@@ -23,7 +23,14 @@ import type {
   Token,
 } from "./types";
 
+/**
+ * Configuration options for the NodeContainer.
+ */
 export interface iContainerOptions {
+  /**
+   * When true, logs the bootstrap time to the console based on performance.now() difference before and after bootstrap.
+   * @default false
+   */
   measurePerformance?: boolean;
 }
 
@@ -37,6 +44,29 @@ export class NodeContainer implements iDIContainer {
 
   constructor(private readonly _opts?: iContainerOptions) {}
 
+  /**
+   * Registers a provider in the container.
+   * Must be called before {@link bootstrap}.
+   *
+   * @template T - The type of value being provided
+   * @param provider - The provider configuration (token, class, or provider object)
+   * @throws {InjectionError} If called after bootstrap or if a duplicate provider is detected
+   *
+   * @example
+   * ```typescript
+   * // Provide a value
+   * container.provide({ provide: CONFIG_TOKEN, value: { apiKey: '123' } });
+   *
+   * // Provide a factory
+   * container.provide({ provide: LOGGER_TOKEN, factory: () => new ConsoleLogger() });
+   *
+   * // Provide an injectable class directly
+   * container.provide(UserService);
+   *
+   * // Provide a class override
+   * container.provide({ provide: ServiceClass, useClass: ServiceOverride });
+   * ```
+   */
   public provide<T>(provider: Providable<T>): void {
     if (this._bootstrapped) {
       throw InjectionError.bootstrapped();
@@ -126,6 +156,22 @@ export class NodeContainer implements iDIContainer {
     throw InjectionError.invalidProvider(JSON.stringify(provider));
   }
 
+  /**
+   * Includes a provider set (group of providers) into the container.
+   * This is useful for organizing related providers together.
+   *
+   * @param group - A provider set created with {@link createProviderSet}
+   *
+   * @example
+   * ```typescript
+   * const databaseProviders = createProviderSet(
+   *   { provide: DbToken, useClass: PostgresDb },
+   *   { provide: CacheToken, useClass: RedisCache }
+   * );
+   *
+   * container.include(databaseProviders);
+   * ```
+   */
   public include(group: iNodeProviderSet): void {
     group(this);
   }
@@ -159,9 +205,26 @@ export class NodeContainer implements iDIContainer {
     return root;
   }
 
-  // Step 1 – collect providers
-  // Step 2 - resolve injection trees
-  // Step 3 - instantiate from bottom to top
+  /**
+   * Bootstraps the container by resolving the dependency trees and instantiating all providers.
+   * This must be called after all providers are registered and before calling {@link get}.
+   *
+   * The bootstrap process:
+   * 1. Validates all provider registrations
+   * 2. Builds dependency injection trees
+   * 3. Detects circular dependencies in each tree
+   * 4. Instantiates all dependencies in the correct order
+   *
+   * @throws {InjectionError} If the container is already bootstrapped or if circular dependencies are detected
+   *
+   * @example
+   * ```typescript
+   * const container = new NodeContainer();
+   * container.provide(UserService);
+   * container.provide(LoggerService);
+   * container.bootstrap(); // Resolves and instantiates all dependencies
+   * ```
+   */
   public bootstrap(): void {
     if (this._bootstrapped) throw InjectionError.doubleBootstrap();
 
@@ -178,6 +241,27 @@ export class NodeContainer implements iDIContainer {
     }
   }
 
+  /**
+   * Retrieves an instance from the container.
+   * Must be called after {@link bootstrap}.
+   *
+   * @template T - The type of value being retrieved (typically inferred)
+   * @param token - The token or class to retrieve
+   * @returns For NodeToken: a single instance. For MultiNodeToken: an array of instances.
+   * @throws {InjectionError} If called before bootstrap or if the token is not found
+   *
+   * @example
+   * ```typescript
+   * // Get a single provider
+   * const logger = container.get(LoggerToken);
+   *
+   * // Get a decorated class
+   * const service = container.get(UserService);
+   *
+   * // Get multiple providers
+   * const plugins = container.get(PluginToken); // Returns array
+   * ```
+   */
   public get<T>(token: MultiNodeToken<T>): T[];
   public get<T>(token: NodeToken<T>): T;
   public get<T>(token: NodeToken<T> | Ctor<T>): T;

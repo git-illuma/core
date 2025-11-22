@@ -2,6 +2,13 @@ import { InjectionError } from "./errors";
 import type { MultiNodeToken, NodeBase, NodeToken } from "./token";
 
 type InjectorFn = (token: NodeBase<any>, optional?: boolean) => any;
+
+/**
+ * Internal context manager for tracking dependency injections during factory execution.
+ * This class manages the injection context lifecycle and tracks all injection calls.
+ *
+ * @internal
+ */
 export abstract class InjectionContext {
   public static contextOpen = false;
   public static calls = new Set<InjectionNode<any>>();
@@ -51,6 +58,13 @@ export abstract class InjectionContext {
   }
 }
 
+/**
+ * Represents a single dependency injection point in the dependency graph.
+ * Stores information about what token is being injected and whether it's optional.
+ *
+ * @template T - The type of value being injected
+ * @internal
+ */
 export class InjectionNode<T> {
   constructor(
     public readonly token: NodeToken<T> | MultiNodeToken<T>,
