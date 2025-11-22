@@ -33,6 +33,20 @@ yarn add @zodyac/illuma
 bun add @zodyac/illuma
 ```
 
+## Table of Contents
+- [🚀 Quick Start](#-quick-start)
+- [📖 Core Concepts](#-core-concepts)
+- [🎨 Provider Types](#-provider-types)
+- [🔄 Dependency Injection](#-dependency-injection)
+- [📦 Provider Sets](#-provider-sets)
+- [🔧 Advanced Usage](#-advanced-usage)
+- [🧪 Testing](#-testing)
+- [📚 API Reference](#-api-reference)
+- [Troubleshooting](#-troubleshooting)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+- [🔗 Links](#-links)
+
 ## 🚀 Quick Start
 
 ### Basic Usage with Decorators
@@ -371,6 +385,10 @@ describe('UserService', () => {
 ### Decorators
 
 - `@NodeInjectable()` - Mark a class as injectable
+
+## ⚠️ Troubleshooting
+
+See the [Error Reference](./TROUBLESHOOTING.md) for common issues and solutions.
 
 ## 🤝 Contributing
 
