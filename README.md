@@ -49,6 +49,34 @@ bun add @zodyac/illuma
 
 ## 🚀 Quick Start
 
+## 🔧 TypeScript Configuration
+
+To use decorators like `@NodeInjectable()`, you need to enable experimental decorators in your `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  }
+}
+```
+
+Alternatively, if you prefer not to use decorators, you can use `makeInjectable` to mark classes as injectable:
+
+```ts
+import { makeInjectable } from '@zodyac/illuma';
+
+class _UserService {
+  public getUser() {
+    return { id: 1, name: "John Doe" };
+  }
+}
+
+export type UserService = _UserService;
+export const UserService = makeInjectable(_UserService);
+```
+
 ### Basic Usage with Decorators
 
 ```typescript

@@ -1,5 +1,5 @@
 import { NodeContainer } from "./container";
-import { INJECTION_SYMBOL, NodeInjectable } from "./decorator";
+import { INJECTION_SYMBOL, NodeInjectable, makeInjectable } from "./decorator";
 import { InjectionError } from "./errors";
 import { createProviderSet } from "./helpers";
 import { nodeInject } from "./injector";
@@ -190,6 +190,199 @@ describe("NodeContainer", () => {
 
       container.bootstrap();
       expect(() => container.get(token)).toThrow(InjectionError.notFound(token));
+    });
+  });
+
+  describe("makeInjectable helper", () => {
+    it("should make class injectable", () => {
+      const container = new NodeContainer();
+
+      class _TestClass {
+        public readonly value = "class-value";
+      }
+
+      const TestClass = makeInjectable(_TestClass);
+      container.provide(TestClass);
+
+      container.bootstrap();
+      const instance = container.get(TestClass);
+      expect(instance).toBeInstanceOf(TestClass);
+      expect(instance.value).toBe("class-value");
+    });
+
+    it("should work with override using class", () => {
+      const container = new NodeContainer();
+
+      class _TestClass {
+        public readonly value: string = "test-class-value";
+      }
+
+      const TestClass = makeInjectable(_TestClass);
+
+      class OverrideClass {
+        public readonly value: string = "override-value";
+      }
+
+      container.provide({
+        provide: TestClass,
+        useClass: OverrideClass,
+      });
+
+      container.bootstrap();
+
+      const instance = container.get(TestClass);
+      expect(instance).toBeInstanceOf(OverrideClass);
+      expect(instance.value).toBe("override-value");
+    });
+
+    it("should work with override using factory", () => {
+      const container = new NodeContainer();
+
+      class _TestClass {
+        public readonly value: string = "test-class-value";
+      }
+
+      const TestClass = makeInjectable(_TestClass);
+
+      container.provide({
+        provide: TestClass,
+        factory: () => ({ value: "factory-value" }),
+      });
+
+      container.bootstrap();
+      expect(container.get(TestClass).value).toBe("factory-value");
+    });
+
+    it("should work with override using value", () => {
+      const container = new NodeContainer();
+
+      class _TestClass {
+        public readonly value: string = "test-class-value";
+      }
+
+      const TestClass = makeInjectable(_TestClass);
+
+      container.provide({
+        provide: TestClass,
+        value: { value: "static-value" },
+      });
+
+      container.bootstrap();
+      expect(container.get(TestClass).value).toBe("static-value");
+    });
+
+    it("should work with aliasing", () => {
+      const container = new NodeContainer();
+
+      class _TestClass {
+        public readonly value: string = "test-class-value";
+      }
+
+      const TestClass = makeInjectable(_TestClass);
+
+      class _AliasedClass {
+        public readonly value: string = "aliased-value";
+      }
+
+      const AliasedClass = makeInjectable(_AliasedClass);
+
+      container.provide(AliasedClass);
+      container.provide({
+        provide: TestClass,
+        alias: AliasedClass,
+      });
+
+      container.bootstrap();
+
+      const instance = container.get(TestClass);
+      expect(instance).toBeInstanceOf(AliasedClass);
+      expect(instance.value).toBe("aliased-value");
+    });
+
+    it("should work with dependency injection", () => {
+      const container = new NodeContainer();
+      const dep = new NodeToken<string>("DEP");
+
+      class _TestClass {
+        public readonly injected = nodeInject(dep);
+      }
+
+      const TestClass = makeInjectable(_TestClass);
+
+      container.provide(TestClass);
+      container.provide({ provide: dep, value: "dep-value" });
+
+      container.bootstrap();
+      expect(container.get(TestClass).injected).toBe("dep-value");
+    });
+
+    it("should work with multi token injection", () => {
+      const container = new NodeContainer();
+      const multi = new MultiNodeToken<{ value: string }>("MULTI_TOKEN");
+
+      class _TestClass {
+        public readonly injected = nodeInject(multi);
+      }
+
+      const TestClass = makeInjectable(_TestClass);
+
+      class Dep {
+        public readonly value = "dep-value";
+      }
+
+      makeInjectable(Dep);
+
+      container.provide({ provide: multi, alias: Dep });
+      container.provide({ provide: multi, value: { value: "direct-value" } });
+      container.provide(TestClass);
+
+      container.bootstrap();
+
+      const instance = container.get(TestClass);
+      expect(instance.injected.length).toBe(2);
+      expect(instance.injected.some((i) => i instanceof Dep)).toBe(true);
+      expect(instance.injected.some((i) => i.value === "direct-value")).toBe(true);
+    });
+
+    it("should throw on duplicate class", () => {
+      const container = new NodeContainer();
+
+      class _TestClass {
+        public readonly value = "test-value";
+      }
+
+      const TestClass = makeInjectable(_TestClass);
+
+      container.provide(TestClass);
+      expect(() => container.provide(TestClass)).toThrow();
+    });
+
+    it("should work identically to NodeInjectable decorator", () => {
+      const containerA = new NodeContainer();
+      const containerB = new NodeContainer();
+
+      @NodeInjectable()
+      class DecoratedClass {
+        public readonly value = "test-value";
+      }
+
+      class _ManualClass {
+        public readonly value = "test-value";
+      }
+
+      const ManualClass = makeInjectable(_ManualClass);
+      containerA.provide(DecoratedClass);
+      containerB.provide(ManualClass);
+
+      containerA.bootstrap();
+      containerB.bootstrap();
+
+      const instanceA = containerA.get(DecoratedClass);
+      const instanceB = containerB.get(ManualClass);
+
+      expect(instanceA).toBeInstanceOf(DecoratedClass);
+      expect(instanceB).toBeInstanceOf(ManualClass);
+      expect(instanceA.value).toBe(instanceB.value);
     });
   });
 

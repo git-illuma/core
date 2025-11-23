@@ -1,4 +1,5 @@
 import { NodeToken } from "./token";
+import type { Ctor } from "./types";
 
 /**
  * Symbol used to mark classes as injectable and store their associated token.
@@ -26,11 +27,27 @@ export const INJECTION_SYMBOL = Symbol("Injectable");
  * ```
  */
 export function NodeInjectable<T>() {
-  return (ctor: new (...args: any[]) => T) => {
+  return (ctor: Ctor<T>): Ctor<T> => {
     const nodeToken = new NodeToken<T>(`_${ctor.name}`, {
       factory: () => new ctor(),
     });
 
     (ctor as any)[INJECTION_SYMBOL] = nodeToken;
+    return ctor;
   };
+}
+
+/**
+ * Alternative function to mark a class as injectable in the dependency injection system for environments
+ * that do not support decorators.
+ * @param ctor
+ * @returns
+ */
+export function makeInjectable<T>(ctor: Ctor<T>): Ctor<T> {
+  const nodeToken = new NodeToken<T>(`_${ctor.name}`, {
+    factory: () => new ctor(),
+  });
+
+  (ctor as any)[INJECTION_SYMBOL] = nodeToken;
+  return ctor;
 }
