@@ -4,8 +4,8 @@ import {
   INJECTION_SYMBOL,
   isNodeBase,
   MultiNodeToken,
-  nodeInject,
   NodeToken,
+  nodeInject,
 } from "../api";
 import { InjectionError } from "../errors";
 import type { ProtoNode, TreeNode, UpstreamGetter } from "../provider";
