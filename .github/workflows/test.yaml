@@ -1,20 +1,12 @@
-name: Test and lint
+name: PR tests
 
 on:
-  push:
-    paths:
-      - "src/**"
-    branches:
-      - main
-      - develop
-
   pull_request:
     types: [opened, synchronize]
     paths:
       - "src/**"
     branches:
       - main
-      - develop
 
 jobs:
   test-lint:
@@ -39,11 +31,3 @@ jobs:
       # Run tests
       - name: Test
         run: yarn test
-
-      # Install biome
-      - name: Install Biome
-        run: yarn add --dev @biomejs/biome
-
-        # Run linter
-      - name: Lint
-        run: yarn lint

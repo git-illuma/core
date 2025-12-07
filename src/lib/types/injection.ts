@@ -17,8 +17,9 @@ export interface iNodeInjectorOptions {
  * @template Node - The token type to extract from
  */
 
-export type ExtractInjectedType<Node> = Node extends MultiNodeToken<infer T>
-  ? T[]
-  : Node extends NodeToken<infer T>
-    ? T
-    : never;
+export type ExtractInjectedType<Node> =
+  Node extends MultiNodeToken<infer T>
+    ? T[]
+    : Node extends NodeToken<infer T>
+      ? T
+      : never;
