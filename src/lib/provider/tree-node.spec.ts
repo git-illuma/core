@@ -1,6 +1,11 @@
 import { MultiNodeToken, NodeToken, nodeInject } from "../api";
 import { InjectionError } from "../errors";
-import { isNotTransparentProto, ProtoNodeMulti, ProtoNodeSingle, ProtoNodeTransparent } from "./proto";
+import {
+  isNotTransparentProto,
+  ProtoNodeMulti,
+  ProtoNodeSingle,
+  ProtoNodeTransparent,
+} from "./proto";
 import {
   TreeNodeMulti,
   TreeNodeSingle,
@@ -379,10 +384,7 @@ describe("Extra Coverage", () => {
   it("should inject transparent node instance when requesting parent token", () => {
     const parentToken = new NodeToken<string>("parent");
     const parentProto = new ProtoNodeSingle(parentToken);
-    const transparentProto = new ProtoNodeTransparent(
-      parentProto,
-      () => "transparent",
-    );
+    const transparentProto = new ProtoNodeTransparent(parentProto, () => "transparent");
     const transparentNode = new TreeNodeTransparent(transparentProto);
 
     const consumerToken = new NodeToken<string>("consumer");
@@ -422,9 +424,7 @@ describe("Extra Coverage", () => {
     // Instantiate calls factory. showDep is true. nodeInject called.
     // Should throw untracked.
 
-    expect(() => node.instantiate()).toThrow(
-      InjectionError.untracked(depToken, token),
-    );
+    expect(() => node.instantiate()).toThrow(InjectionError.untracked(depToken, token));
   });
 
   it("should expose dependencies", () => {
@@ -449,10 +449,3 @@ describe("Extra Coverage", () => {
     expect(transNode.instance).toBe("trans");
   });
 });
-
-
-
-
-
-
-

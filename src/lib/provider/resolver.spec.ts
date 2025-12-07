@@ -280,22 +280,14 @@ describe("resolveTreeNode", () => {
   it("should not add dependency if upstream getter returns non-multi node for MultiNode", () => {
     const token = new MultiNodeToken<string>("multi");
     const proto = new ProtoNodeMulti(token);
-    const upstreamNode = new TreeNodeSingle(
-      new ProtoNodeSingle(new NodeToken("single")),
-    );
+    const upstreamNode = new TreeNodeSingle(new ProtoNodeSingle(new NodeToken("single")));
     const upstreamGetter = jest.fn().mockReturnValue(upstreamNode);
 
     const cache = new Map();
     const singleNodes = new Map();
     const multiNodes = new Map([[token, proto]]);
 
-    const node = resolveTreeNode(
-      proto,
-      cache,
-      singleNodes,
-      multiNodes,
-      upstreamGetter,
-    );
+    const node = resolveTreeNode(proto, cache, singleNodes, multiNodes, upstreamGetter);
 
     expect(node).toBeInstanceOf(TreeNodeMulti);
     expect(upstreamGetter).toHaveBeenCalledWith(token);

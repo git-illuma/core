@@ -1,13 +1,7 @@
 import { InjectionError } from "../errors";
 import type { Token } from "../types";
 import { INJECTION_SYMBOL } from "./decorator";
-import {
-  extractToken,
-  isNodeBase,
-  MultiNodeToken,
-  NodeBase,
-  NodeToken,
-} from "./token";
+import { extractToken, isNodeBase, MultiNodeToken, NodeBase, NodeToken } from "./token";
 
 describe("Token", () => {
   describe("NodeBase", () => {
@@ -76,9 +70,9 @@ describe("Token", () => {
     });
 
     it("should throw on invalid token in class", () => {
-        class TestClass {}
-        (TestClass as any)[INJECTION_SYMBOL] = "invalid";
-        expect(() => extractToken(TestClass)).toThrow(InjectionError);
+      class TestClass {}
+      (TestClass as any)[INJECTION_SYMBOL] = "invalid";
+      expect(() => extractToken(TestClass)).toThrow(InjectionError);
     });
   });
 });

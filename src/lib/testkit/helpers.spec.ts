@@ -183,5 +183,3 @@ describe("Testkit Helpers", () => {
     expect(() => spectator.nodeInject(missingToken)).toThrow(InjectionError);
   });
 });
-
-
