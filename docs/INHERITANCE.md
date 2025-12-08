@@ -1,6 +1,6 @@
 # 🔗 Async Injection & Sub-Containers
 
-This guide covers advanced dependency injection patterns using `injectAsync` and `injectChildrenAsync` for lazy-loading dependencies and managing sub-containers.
+This guide covers advanced dependency injection patterns using `injectAsync`, `injectChildrenAsync`, and `injectGroupAsync` for lazy-loading dependencies and managing sub-containers.
 
 ## Table of Contents
 
@@ -14,6 +14,7 @@ This guide covers advanced dependency injection patterns using `injectAsync` and
       - [2. **Conditional Dependencies**](#2-conditional-dependencies)
     - [Type Safety](#type-safety)
     - [Caching Behavior](#caching-behavior)
+    - [Overriding Dependencies](#overriding-dependencies)
   - [injectChildrenAsync](#injectchildrenasync)
     - [Basic Usage](#basic-usage-1)
     - [Use Cases](#use-cases-1)
@@ -22,6 +23,12 @@ This guide covers advanced dependency injection patterns using `injectAsync` and
       - [3. **Scoped Contexts**](#3-scoped-contexts)
     - [Parent-Child Relationships](#parent-child-relationships)
     - [Caching Behavior](#caching-behavior-1)
+    - [Overriding Dependencies](#overriding-dependencies-1)
+  - [injectGroupAsync](#injectgroupasync)
+    - [Basic Usage](#basic-usage-2)
+    - [Migration from injectChildrenAsync](#migration-from-injectchildrenasync)
+    - [Caching Behavior](#caching-behavior-2)
+    - [Overriding Dependencies](#overriding-dependencies-2)
   - [Common Patterns](#common-patterns)
     - [Pattern 1: Dynamic Feature Loading](#pattern-1-dynamic-feature-loading)
     - [Pattern 2: Lazy Service Registry](#pattern-2-lazy-service-registry)
@@ -38,16 +45,18 @@ This guide covers advanced dependency injection patterns using `injectAsync` and
 
 ## Overview
 
-Illuma provides two powerful utilities for advanced dependency injection scenarios:
+Illuma provides three powerful utilities for advanced dependency injection scenarios:
 
 - **`injectAsync`**: Lazily inject dependencies that may require async initialization or dynamic imports
-- **`injectChildrenAsync`**: Create isolated sub-containers with their own dependency trees
+- **`injectChildrenAsync`**: *(deprecated)* Create isolated sub-containers with provider sets
+- **`injectGroupAsync`**: Create isolated sub-containers with arrays of providers (recommended over `injectChildrenAsync`)
 
-Both utilities support:
+All utilities support:
 - ✅ Async factory functions
 - ✅ Dynamic imports for code splitting
 - ✅ Optional caching
 - ✅ Full type inference
+- ✅ Dependency overrides
 - ✅ Parent container access
 
 ## injectAsync
@@ -165,6 +174,44 @@ private readonly getAnalytics = injectAsync(
 );
 ```
 
+### Overriding Dependencies
+
+You can provide additional dependencies or override parent container values using the `overrides` option:
+
+```typescript
+const CONFIG_TOKEN = new NodeToken<Config>('CONFIG');
+const API_URL = new NodeToken<string>('API_URL');
+
+@NodeInjectable()
+class ApiService {
+  private readonly config = nodeInject(CONFIG_TOKEN);
+  private readonly apiUrl = nodeInject(API_URL);
+}
+
+@NodeInjectable()
+class MyService {
+  // Provide additional dependencies for the injected service
+  private readonly getApiService = injectAsync(
+    async () => ApiService,
+    {
+      overrides: [
+        { provide: API_URL, value: 'https://api.example.com' },
+        { provide: CONFIG_TOKEN, value: { timeout: 5000 } }
+      ]
+    }
+  );
+
+  async makeRequest() {
+    const api = await this.getApiService();
+    // api has access to both API_URL and CONFIG_TOKEN
+  }
+}
+```
+
+**Important**: If the main provider and overrides both provide the same token, a duplicate provider error will be thrown. Use overrides for:
+- Providing additional tokens not in the main provider
+- Shadowing parent container values with different values in the sub-container
+
 ## injectChildrenAsync
 
 `injectChildrenAsync` creates an isolated sub-container with its own dependency tree. This is useful for plugin systems, feature modules, and scoped contexts with access to parent dependencies.
@@ -224,7 +271,7 @@ class FeatureHost {
   async executeFeature() {
     // Get the injector for the sub-container
     const injector = await this.getFeatureInjector();
-    
+
     // Retrieve services from the sub-container
     const featureService = injector.get(FEATURE_SERVICE);
     featureService.execute();
@@ -254,7 +301,7 @@ const PLUGIN_CONFIG = new NodeToken<PluginConfig>('PLUGIN_CONFIG');
 class PluginLoader {
   private readonly createPluginContext = injectChildrenAsync(async () => {
     const { PluginCore } = await import('./plugin-core');
-    
+
     return createProviderSet(
       {
         provide: PLUGIN_CORE,
@@ -375,7 +422,7 @@ class RequestHandler {
   async handleRequest(userId: string, requestId: string) {
     const getRequestInjector = this.createRequestContext(userId, requestId);
     const requestInjector = await getRequestInjector();
-    
+
     const requestService = requestInjector.get(RequestService);
     return requestService.process();
   }
@@ -440,7 +487,171 @@ private readonly getFeatureInjector = injectChildrenAsync(
 );
 ```
 
+### Overriding Dependencies
+
+You can provide additional dependencies or override parent container values in the sub-container using the `overrides` option:
+
+```typescript
+const FEATURE_CONFIG = new NodeToken<FeatureConfig>('FEATURE_CONFIG');
+const FEATURE_MODE = new NodeToken<string>('FEATURE_MODE');
+
+@NodeInjectable()
+class FeatureHost {
+  private readonly getFeatureInjector = injectChildrenAsync(
+    async () => {
+      const { featureProviders } = await import('./feature-module');
+      return featureProviders; // Provides FEATURE_CONFIG
+    },
+    {
+      // Provide additional tokens for the sub-container
+      overrides: [
+        { provide: FEATURE_MODE, value: 'production' }
+      ]
+    }
+  );
+
+  async loadFeature() {
+    const injector = await this.getFeatureInjector();
+    const mode = injector.get(FEATURE_MODE); // 'production'
+    const config = injector.get(FEATURE_CONFIG); // From featureProviders
+  }
+}
+```
+
+**Important**: Overrides are provided to the sub-container BEFORE the provider set is included. If both the provider set and overrides provide the same token, a duplicate provider error will be thrown. Use overrides for:
+- Providing additional tokens not in the provider set
+- Shadowing parent container values with different values for the sub-container
+
+## injectGroupAsync
+
+`injectGroupAsync` creates an isolated sub-container using an array of providers instead of a provider set. This is the recommended approach over `injectChildrenAsync` for most use cases.
+
+### Basic Usage
+
+```typescript
+import { injectGroupAsync, NodeInjectable, NodeToken } from '@zodyac/illuma';
+
+const FEATURE_CONFIG = new NodeToken<FeatureConfig>('FEATURE_CONFIG');
+const FEATURE_SERVICE = new NodeToken<FeatureService>('FEATURE_SERVICE');
+
+@NodeInjectable()
+class FeatureHost {
+  private readonly getFeatureInjector = injectGroupAsync(async () => {
+    const { FeatureService } = await import('./feature-service');
+
+    return [
+      { provide: FEATURE_SERVICE, useClass: FeatureService },
+      { provide: FEATURE_CONFIG, value: { enabled: true } }
+    ];
+  });
+
+  async executeFeature() {
+    const injector = await this.getFeatureInjector();
+    const service = injector.get(FEATURE_SERVICE);
+    service.execute();
+  }
+}
+```
+
+### Migration from injectChildrenAsync
+
+`injectGroupAsync` is functionally equivalent to `injectChildrenAsync` but uses arrays of providers instead of provider sets:
+
+```typescript
+// Old approach (deprecated)
+import { createProviderSet, injectChildrenAsync } from '@zodyac/illuma';
+
+private readonly getInjector = injectChildrenAsync(async () => {
+  return createProviderSet(
+    ServiceA,
+    ServiceB,
+    { provide: CONFIG, value: config }
+  );
+});
+
+// New approach (recommended)
+import { injectGroupAsync } from '@zodyac/illuma';
+
+private readonly getInjector = injectGroupAsync(async () => {
+  return [
+    ServiceA,
+    ServiceB,
+    { provide: CONFIG, value: config }
+  ];
+});
+```
+
+### Caching Behavior
+
+Like other async injection utilities, `injectGroupAsync` caches the sub-container by default:
+
+```typescript
+@NodeInjectable()
+class FeatureHost {
+  private readonly getFeatureInjector = injectGroupAsync(
+    async () => [/* providers */]
+  );
+
+  async method1() {
+    const injector = await this.getFeatureInjector(); // Creates sub-container
+  }
+
+  async method2() {
+    const injector = await this.getFeatureInjector(); // Returns cached sub-container
+  }
+}
+```
+
+Disable caching to create a new sub-container each time:
+
+```typescript
+private readonly getFeatureInjector = injectGroupAsync(
+  async () => [/* providers */],
+  { withCache: false }
+);
+```
+
+### Overriding Dependencies
+
+Like `injectChildrenAsync`, you can provide additional dependencies or override parent values using the `overrides` option:
+
+```typescript
+const DATABASE_URL = new NodeToken<string>('DATABASE_URL');
+const API_KEY = new NodeToken<string>('API_KEY');
+
+@NodeInjectable()
+class AppService {
+  private readonly getDataModule = injectGroupAsync(
+    async () => {
+      const { DataService, DataRepository } = await import('./data-module');
+      return [
+        DataService,
+        DataRepository
+      ];
+    },
+    {
+      overrides: [
+        { provide: DATABASE_URL, value: 'postgresql://localhost/mydb' },
+        { provide: API_KEY, value: 'secret-key' }
+      ]
+    }
+  );
+
+  async loadData() {
+    const injector = await this.getDataModule();
+    const dataService = injector.get(DataService);
+    // dataService has access to DATABASE_URL and API_KEY
+  }
+}
+```
+
+**Important**: Overrides are provided to the sub-container BEFORE the provider array. If both the provider array and overrides provide the same token, a duplicate provider error will be thrown. Use overrides for:
+- Providing additional tokens not in the provider array
+- Shadowing parent container values with different values for the sub-container
+
 ## Common Patterns
+
+> **Note**: All async injection functions (`injectAsync`, `injectChildrenAsync`, `injectGroupAsync`) support an `overrides` option to provide additional dependencies or shadow parent container values. See the respective function documentation for details.
 
 ### Pattern 1: Dynamic Feature Loading
 
@@ -462,7 +673,7 @@ class FeatureManager {
   async loadFeature(name: string) {
     const loader = this.features.get(name);
     if (!loader) throw new Error(`Feature ${name} not found`);
-    
+
     return loader();
   }
 }
@@ -494,7 +705,7 @@ class ServiceRegistry {
   async get<T>(key: string): Promise<T> {
     const loader = this.registry.get(key);
     if (!loader) throw new Error(`Service ${key} not registered`);
-    
+
     return loader();
   }
 }
@@ -569,7 +780,7 @@ class AppBootstrap {
    class ServiceA {
      private readonly getB = injectAsync(async () => ServiceB);
    }
-   
+
    @NodeInjectable()
    class ServiceB {
      private readonly getA = injectAsync(async () => ServiceA); // Circular!
@@ -589,14 +800,14 @@ class AppBootstrap {
    ```typescript
    // Bad: Using async when sync would work
    private readonly getConfig = injectAsync(async () => ConfigService);
-   
+
    async method() {
      const config = await this.getConfig(); // Extra await
    }
-   
+
    // Good: Use sync injection
    private readonly config = nodeInject(ConfigService);
-   
+
    method() {
      const config = this.config; // Direct access
    }

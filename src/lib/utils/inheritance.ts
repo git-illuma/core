@@ -13,6 +13,12 @@ interface iInjectionOptions {
    * @default true
    */
   withCache?: boolean;
+  /**
+   * Overrides to provide to the sub-container
+   * These will be provided in addition to the main injection
+   * @default []
+   */
+  overrides?: Providable<unknown>[];
 }
 
 /**
@@ -37,6 +43,8 @@ export function injectChildrenAsync(
     const providerSet = await fn();
 
     const subContainer = new NodeContainer({ parent });
+
+    if (opts?.overrides) subContainer.provide(opts.overrides);
     subContainer.include(providerSet);
     subContainer.bootstrap();
 
@@ -73,6 +81,8 @@ export function injectGroupAsync(
     const providers = await fn();
 
     const subContainer = new NodeContainer({ parent });
+
+    if (opts?.overrides) subContainer.provide(opts.overrides);
     subContainer.provide(providers);
     subContainer.bootstrap();
 
@@ -121,6 +131,8 @@ export function injectAsync<T>(
   const factory = (async () => {
     const token = await fn();
     const tempContainer = new NodeContainer({ parent });
+
+    if (opts?.overrides) tempContainer.provide(opts.overrides);
     tempContainer.provide(token);
     tempContainer.bootstrap();
 
