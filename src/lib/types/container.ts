@@ -38,4 +38,6 @@ export interface iDIContainer {
   get<T>(token: MultiNodeToken<T>): T[];
   get<T>(token: NodeToken<T>): T;
   get<T>(token: Ctor<T>): T;
+
+  produce<T>(token: Ctor<T>): T;
 }

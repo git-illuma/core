@@ -15,6 +15,19 @@ export interface iInjector {
   get<T>(token: MultiNodeToken<T>): T[];
   get<T>(token: NodeToken<T>): T;
   get<T>(token: Ctor<T>): T;
+
+  /**
+   * Instantiates a class with injections in runtime using current context.
+   * Useful when creating an object that requires injections in runtime.
+   * Class does not get registered in the container and cannot be retrieved via {@link get} or {@link nodeInject}.
+   *
+   * @template T - The type of the class being instantiated
+   * @param ctor - The constructor of the class to instantiate
+   * @returns A new instance of the class with dependencies injected
+   * @throws {InjectionError} If called before bootstrap or if the constructor is invalid
+   * Must be called after {@link bootstrap}.
+   */
+  produce<T>(token: Ctor<T>): T;
 }
 
 /**
@@ -28,6 +41,10 @@ export class InjectorImpl implements iInjector {
   public get<T>(token: Ctor<T>): T;
   public get<T>(token: Token<T>): T | T[] {
     return this.container.get<T>(token as any);
+  }
+
+  public produce<T>(token: Ctor<T>): T {
+    return this.container.produce<T>(token);
   }
 }
 

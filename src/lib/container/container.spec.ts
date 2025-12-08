@@ -1217,4 +1217,278 @@ describe("NodeContainer", () => {
       consoleSpy.mockRestore();
     });
   });
+
+  describe("produce", () => {
+    it("should instantiate a class with dependencies at runtime", () => {
+      const container = new NodeContainer();
+
+      @NodeInjectable()
+      class DependencyService {
+        public readonly value = "dependency-value";
+      }
+
+      @NodeInjectable()
+      class RuntimeClass {
+        public readonly dep = nodeInject(DependencyService);
+        public readonly id = Math.random();
+      }
+
+      container.provide(DependencyService);
+      container.bootstrap();
+
+      const instance = container.produce(RuntimeClass);
+
+      expect(instance).toBeInstanceOf(RuntimeClass);
+      expect(instance.dep).toBeInstanceOf(DependencyService);
+      expect(instance.dep.value).toBe("dependency-value");
+    });
+
+    it("should create new instances on each call", () => {
+      const container = new NodeContainer();
+
+      @NodeInjectable()
+      class RuntimeClass {
+        public readonly id = Math.random();
+      }
+
+      container.bootstrap();
+
+      const instance1 = container.produce(RuntimeClass);
+      const instance2 = container.produce(RuntimeClass);
+
+      expect(instance1).toBeInstanceOf(RuntimeClass);
+      expect(instance2).toBeInstanceOf(RuntimeClass);
+      expect(instance1.id).not.toBe(instance2.id);
+    });
+
+    it("should not register class in container", () => {
+      const container = new NodeContainer();
+
+      @NodeInjectable()
+      class RuntimeClass {
+        public readonly value = "runtime";
+      }
+
+      container.bootstrap();
+
+      container.produce(RuntimeClass);
+
+      // Trying to get the class should throw since it was never provided
+      expect(() => container.get(RuntimeClass)).toThrow(InjectionError);
+    });
+
+    it("should throw if called before bootstrap", () => {
+      const container = new NodeContainer();
+
+      @NodeInjectable()
+      class RuntimeClass {
+        public readonly value = "runtime";
+      }
+
+      expect(() => container.produce(RuntimeClass)).toThrow(InjectionError);
+    });
+
+    it("should throw for invalid constructor", () => {
+      const container = new NodeContainer();
+
+      class NotInjectable {
+        public readonly value = "not-injectable";
+      }
+
+      container.bootstrap();
+
+      expect(() => container.produce(NotInjectable as any)).toThrow(InjectionError);
+    });
+
+    it("should work with complex dependency chains", () => {
+      const container = new NodeContainer();
+
+      @NodeInjectable()
+      class ServiceA {
+        public readonly name = "A";
+      }
+
+      @NodeInjectable()
+      class ServiceB {
+        public readonly dep = nodeInject(ServiceA);
+        public readonly name = "B";
+      }
+
+      @NodeInjectable()
+      class ServiceC {
+        public readonly depB = nodeInject(ServiceB);
+        public readonly name = "C";
+      }
+
+      @NodeInjectable()
+      class RuntimeClass {
+        public readonly serviceC = nodeInject(ServiceC);
+      }
+
+      container.provide(ServiceA);
+      container.provide(ServiceB);
+      container.provide(ServiceC);
+      container.bootstrap();
+
+      const instance = container.produce(RuntimeClass);
+
+      expect(instance.serviceC).toBeInstanceOf(ServiceC);
+      expect(instance.serviceC.name).toBe("C");
+      expect(instance.serviceC.depB).toBeInstanceOf(ServiceB);
+      expect(instance.serviceC.depB.name).toBe("B");
+      expect(instance.serviceC.depB.dep).toBeInstanceOf(ServiceA);
+      expect(instance.serviceC.depB.dep.name).toBe("A");
+    });
+
+    it("should share singleton instances with container", () => {
+      const container = new NodeContainer();
+
+      @NodeInjectable()
+      class SingletonService {
+        public readonly id = Math.random();
+      }
+
+      @NodeInjectable()
+      class RuntimeClass {
+        public readonly singleton = nodeInject(SingletonService);
+      }
+
+      container.provide(SingletonService);
+      container.bootstrap();
+
+      const containerInstance = container.get(SingletonService);
+      const runtime1 = container.produce(RuntimeClass);
+      const runtime2 = container.produce(RuntimeClass);
+
+      // All should reference the same singleton
+      expect(runtime1.singleton.id).toBe(containerInstance.id);
+      expect(runtime2.singleton.id).toBe(containerInstance.id);
+    });
+
+    it("should work with token-based dependencies", () => {
+      const container = new NodeContainer();
+      const configToken = new NodeToken<{ apiKey: string }>("Config");
+      const loggerToken = new NodeToken<{ log: (msg: string) => void }>("Logger");
+
+      @NodeInjectable()
+      class RuntimeClass {
+        public readonly config = nodeInject(configToken);
+        public readonly logger = nodeInject(loggerToken);
+      }
+
+      container.provide({
+        provide: configToken,
+        value: { apiKey: "test-key" },
+      });
+
+      container.provide({
+        provide: loggerToken,
+        factory: () => ({ log: (msg: string) => msg }),
+      });
+
+      container.bootstrap();
+
+      const instance = container.produce(RuntimeClass);
+
+      expect(instance.config.apiKey).toBe("test-key");
+      expect(instance.logger.log("test")).toBe("test");
+    });
+
+    it("should work with optional dependencies", () => {
+      const container = new NodeContainer();
+      const optionalToken = new NodeToken<string>("Optional");
+      const requiredToken = new NodeToken<string>("Required");
+
+      @NodeInjectable()
+      class RuntimeClass {
+        public readonly optional = nodeInject(optionalToken, { optional: true });
+        public readonly required = nodeInject(requiredToken);
+      }
+
+      container.provide({
+        provide: requiredToken,
+        value: "required-value",
+      });
+
+      container.bootstrap();
+
+      const instance = container.produce(RuntimeClass);
+
+      expect(instance.optional).toBeNull();
+      expect(instance.required).toBe("required-value");
+    });
+
+    it("should throw when required dependency is missing", () => {
+      const container = new NodeContainer();
+
+      @NodeInjectable()
+      class MissingService {
+        public readonly value = "missing";
+      }
+
+      @NodeInjectable()
+      class RuntimeClass {
+        public readonly dep = nodeInject(MissingService);
+      }
+
+      container.bootstrap();
+
+      expect(() => container.produce(RuntimeClass)).toThrow(InjectionError);
+    });
+
+    it("should work with multi-token dependencies", () => {
+      const container = new NodeContainer();
+      const pluginToken = new MultiNodeToken<{ name: string }>("Plugin");
+
+      @NodeInjectable()
+      class RuntimeClass {
+        public readonly plugins = nodeInject(pluginToken);
+      }
+
+      container.provide({
+        provide: pluginToken,
+        value: { name: "plugin-1" },
+      });
+
+      container.provide({
+        provide: pluginToken,
+        value: { name: "plugin-2" },
+      });
+
+      container.bootstrap();
+
+      const instance = container.produce(RuntimeClass);
+
+      expect(instance.plugins).toHaveLength(2);
+      expect(instance.plugins[0].name).toBe("plugin-1");
+      expect(instance.plugins[1].name).toBe("plugin-2");
+    });
+
+    it("should allow producing classes with constructor parameters", () => {
+      const container = new NodeContainer();
+
+      @NodeInjectable()
+      class DependencyService {
+        public readonly value = "dependency";
+      }
+
+      @NodeInjectable()
+      class RuntimeClass {
+        public readonly dep = nodeInject(DependencyService);
+        public readonly custom: string;
+
+        constructor() {
+          this.custom = "custom-value";
+        }
+      }
+
+      container.provide(DependencyService);
+      container.bootstrap();
+
+      const instance = container.produce(RuntimeClass);
+
+      expect(instance.dep.value).toBe("dependency");
+      expect(instance.custom).toBe("custom-value");
+    });
+  });
 });

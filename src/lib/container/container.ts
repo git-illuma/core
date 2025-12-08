@@ -7,6 +7,7 @@ import {
   NodeToken,
   nodeInject,
 } from "../api";
+import { InjectionContext } from "../context";
 import { InjectionError } from "../errors";
 import type { ProtoNode, TreeNode, UpstreamGetter } from "../provider";
 import {
@@ -328,5 +329,35 @@ export class NodeContainer implements iDIContainer {
     }
 
     return treeNode.instance;
+  }
+
+  /**
+   * Instantiates a class outside injection context. Primarily used to create instances via Injector.
+   * Class does not get registered in the container and cannot be retrieved via {@link get} or {@link nodeInject}.
+   * Must be called after {@link bootstrap}.
+   *
+   * @template T - The type of the class being instantiated
+   * @param ctor - The constructor of the class to instantiate
+   * @returns A new instance of the class with dependencies injected
+   * @throws {InjectionError} If called before bootstrap or if the constructor is invalid
+   */
+  public produce<T>(ctor: Ctor<T>): T {
+    if (!this._bootstrapped || !this._rootNode) {
+      throw InjectionError.notBootstrapped();
+    }
+
+    const token = extractToken<T>(ctor);
+    if (!(token instanceof NodeToken)) throw InjectionError.invalidCtor(ctor);
+
+    return InjectionContext.instantiate(
+      () => new ctor(),
+      (t, optional) => {
+        if (!this._rootNode) throw InjectionError.notBootstrapped();
+        const node = this._rootNode.find<T>(t);
+        if (!node && !optional) throw InjectionError.notFound(t);
+
+        return node ? node.instance : null;
+      },
+    );
   }
 }

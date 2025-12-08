@@ -224,4 +224,68 @@ describe("Injector token", () => {
     expect(instance1.id).toBe(instance2.id);
     expect(instance1.id).toBe(directInstance.id);
   });
+
+  describe("produce", () => {
+    it("should delegate to container.produce", () => {
+      const container = new NodeContainer();
+
+      @NodeInjectable()
+      class DependencyService {
+        public readonly value = "dependency";
+      }
+
+      @NodeInjectable()
+      class RuntimeClass {
+        public readonly dep = nodeInject(DependencyService);
+        public readonly id = Math.random();
+      }
+
+      container.provide(DependencyService);
+      container.bootstrap();
+
+      const injector = new InjectorImpl(container);
+      const instance = injector.produce(RuntimeClass);
+
+      expect(instance).toBeInstanceOf(RuntimeClass);
+      expect(instance.dep).toBeInstanceOf(DependencyService);
+      expect(instance.dep.value).toBe("dependency");
+    });
+
+    it("should work when called from Injector within a service", () => {
+      const container = new NodeContainer();
+
+      @NodeInjectable()
+      class DependencyService {
+        public readonly value = "dependency";
+      }
+
+      @NodeInjectable()
+      class RuntimeClass {
+        public readonly dep = nodeInject(DependencyService);
+        public readonly id = Math.random();
+      }
+
+      @NodeInjectable()
+      class FactoryService {
+        private readonly _injector = nodeInject(Injector);
+
+        public createRuntimeInstance() {
+          return this._injector.produce(RuntimeClass);
+        }
+      }
+
+      container.provide(DependencyService);
+      container.provide(FactoryService);
+      container.bootstrap();
+
+      const factory = container.get(FactoryService);
+      const instance1 = factory.createRuntimeInstance();
+      const instance2 = factory.createRuntimeInstance();
+
+      expect(instance1).toBeInstanceOf(RuntimeClass);
+      expect(instance2).toBeInstanceOf(RuntimeClass);
+      expect(instance1.id).not.toBe(instance2.id);
+      expect(instance1.dep.value).toBe("dependency");
+    });
+  });
 });

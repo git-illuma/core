@@ -376,18 +376,64 @@ import { Injector, nodeInject, NodeInjectable } from '@zodyac/illuma';
 class PluginManager {
   private readonly injector = nodeInject(Injector);
 
-  public getPlugin(pluginToken: Token<any>) {
+  public getPlugin() {
     // Dynamically retrieve a dependency at runtime
-    const plugin = this.injector.get(pluginToken);
-    return plugin;
+    const token = condition ? PLUGIN : ALT_PLUGIN;
+    return this.injector.get(token);
   }
 }
+```
+
+The `Injector` provides two key methods:
+
+#### `get<T>(token: Token<T>): T`
+Retrieve a registered dependency from the container (same as `container.get()`).
+
+#### `produce<T>(ctor: Ctor<T>): T`
+Create transient instances with dependencies injected, without registering them in the container:
+
+```typescript
+import { Injector, nodeInject, NodeInjectable } from '@zodyac/illuma';
+
+@NodeInjectable()
+class Logger {
+  public log(msg: string) { console.log(msg); }
+}
+
+@NodeInjectable()
+class RequestHandler {
+  private readonly logger = nodeInject(Logger);
+  
+  public handle(req: Request) {
+    this.logger.log(`Handling request: ${req.url}`);
+  }
+}
+
+@NodeInjectable()
+class FactoryService {
+  private readonly injector = nodeInject(Injector);
+
+  public createHandler() {
+    // Create a new handler instance with dependencies injected
+    return this.injector.produce(RequestHandler);
+  }
+}
+
+const container = new NodeContainer();
+container.provide([Logger, FactoryService]);
+container.bootstrap();
+
+const factory = container.get(FactoryService);
+const handler1 = factory.createHandler();
+const handler2 = factory.createHandler();
+// handler1 !== handler2 (new instance each time)
 ```
 
 This is particularly useful for:
 - **Dynamic service loading**: Retrieve services based on runtime conditions
 - **Plugin systems**: Load plugins dynamically from a registry
 - **Factory patterns**: Create instances with dependencies injected from the container
+- **Transient instances**: Create new instances on-demand that aren't singletons
 - **Service locator pattern**: When you need access to multiple services conditionally
 
 ### Circular Dependencies
