@@ -1,7 +1,7 @@
 import type { NodeInjectFn } from "../api";
 import { NodeContainer } from "../container";
 import { InjectionError } from "../errors";
-import type { iNodeInjectorOptions, iNodeProviderSet, Token } from "../types";
+import type { iNodeInjectorOptions, iNodeProviderSet, Providable, Token } from "../types";
 
 /**
  * Spectator object returned by test factory functions.
@@ -34,7 +34,9 @@ export type TestFactoryFn<T> = (() => iSpectator<T>) & iTestFactory;
  */
 export interface iTestFactoryConfig<T> {
   readonly target: Token<T>;
+  /** @deprecated */
   readonly providers?: iNodeProviderSet;
+  readonly provide?: Providable<unknown>[];
 }
 
 /**
@@ -50,6 +52,7 @@ export function createTestFactory<T>(cfg: iTestFactoryConfig<T>): TestFactoryFn<
     const container = new NodeContainer();
 
     if (cfg.providers) container.include(cfg.providers);
+    if (cfg.provide) container.provide(cfg.provide);
     container.provide(cfg.target);
 
     container.bootstrap();

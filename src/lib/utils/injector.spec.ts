@@ -1,6 +1,6 @@
 import { MultiNodeToken, NodeInjectable, NodeToken, nodeInject } from "../api";
 import { NodeContainer } from "../container";
-import { Injector, InjectorImpl } from "./utils";
+import { Injector, InjectorImpl } from "./injector";
 
 describe("InjectorImpl", () => {
   describe("get", () => {

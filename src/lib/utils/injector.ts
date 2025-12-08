@@ -23,6 +23,9 @@ export interface iInjector {
 export class InjectorImpl implements iInjector {
   constructor(public readonly container: iDIContainer) {}
 
+  public get<T>(token: MultiNodeToken<T>): T[];
+  public get<T>(token: NodeToken<T>): T;
+  public get<T>(token: Ctor<T>): T;
   public get<T>(token: Token<T>): T | T[] {
     return this.container.get<T>(token as any);
   }

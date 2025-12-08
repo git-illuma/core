@@ -79,6 +79,11 @@ export class NodeContainer implements iDIContainer {
       throw InjectionError.bootstrapped();
     }
 
+    if (Array.isArray(provider)) {
+      for (const item of provider) this.provide(item);
+      return;
+    }
+
     // Handle node token declarations
     if (provider instanceof MultiNodeToken) {
       if (this._multiProtoNodes.has(provider)) {
@@ -164,6 +169,7 @@ export class NodeContainer implements iDIContainer {
   }
 
   /**
+   * @deprecated Use {@link provide} instead.
    * Includes a provider set (group of providers) into the container.
    * This is useful for organizing related providers together.
    *

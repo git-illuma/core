@@ -1,9 +1,9 @@
-import { createProviderSet, NodeInjectable, NodeToken } from "../api";
+import { createProviderSet, MultiNodeToken, NodeInjectable, NodeToken } from "../api";
 import { NodeContainer } from "../container";
 import { InjectionError } from "../errors";
-import { injectAsync, injectChildrenAsync } from "./inheritance";
+import { injectAsync, injectChildrenAsync, injectGroupAsync } from "./inheritance";
 
-describe("injectChildrenAsync", () => {
+describe("[BC] injectChildrenAsync", () => {
   it("should throw when called outside injection context", () => {
     expect(() => injectChildrenAsync(() => createProviderSet())).toThrow(InjectionError);
   });
@@ -172,5 +172,185 @@ describe("injectAsync", () => {
     const service2 = await parentService.getService();
 
     expect(service1).not.toBe(service2);
+  });
+});
+
+describe("injectGroupAsync", () => {
+  it("should work with array providers in sub-container", async () => {
+    const parent = new NodeContainer();
+    const childTokenA = new NodeToken<string>("childTokenA");
+    const childTokenB = new NodeToken<string>("childTokenB");
+
+    @NodeInjectable()
+    class ParentService {
+      private readonly _getSubContainer = injectGroupAsync(() => [
+        { provide: childTokenA, value: "child-value-a" },
+        { provide: childTokenB, value: "child-value-b" },
+      ]);
+
+      public createSubContainer() {
+        return this._getSubContainer();
+      }
+    }
+
+    parent.provide(ParentService);
+    parent.bootstrap();
+
+    const parentService = parent.get(ParentService);
+    const subInjector = await parentService.createSubContainer();
+
+    expect(subInjector.get(childTokenA)).toBe("child-value-a");
+    expect(subInjector.get(childTokenB)).toBe("child-value-b");
+  });
+
+  it("should support nested array providers in sub-container", async () => {
+    const parent = new NodeContainer();
+    const tokenA = new NodeToken<string>("tokenA");
+    const tokenB = new NodeToken<string>("tokenB");
+    const tokenC = new NodeToken<string>("tokenC");
+
+    @NodeInjectable()
+    class ParentService {
+      private readonly _getSubContainer = injectGroupAsync(() => [
+        [{ provide: tokenA, value: "value-a" }],
+        [{ provide: tokenB, value: "value-b" }, [{ provide: tokenC, value: "value-c" }]],
+      ]);
+
+      public createSubContainer() {
+        return this._getSubContainer();
+      }
+    }
+
+    parent.provide(ParentService);
+    parent.bootstrap();
+
+    const parentService = parent.get(ParentService);
+    const subInjector = await parentService.createSubContainer();
+
+    expect(subInjector.get(tokenA)).toBe("value-a");
+    expect(subInjector.get(tokenB)).toBe("value-b");
+    expect(subInjector.get(tokenC)).toBe("value-c");
+  });
+
+  it("should support mixed array of classes and providers in sub-container", async () => {
+    const parent = new NodeContainer();
+    const token = new NodeToken<string>("token");
+
+    @NodeInjectable()
+    class ChildService {
+      public readonly value = "child-service";
+    }
+
+    @NodeInjectable()
+    class ParentService {
+      private readonly _getSubContainer = injectGroupAsync(() => [
+        ChildService,
+        { provide: token, value: "token-value" },
+      ]);
+
+      public createSubContainer() {
+        return this._getSubContainer();
+      }
+    }
+
+    parent.provide(ParentService);
+    parent.bootstrap();
+
+    const parentService = parent.get(ParentService);
+    const subInjector = await parentService.createSubContainer();
+
+    expect(subInjector.get(ChildService)).toBeInstanceOf(ChildService);
+    expect(subInjector.get(ChildService).value).toBe("child-service");
+    expect(subInjector.get(token)).toBe("token-value");
+  });
+
+  it("should support multi-token providers in array for sub-container", async () => {
+    const parent = new NodeContainer();
+    const multiToken = new MultiNodeToken<{ name: string }>("MULTI");
+
+    @NodeInjectable()
+    class PluginA {
+      public readonly name = "plugin-a";
+    }
+
+    @NodeInjectable()
+    class PluginB {
+      public readonly name = "plugin-b";
+    }
+
+    @NodeInjectable()
+    class ParentService {
+      private readonly _getSubContainer = injectGroupAsync(() => [
+        { provide: multiToken, alias: PluginA },
+        { provide: multiToken, alias: PluginB },
+      ]);
+
+      public createSubContainer() {
+        return this._getSubContainer();
+      }
+    }
+
+    parent.provide(ParentService);
+    parent.bootstrap();
+
+    const parentService = parent.get(ParentService);
+    const subInjector = await parentService.createSubContainer();
+
+    const plugins = subInjector.get(multiToken);
+    expect(plugins).toHaveLength(2);
+    expect(plugins.map((p) => p.name)).toEqual(
+      expect.arrayContaining(["plugin-a", "plugin-b"]),
+    );
+  });
+
+  it("should cache by default", async () => {
+    const parent = new NodeContainer();
+    const token = new NodeToken<string>("TOKEN");
+
+    @NodeInjectable()
+    class ParentService {
+      private readonly _getSubContainer = injectGroupAsync(() => [
+        { provide: token, value: "value" },
+      ]);
+
+      public createSubContainer() {
+        return this._getSubContainer();
+      }
+    }
+
+    parent.provide(ParentService);
+    parent.bootstrap();
+
+    const parentService = parent.get(ParentService);
+    const subInjector1 = await parentService.createSubContainer();
+    const subInjector2 = await parentService.createSubContainer();
+
+    expect(subInjector1).toBe(subInjector2);
+  });
+
+  it("should not cache when withCache is false", async () => {
+    const parent = new NodeContainer();
+    const token = new NodeToken<string>("TOKEN");
+
+    @NodeInjectable()
+    class ParentService {
+      private readonly _getSubContainer = injectGroupAsync(
+        () => [{ provide: token, value: "value" }],
+        { withCache: false },
+      );
+
+      public createSubContainer() {
+        return this._getSubContainer();
+      }
+    }
+
+    parent.provide(ParentService);
+    parent.bootstrap();
+
+    const parentService = parent.get(ParentService);
+    const subInjector1 = await parentService.createSubContainer();
+    const subInjector2 = await parentService.createSubContainer();
+
+    expect(subInjector1).not.toBe(subInjector2);
   });
 });

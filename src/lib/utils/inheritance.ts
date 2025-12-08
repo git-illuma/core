@@ -1,9 +1,9 @@
 import type { MultiNodeToken, NodeToken } from "../api";
 import { extractToken, nodeInject } from "../api";
 import { NodeContainer } from "../container";
-import type { Ctor, iNodeProviderSet, Token } from "../types";
-import type { iInjector } from "./utils";
-import { Injector } from "./utils";
+import type { Ctor, iNodeProviderSet, Providable, Token } from "../types";
+import type { iInjector } from "./injector";
+import { Injector } from "./injector";
 
 type MaybeAsyncFactory<T> = () => T | Promise<T>;
 interface iInjectionOptions {
@@ -16,12 +16,14 @@ interface iInjectionOptions {
 }
 
 /**
+ * @deprecated Use array of providers with {@link injectGroupAsync} instead.
+ *
  * Creates an async function that injects a sub-container with the given dependencies.
  * The returned function, when called, will create a new sub-container,
  * include the provided dependencies, bootstrap it, and return its injector.
  *
  * @note
- * `injectContainer` should be called within an injection context where the parent container is accessible.
+ * `injectChildrenAsync` should be called within an injection context where the parent container is accessible.
  *
  * @param fn - A function that returns a provider set or a promise resolving to one
  * @returns A function that returns a promise resolving to the injector of the sub-container
@@ -36,6 +38,42 @@ export function injectChildrenAsync(
 
     const subContainer = new NodeContainer({ parent });
     subContainer.include(providerSet);
+    subContainer.bootstrap();
+
+    return subContainer.get(Injector);
+  };
+
+  const withCache = opts?.withCache ?? true;
+  if (!withCache) return factory;
+
+  let cache: Promise<iInjector> | null = null;
+  return () => {
+    cache ??= factory();
+    return cache;
+  };
+}
+
+/**
+ * Creates an async function that injects a group of dependencies as a sub-container.
+ * The returned function, when called, will create a new sub-container, provide the given dependencies,
+ * bootstrap it, and return its injector.
+ *
+ * @note
+ * `injectGroupAsync` should be called within an injection context where the parent container is accessible.
+ *
+ * @param fn - A function that returns an array of providers or a promise resolving to one
+ * @returns A function that returns a promise resolving to the injector of the sub-container
+ */
+export function injectGroupAsync(
+  fn: MaybeAsyncFactory<Providable<unknown>[]>,
+  opts?: iInjectionOptions,
+): () => Promise<iInjector> {
+  const { container: parent } = nodeInject(Injector);
+  const factory = async () => {
+    const providers = await fn();
+
+    const subContainer = new NodeContainer({ parent });
+    subContainer.provide(providers);
     subContainer.bootstrap();
 
     return subContainer.get(Injector);

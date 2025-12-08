@@ -182,4 +182,184 @@ describe("Testkit Helpers", () => {
     const missingToken = new NodeToken("missing");
     expect(() => spectator.nodeInject(missingToken)).toThrow(InjectionError);
   });
+
+  describe("Array providers API", () => {
+    it("should support array of providers via provide property", () => {
+      const tokenA = new NodeToken<string>("TOKEN_A");
+      const tokenB = new NodeToken<number>("TOKEN_B");
+
+      @NodeInjectable()
+      class Service {
+        public readonly a = nodeInject(tokenA);
+        public readonly b = nodeInject(tokenB);
+      }
+
+      const createProvider = createTestFactory({
+        target: Service,
+        provide: [
+          { provide: tokenA, value: "value-a" },
+          { provide: tokenB, value: 42 },
+        ],
+      });
+
+      const spectator = createProvider();
+      expect(spectator.instance.a).toBe("value-a");
+      expect(spectator.instance.b).toBe(42);
+    });
+
+    it("should support mixed array of providers and classes", () => {
+      const token = new NodeToken<string>("TOKEN");
+
+      @NodeInjectable()
+      class DependencyService {
+        public readonly value = "dependency";
+      }
+
+      @NodeInjectable()
+      class Service {
+        public readonly dep = nodeInject(DependencyService);
+        public readonly tokenValue = nodeInject(token);
+      }
+
+      const createProvider = createTestFactory({
+        target: Service,
+        provide: [DependencyService, { provide: token, value: "token-value" }],
+      });
+
+      const spectator = createProvider();
+      expect(spectator.instance.dep).toBeInstanceOf(DependencyService);
+      expect(spectator.instance.dep.value).toBe("dependency");
+      expect(spectator.instance.tokenValue).toBe("token-value");
+    });
+
+    it("should support nested arrays of providers", () => {
+      const tokenA = new NodeToken<string>("TOKEN_A");
+      const tokenB = new NodeToken<string>("TOKEN_B");
+      const tokenC = new NodeToken<string>("TOKEN_C");
+
+      @NodeInjectable()
+      class Service {
+        public readonly a = nodeInject(tokenA);
+        public readonly b = nodeInject(tokenB);
+        public readonly c = nodeInject(tokenC);
+      }
+
+      const createProvider = createTestFactory({
+        target: Service,
+        provide: [
+          [{ provide: tokenA, value: "value-a" }],
+          [
+            { provide: tokenB, value: "value-b" },
+            [{ provide: tokenC, value: "value-c" }],
+          ],
+        ],
+      });
+
+      const spectator = createProvider();
+      expect(spectator.instance.a).toBe("value-a");
+      expect(spectator.instance.b).toBe("value-b");
+      expect(spectator.instance.c).toBe("value-c");
+    });
+
+    it("should support multi-token providers in arrays", () => {
+      const multiToken = new MultiNodeToken<{ name: string }>("MULTI");
+
+      @NodeInjectable()
+      class PluginA {
+        public readonly name = "plugin-a";
+      }
+
+      @NodeInjectable()
+      class PluginB {
+        public readonly name = "plugin-b";
+      }
+
+      @NodeInjectable()
+      class Service {
+        public readonly plugins = nodeInject(multiToken);
+      }
+
+      const createProvider = createTestFactory({
+        target: Service,
+        provide: [
+          { provide: multiToken, alias: PluginA },
+          { provide: multiToken, alias: PluginB },
+        ],
+      });
+
+      const spectator = createProvider();
+      expect(spectator.instance.plugins).toHaveLength(2);
+      expect(spectator.instance.plugins.map((p) => p.name)).toEqual(
+        expect.arrayContaining(["plugin-a", "plugin-b"]),
+      );
+    });
+
+    it("should allow combining provide array with deprecated providers", () => {
+      const tokenA = new NodeToken<string>("TOKEN_A");
+      const tokenB = new NodeToken<string>("TOKEN_B");
+
+      @NodeInjectable()
+      class Service {
+        public readonly a = nodeInject(tokenA);
+        public readonly b = nodeInject(tokenB);
+      }
+
+      const createProvider = createTestFactory({
+        target: Service,
+        providers: createProviderSet({ provide: tokenA, value: "from-provider-set" }),
+        provide: [{ provide: tokenB, value: "from-provide-array" }],
+      });
+
+      const spectator = createProvider();
+      expect(spectator.instance.a).toBe("from-provider-set");
+      expect(spectator.instance.b).toBe("from-provide-array");
+    });
+
+    it("should support factory providers in arrays", () => {
+      const tokenA = new NodeToken<string>("TOKEN_A");
+      const tokenB = new NodeToken<() => string>("TOKEN_B");
+
+      @NodeInjectable()
+      class Service {
+        public readonly a = nodeInject(tokenA);
+        public readonly b = nodeInject(tokenB);
+      }
+
+      const createProvider = createTestFactory({
+        target: Service,
+        provide: [
+          { provide: tokenA, factory: () => "factory-a" },
+          { provide: tokenB, factory: () => () => "factory-b" },
+        ],
+      });
+
+      const spectator = createProvider();
+      expect(spectator.instance.a).toBe("factory-a");
+      expect(spectator.instance.b()).toBe("factory-b");
+    });
+
+    it("should support class providers in arrays", () => {
+      const token = new NodeToken<{ getValue: () => string }>("TOKEN");
+
+      class Implementation {
+        getValue() {
+          return "implementation";
+        }
+      }
+
+      @NodeInjectable()
+      class Service {
+        public readonly impl = nodeInject(token);
+      }
+
+      const createProvider = createTestFactory({
+        target: Service,
+        provide: [{ provide: token, useClass: Implementation }],
+      });
+
+      const spectator = createProvider();
+      expect(spectator.instance.impl).toBeInstanceOf(Implementation);
+      expect(spectator.instance.impl.getValue()).toBe("implementation");
+    });
+  });
 });

@@ -20,10 +20,10 @@ The main dependency injection container.
 
 #### `provide<T>(provider: Providable<T>): void`
 
-Register a provider in the container.
+Register a provider or array of providers in the container.
 
 **Parameters:**
-- `provider` - A provider configuration object or injectable class
+- `provider` - A provider configuration object, injectable class, or array of providers
 
 **Example:**
 ```typescript
@@ -32,13 +32,38 @@ import { NodeContainer, NodeToken } from '@zodyac/illuma';
 const container = new NodeContainer();
 const CONFIG = new NodeToken<Config>('CONFIG');
 
+// Single provider
 container.provide({
   provide: CONFIG,
   value: { apiUrl: 'https://api.example.com' }
 });
+
+// Array of providers (recommended)
+container.provide([
+  UserService,
+  DatabaseService,
+  {
+    provide: CONFIG,
+    value: { apiUrl: 'https://api.example.com' }
+  },
+]);
+
+// Nested arrays are supported
+container.provide([
+  UserService,
+  [
+    DatabaseService,
+    {
+      provide: CONFIG,
+      value: { apiUrl: 'https://api.example.com' }
+    },
+  ],
+]);
 ```
 
-#### `include(providerSet: iNodeProviderSet): void`
+#### `include(providerSet: iNodeProviderSet): void` (Deprecated)
+
+> **Deprecated:** Use `provide()` with an array of providers instead.
 
 Include a provider set in the container.
 
@@ -55,7 +80,10 @@ const providers = createProviderSet(
 );
 
 const container = new NodeContainer();
-container.include(providers);
+container.include(providers); // deprecated
+
+// Recommended instead:
+container.provide([UserService, DatabaseService]);
 ```
 
 #### `bootstrap(): void`
@@ -293,6 +321,142 @@ container.provide({
 container.bootstrap();
 
 const dbInstance = container.get(DB); // Resolves to PRIMARY_DB instance
+```
+
+---
+
+## Async Injection Functions
+
+### injectGroupAsync
+
+Creates an async function that injects a group of dependencies as an isolated sub-container.
+
+**Function Signature:**
+```typescript
+function injectGroupAsync(
+  fn: () => Providable<unknown>[] | Promise<Providable<unknown>[]>,
+  options?: { withCache?: boolean }
+): () => Promise<iInjector>
+```
+
+**Parameters:**
+- `fn` - A function that returns an array of providers or a promise resolving to one
+- `options.withCache` - If `true` (default), caches the sub-container instance
+
+**Returns:** A function that returns a promise resolving to the injector of the sub-container
+
+**Example:**
+```typescript
+// In plugins.ts
+
+export function providePlugins() {
+  return [
+    { provide: PLUGIN_TOKEN, value: new PluginA() },
+    { provide: PLUGIN_TOKEN, value: new PluginB() },
+  ];
+}
+
+// In plugin-host.ts
+
+import { injectGroupAsync, NodeInjectable } from '@zodyac/illuma';
+
+@NodeInjectable()
+class PluginHost {
+  private readonly getPluginContainer = injectGroupAsync(
+    () => import('./plugins').then(m => m.providePlugins()),
+  );
+
+  async executePlugins() {
+    const injector = await this.getPluginContainer();
+    const plugins = injector.get(PLUGIN_TOKEN);
+    for (const p of plugins) p.execute();
+  }
+}
+```
+
+### injectChildrenAsync (Deprecated)
+
+> **Deprecated:** Use `injectGroupAsync()` with array providers instead.
+
+Creates an async function that injects a sub-container with the given dependencies.
+
+**Function Signature:**
+```typescript
+function injectChildrenAsync(
+  fn: () => iNodeProviderSet | Promise<iNodeProviderSet>,
+  options?: { withCache?: boolean }
+): () => Promise<iInjector>
+```
+
+### injectAsync
+
+Creates an async function that injects a single dependency lazily.
+
+**Function Signature:**
+```typescript
+function injectAsync<T>(
+  fn: () => Token<T> | Promise<Token<T>>,
+  options?: { withCache?: boolean }
+): () => Promise<T | T[]>
+```
+
+**Parameters:**
+- `fn` - A function that returns a token/class or a promise resolving to one
+- `options.withCache` - If `true` (default), caches the resolved instance
+
+**Returns:** A function that returns a promise resolving to the dependency instance
+
+**Example:**
+```typescript
+import { injectAsync, NodeInjectable } from '@zodyac/illuma';
+
+@NodeInjectable()
+class FeatureService {
+  private readonly getAnalytics = injectAsync(
+    () => import('./analytics').then(m => m.AnalyticsService),
+  );
+
+  async trackEvent(event: string) {
+    const analytics = await this.getAnalytics();
+    analytics.track(event);
+  }
+}
+```
+
+---
+
+## Utility Functions
+
+### createProviderSet (Deprecated)
+
+> **Deprecated:** Use array providers with `provide()` instead.
+
+Creates a reusable set of providers that can be included in a container.
+
+**Function Signature:**
+```typescript
+function createProviderSet(
+  ...providers: (iNodeProvider<unknown> | Ctor<unknown>)[]
+): iNodeProviderSet
+```
+
+**Example:**
+```typescript
+import { createProviderSet } from '@zodyac/illuma';
+
+// Deprecated
+const providers = createProviderSet(
+  UserService,
+  { provide: CONFIG, value: config }
+);
+
+container.include(providers);
+
+// Recommended instead
+container.provide([
+  UserService,
+  { provide: CONFIG, value: config }
+]);
 ```
 
 ---

@@ -299,7 +299,51 @@ class MyService {
 
 ## 📦 Provider Sets
 
-Group related providers together:
+### Array Providers (Recommended)
+
+Group related providers together using arrays:
+
+```typescript
+import { NodeContainer } from '@zodyac/illuma';
+
+const container = new NodeContainer();
+
+// Provide an array of providers
+container.provide([
+  Database,
+  UserRepository,
+  ProductRepository,
+  {
+    provide: CONNECTION_TOKEN,
+    factory: () => createConnection()
+  }
+]);
+
+container.bootstrap();
+```
+
+Arrays can be nested for better organization:
+
+```typescript
+const databaseProviders = [
+  Database,
+  { provide: CONNECTION_TOKEN, factory: () => createConnection() }
+];
+
+const repositoryProviders = [
+  UserRepository,
+  ProductRepository
+];
+
+container.provide([
+  databaseProviders,
+  repositoryProviders
+]);
+```
+
+### Provider Sets (Deprecated)
+
+> **Note:** `createProviderSet` is deprecated. Use array providers instead.
 
 ```typescript
 import { createProviderSet } from '@zodyac/illuma';
@@ -315,7 +359,7 @@ const databaseProviders = createProviderSet(
 );
 
 const container = new NodeContainer();
-container.include(databaseProviders);
+container.include(databaseProviders); // deprecated
 container.bootstrap();
 ```
 
@@ -440,10 +484,8 @@ Or, create isolated sub-containers:
 ```typescript
 
 // In plugins.ts
-import { createProviderSet } from '@zodyac/illuma';
-
 export function providePlugins() {
-  return createProviderSet(
+  return [
     {
       provide: PLUGIN_TOKEN,
       factory: () => new PluginA(),
@@ -452,14 +494,16 @@ export function providePlugins() {
       provide: PLUGIN_TOKEN,
       factory: () => new PluginB(),
     }
-  );
+  ];
 }
 
 // In plugin-host.ts 
+import { injectGroupAsync } from '@zodyac/illuma';
+
 @NodeInjectable()
 class PluginHost {
   // Create an isolated sub-container for plugins
-  private readonly getPluginContainer = injectChildrenAsync(
+  private readonly getPluginContainer = injectGroupAsync(
     () => import('./plugins').then((m) => m.providePlugins()),
   );
 
@@ -471,6 +515,8 @@ class PluginHost {
 }
 ```
 
+> **Note:** `injectChildrenAsync` is deprecated. Use `injectGroupAsync` with array providers instead.
+
 For comprehensive documentation on async injection patterns, see **[Async Injection Guide (INHERITANCE.md)](./docs/INHERITANCE.md)**.
 
 ## 🧪 Testing
@@ -481,12 +527,11 @@ Illuma provides a dedicated testkit to make testing services with dependency inj
 
 ```typescript
 import { createTestFactory } from '@zodyac/illuma/testkit';
-import { createProviderSet } from '@zodyac/illuma';
 
 describe('UserService', () => {
   const createTest = createTestFactory({
     target: UserService,
-    providers: createProviderSet(Logger),
+    provide: [Logger], // Use array of providers
   });
 
   it('should fetch user', () => {
@@ -505,10 +550,23 @@ import { createTestFactory } from '@zodyac/illuma/testkit';
 
 const createTest = createTestFactory({
   target: UserService,
-  providers: createProviderSet({
-    provide: Logger,
-    useClass: MockLogger,
-  }),
+  provide: [
+    {
+      provide: Logger,
+      useClass: MockLogger,
+    }
+  ],
+});
+```
+
+### Legacy API (Deprecated)
+
+```typescript
+import { createProviderSet } from '@zodyac/illuma';
+
+const createTest = createTestFactory({
+  target: UserService,
+  providers: createProviderSet(Logger), // deprecated
 });
 ```
 

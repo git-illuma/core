@@ -1,2 +1,2 @@
 export * from "./inheritance";
-export * from "./utils";
+export * from "./injector";

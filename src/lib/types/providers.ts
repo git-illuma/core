@@ -84,4 +84,8 @@ export type iNodeProvider<T> =
  * @template T - The type of value being provided
  */
 
-export type Providable<T> = NodeBase<T> | iNodeProvider<T> | Ctor<T>;
+export type Providable<T> =
+  | NodeBase<T>
+  | iNodeProvider<T>
+  | Ctor<T>
+  | Providable<unknown>[];
