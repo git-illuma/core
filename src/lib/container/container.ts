@@ -131,8 +131,9 @@ export class NodeContainer implements iDIContainer {
     }
 
     // Extract token and retriever from provider object or constructor
-    const token = extractToken((<iNodeProvider<T>>provider).provide);
-    const retriever = extractProvider<T>(provider);
+    const obj = provider as iNodeProvider<T>;
+    const token = extractToken(obj.provide);
+    const retriever = extractProvider<T>(obj);
 
     if (token instanceof MultiNodeToken) {
       const multiProto = this._multiProtoNodes.get(token);

@@ -134,9 +134,8 @@ export function extractToken<T>(
   isAlias = false,
 ): NodeToken<T> | MultiNodeToken<T> {
   let token: NodeBase<T> | null = null;
-  if (isInjectable(provider)) {
-    const node = getInjectableToken(provider);
-    if (isNodeBase<T>(node)) token = node;
+  if (isInjectable<T>(provider)) {
+    token = getInjectableToken<T>(provider);
   } else if (isNodeBase<T>(provider)) token = provider;
 
   if (!token || !isNodeBase<T>(token)) {

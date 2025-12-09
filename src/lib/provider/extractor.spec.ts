@@ -1,21 +1,11 @@
-import { MultiNodeToken, NodeToken } from "../api";
+import { NodeToken } from "../api";
 import { InjectionError } from "../errors";
 import { extractProvider } from "./extractor";
 
 describe("extractProvider", () => {
-  it("should return NodeToken as is", () => {
-    const token = new NodeToken("test");
-    expect(extractProvider(token)).toBe(token);
-  });
-
-  it("should return MultiNodeToken as is", () => {
-    const token = new MultiNodeToken("test");
-    expect(extractProvider(token)).toBe(token);
-  });
-
-  it("should return function as is", () => {
+  it("should throw on plain function", () => {
     const fn = () => "test";
-    expect(extractProvider(fn)).toBe(fn);
+    expect(() => extractProvider(fn as any)).toThrow(InjectionError);
   });
 
   it("should extract value provider", () => {

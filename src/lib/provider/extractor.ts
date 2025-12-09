@@ -1,21 +1,9 @@
 import type { NodeBase } from "../api";
-import {
-  extractToken,
-  getInjectableToken,
-  isInjectable,
-  MultiNodeToken,
-  NodeToken,
-} from "../api";
+import { extractToken } from "../api";
 import { InjectionError } from "../errors";
-import type { Providable } from "../types";
+import type { iNodeProvider } from "../types";
 
-export function extractProvider<T>(provider: Providable<T>): NodeBase<T> | (() => T) {
-  if (provider instanceof NodeToken || provider instanceof MultiNodeToken) {
-    return provider;
-  }
-
-  if (isInjectable<T>(provider)) return getInjectableToken<T>(provider);
-
+export function extractProvider<T>(provider: iNodeProvider<T>): NodeBase<T> | (() => T) {
   if ("value" in provider) return () => provider.value;
   if ("factory" in provider) return provider.factory;
   if ("useClass" in provider) return () => new provider.useClass();
