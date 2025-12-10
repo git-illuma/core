@@ -6,6 +6,10 @@ on:
       release-type:
         description: "Release type (one of): patch, minor, major, prepatch, preminor, premajor, prerelease"
         required: true
+
+permissions:
+  id-token: write  # Required for OIDC
+
 jobs:
   release:
     runs-on: ubuntu-latest
