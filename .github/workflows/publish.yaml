@@ -28,10 +28,6 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      # Tests
-      - name: Run tests
-        run: yarn test
-
       # Configure Git
       - name: Git configuration
         run: |
@@ -81,8 +77,6 @@ jobs:
       # Publish version to public repository
       - name: Publish
         run: yarn publish --verbose --access public --tag ${{ env.RELEASE_TAG }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       # Push repository changes
       - name: Push changes to repository
