@@ -76,6 +76,28 @@ describe("NodeContainer", () => {
       expect(instance.value).toBe("class-value");
     });
 
+    it("should prefer token factory for decorated class", () => {
+      const container = new NodeContainer();
+      const spyFn = jest.fn(() => ({ value: "from-factory" }));
+
+      @NodeInjectable()
+      class TestClass {
+        public readonly value = "class-value";
+      }
+
+      const t = extractToken(TestClass);
+      if (!t.opts) throw new Error("Token options missing");
+      (t.opts.factory as any) = spyFn;
+
+      container.provide(TestClass);
+
+      container.bootstrap();
+
+      const instance = container.get(TestClass);
+      expect(spyFn).toHaveBeenCalled();
+      expect(instance.value).toBe("from-factory");
+    });
+
     it("should override with class", () => {
       const container = new NodeContainer();
 

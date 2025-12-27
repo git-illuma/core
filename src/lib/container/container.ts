@@ -127,7 +127,7 @@ export class NodeContainer extends PluginContainer implements iDIContainer {
       const existing = this._protoNodes.get(token);
       if (existing?.hasFactory()) throw InjectionError.duplicate(token);
 
-      const factory = () => new provider();
+      const factory = token.opts?.factory ?? (() => new provider());
       if (existing) {
         existing.setFactory(factory);
         return;
