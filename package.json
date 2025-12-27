@@ -24,9 +24,9 @@
       "require": "./dist/testkit.cjs"
     },
     "./plugins": {
-      "types": "./dist/plugins/index.d.ts",
-      "import": "./dist/plugins/index.js",
-      "require": "./dist/plugins/index.cjs"
+      "types": "./dist/plugins.d.ts",
+      "import": "./dist/plugins.js",
+      "require": "./dist/plugins.cjs"
     }
   },
   "private": false,
