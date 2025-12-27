@@ -22,6 +22,11 @@
       "types": "./dist/testkit.d.ts",
       "import": "./dist/testkit.js",
       "require": "./dist/testkit.cjs"
+    },
+    "./plugins": {
+      "types": "./dist/plugins/index.d.ts",
+      "import": "./dist/plugins/index.js",
+      "require": "./dist/plugins/index.cjs"
     }
   },
   "private": false,

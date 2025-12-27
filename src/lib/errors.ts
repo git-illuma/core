@@ -59,21 +59,21 @@ export class InjectionError extends Error {
   public static notBootstrapped(): InjectionError {
     return new InjectionError(
       300,
-      `Cannot retrieve providers before the container has been bootstrapped.`,
+      "Cannot retrieve providers before the container has been bootstrapped.",
     );
   }
 
   public static bootstrapped(): InjectionError {
     return new InjectionError(
       301,
-      `Cannot modify providers after the container has been bootstrapped.`,
+      "Cannot modify providers after the container has been bootstrapped.",
     );
   }
 
   public static doubleBootstrap(): InjectionError {
     return new InjectionError(
       302,
-      `Container has already been bootstrapped and cannot be bootstrapped again.`,
+      "Container has already been bootstrapped and cannot be bootstrapped again.",
     );
   }
 
@@ -122,7 +122,7 @@ export class InjectionError extends Error {
   public static calledUtilsOutsideContext(): InjectionError {
     return new InjectionError(
       502,
-      `Cannot call injection utilities outside of an injection context.`,
+      "Cannot call injection utilities outside of an injection context.",
     );
   }
 
@@ -136,7 +136,7 @@ export class InjectionError extends Error {
   public static accessFailed(): InjectionError {
     return new InjectionError(
       504,
-      `Failed to access the requested instance due to an unknown error.`,
+      "Failed to access the requested instance due to an unknown error.",
     );
   }
 }

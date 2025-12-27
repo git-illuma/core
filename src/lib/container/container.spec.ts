@@ -9,6 +9,8 @@ import {
   nodeInject,
 } from "../api";
 import { InjectionError } from "../errors";
+import { PluginContainer } from "../plugins/core/plugin-container";
+import type { TreeNode } from "../provider";
 import { NodeContainer } from "./container";
 
 describe("NodeContainer", () => {
@@ -1759,7 +1761,7 @@ describe("NodeContainer", () => {
       consoleLogSpy.mockRestore();
     });
 
-    it("should not log diagnostics when disabled", () => {
+    it("should not call diagnostics plugins when disabled", () => {
       const container = new NodeContainer({ diagnostics: false });
       const token = new NodeToken<string>("Token");
 
@@ -1775,7 +1777,67 @@ describe("NodeContainer", () => {
       );
     });
 
-    it("should log diagnostics when enabled", () => {
+    it("should call registered diagnostics modules when enabled", () => {
+      const mockDiagnosticsModule = {
+        onReport: jest.fn(),
+      };
+
+      PluginContainer.extendDiagnostics(mockDiagnosticsModule);
+
+      const container = new NodeContainer({ diagnostics: true });
+      const token = new NodeToken<string>("Token");
+
+      container.provide({
+        provide: token,
+        value: "value",
+      });
+
+      container.bootstrap();
+
+      expect(mockDiagnosticsModule.onReport).toHaveBeenCalledWith(
+        expect.objectContaining({
+          totalNodes: expect.any(Number),
+          unusedNodes: expect.any(Array),
+          bootstrapDuration: expect.any(Number),
+        }),
+      );
+    });
+
+    it("should pass correct report data to diagnostics modules", () => {
+      const mockDiagnosticsModule = {
+        onReport: jest.fn(),
+      };
+
+      PluginContainer.extendDiagnostics(mockDiagnosticsModule);
+
+      const container = new NodeContainer({ diagnostics: true });
+      const usedToken = new NodeToken<string>("Used");
+      const unusedToken = new NodeToken<string>("Unused");
+
+      container.provide({
+        provide: usedToken,
+        value: "used",
+      });
+
+      container.provide({
+        provide: unusedToken,
+        value: "unused",
+      });
+
+      container.bootstrap();
+
+      expect(mockDiagnosticsModule.onReport).toHaveBeenCalled();
+      const report = mockDiagnosticsModule.onReport.mock.calls[0][0];
+
+      expect(report.totalNodes).toBeGreaterThan(0);
+      expect(report.unusedNodes).toBeInstanceOf(Array);
+      expect(report.bootstrapDuration).toBeGreaterThanOrEqual(0);
+      expect(
+        report.unusedNodes.some((node: TreeNode) => node.toString().includes("Unused")),
+      ).toBe(true);
+    });
+
+    it("should call default diagnostics reporter when enabled", () => {
       const container = new NodeContainer({ diagnostics: true });
       const token = new NodeToken<string>("Token");
 
@@ -1847,11 +1909,65 @@ describe("NodeContainer", () => {
 
       container.bootstrap();
 
-      // Multi token should be unused if not injected (+ Injector = 2 total)
+      // Multi token should be unused if not injected
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining("2 were not used"),
+        expect.stringContaining("1 were not used"),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("Multi"));
+    });
+
+    it("should call multiple diagnostics modules in sequence", () => {
+      const mockModule1 = {
+        onReport: jest.fn(),
+      };
+      const mockModule2 = {
+        onReport: jest.fn(),
+      };
+
+      PluginContainer.extendDiagnostics(mockModule1);
+      PluginContainer.extendDiagnostics(mockModule2);
+
+      const container = new NodeContainer({ diagnostics: true });
+      const token = new NodeToken<string>("Token");
+
+      container.provide({
+        provide: token,
+        value: "value",
+      });
+
+      container.bootstrap();
+
+      expect(mockModule1.onReport).toHaveBeenCalled();
+      expect(mockModule2.onReport).toHaveBeenCalled();
+
+      // Both should receive the same report
+      const report1 = mockModule1.onReport.mock.calls[0][0];
+      const report2 = mockModule2.onReport.mock.calls[0][0];
+
+      expect(report1.totalNodes).toBe(report2.totalNodes);
+      expect(report1.unusedNodes.length).toBe(report2.unusedNodes.length);
+    });
+
+    it("should include bootstrap duration in diagnostics report", () => {
+      const mockDiagnosticsModule = {
+        onReport: jest.fn(),
+      };
+
+      PluginContainer.extendDiagnostics(mockDiagnosticsModule);
+
+      const container = new NodeContainer({ diagnostics: true });
+      const token = new NodeToken<string>("Token");
+
+      container.provide({
+        provide: token,
+        value: "value",
+      });
+
+      container.bootstrap();
+
+      const report = mockDiagnosticsModule.onReport.mock.calls[0][0];
+      expect(report.bootstrapDuration).toBeGreaterThanOrEqual(0);
+      expect(typeof report.bootstrapDuration).toBe("number");
     });
   });
 });

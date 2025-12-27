@@ -11,6 +11,8 @@ import {
 import { isConstructor } from "../api/decorator";
 import { InjectionContext } from "../context";
 import { InjectionError } from "../errors";
+import { PluginContainer } from "../plugins/core/plugin-container";
+import { DiagnosticsDefaultReporter } from "../plugins/diagnostics/default-impl";
 import type { ProtoNode, TreeNode, UpstreamGetter } from "../provider";
 import {
   extractProvider,
@@ -43,7 +45,7 @@ export interface iContainerOptions {
   parent?: iDIContainer;
 }
 
-export class NodeContainer implements iDIContainer {
+export class NodeContainer extends PluginContainer implements iDIContainer {
   private _bootstrapped = false;
   private _rootNode?: TreeRootNode;
 
@@ -52,7 +54,12 @@ export class NodeContainer implements iDIContainer {
   private readonly _multiProtoNodes = new Map<MultiNodeToken<any>, ProtoNodeMulti<any>>();
 
   constructor(private readonly _opts?: iContainerOptions) {
+    super();
+
     this._parent = _opts?.parent;
+    if (_opts?.diagnostics) {
+      PluginContainer.extendDiagnostics(new DiagnosticsDefaultReporter());
+    }
   }
 
   /**
@@ -282,20 +289,25 @@ export class NodeContainer implements iDIContainer {
     this._bootstrapped = true;
 
     const end = performance.now();
+    const duration = end - start;
     if (this._opts?.measurePerformance) {
-      const duration = end - start;
       console.log(`[Illuma] 🚀 Bootstrapped in ${duration.toFixed(2)} ms`);
     }
 
     if (this._opts?.diagnostics) {
       const allNodes = this._rootNode.dependencies.size;
-      const unusedNodes = Array.from(this._rootNode.dependencies).filter(
-        (node) => node.allocations === 0,
-      );
-      console.log(`[Illuma] 🧹 Diagnostics:`);
-      console.log(`  Total: ${allNodes} node(s)`);
-      console.log(`  ${unusedNodes.length} were not used while bootstrap:`);
-      for (const node of unusedNodes) console.log(`    - ${node.toString()}`);
+      const unusedNodes = Array.from(this._rootNode.dependencies)
+        .filter((node) => node.allocations === 0)
+        .filter((node) => {
+          if (!(node.proto instanceof ProtoNodeSingle)) return true;
+          return node.proto.token !== Injector;
+        });
+
+      PluginContainer.onReport({
+        totalNodes: allNodes,
+        unusedNodes: unusedNodes,
+        bootstrapDuration: duration,
+      });
     }
   }
 

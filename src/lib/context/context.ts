@@ -1,5 +1,8 @@
-import type { MultiNodeToken, NodeBase, NodeToken } from "../api/token";
+import type { NodeBase } from "../api/token";
 import { InjectionError } from "../errors";
+import type { iContextScanner } from "../plugins/context/types";
+import { PluginContainer } from "../plugins/core/plugin-container";
+import type { InjectionNode } from "./node";
 
 /** @internal */
 export type InjectorFn = (token: NodeBase<any>, optional?: boolean) => any;
@@ -14,6 +17,7 @@ export abstract class InjectionContext {
   public static contextOpen = false;
   public static calls = new Set<InjectionNode<any>>();
   public static injector: InjectorFn | null = null;
+  private static readonly _scanners = PluginContainer.contextScanners;
 
   public static open(injector?: InjectorFn): void {
     InjectionContext.calls = new Set();
@@ -21,7 +25,7 @@ export abstract class InjectionContext {
     InjectionContext.injector = injector || null;
   }
 
-  public static getCalls(): Set<InjectionNode<unknown>> {
+  public static getCalls(): Set<InjectionNode<any>> {
     if (!InjectionContext.contextOpen) {
       throw InjectionError.calledUtilsOutsideContext();
     }
@@ -32,13 +36,20 @@ export abstract class InjectionContext {
   public static scan(factory: any): Set<InjectionNode<any>> {
     if (typeof factory !== "function") return new Set();
     InjectionContext.open();
+
     try {
       factory();
     } catch {
       // No-op
     }
 
-    const injections = InjectionContext.getCalls();
+    const scanners = InjectionContext._scanners;
+    for (const scanner of scanners) {
+      const scanned = scanner.scan(factory);
+      for (const node of scanned) InjectionContext.calls.add(node);
+    }
+
+    const injections = new Set(InjectionContext.calls);
     InjectionContext.close();
     return injections;
   }
@@ -59,16 +70,5 @@ export abstract class InjectionContext {
   }
 }
 
-/**
- * Represents a single dependency injection point in the dependency graph.
- * Stores information about what token is being injected and whether it's optional.
- *
- * @template T - The type of value being injected
- * @internal
- */
-export class InjectionNode<T> {
-  constructor(
-    public readonly token: NodeToken<T> | MultiNodeToken<T>,
-    public readonly optional = false,
-  ) {}
-}
+// Checks that default context implementation satisfies the scanner interface
+InjectionContext satisfies iContextScanner;

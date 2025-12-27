@@ -17,7 +17,8 @@ A lightweight, type-safe dependency injection container for TypeScript. Zero dep
 - 🔄 **Flexible** – Classes, factories, values, and aliases
 - 🎨 **Decorators** – Optional Angular-style `@NodeInjectable()` decorator
 - 🔗 **Multi-Tokens** – Built-in multi-provider support
-- 🌍 **Universal** – Node.js, Browser, and Electron
+- 🔌 **Plugin System** – Extensible architecture with custom scanners and diagnostics
+- 🌍 **Universal** – Node.js, Deno, browser, and Electron
 
 ## 📦 Installation
 
@@ -142,6 +143,8 @@ See [Testing Guide](./docs/TESTKIT.md) for comprehensive examples.
 | [Tokens](./docs/TOKENS.md) | NodeToken and MultiNodeToken |
 | [Async Injection](./docs/ASYNC_INJECTION.md) | Lazy loading and sub-containers |
 | [Testing](./docs/TESTKIT.md) | Testkit and mocking |
+| [Plugins](./docs/PLUGINS.md) | Extending Illuma with custom scanners and diagnostics |
+| [Technical Overview](./docs/TECHNICAL_OVERVIEW.md) | Deep dive into how Illuma works |
 | [API Reference](./docs/API.md) | Complete API documentation |
 | [Troubleshooting](./docs/TROUBLESHOOTING.md) | Error codes and solutions |
 
