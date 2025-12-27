@@ -3,9 +3,9 @@
   "compilerOptions": {
     /* Visit https://aka.ms/tsconfig to read more about this file */
     "rootDir": "src",
-    "module": "node16",
+    "module": "ES2022",
     "target": "ES2022",
-    "moduleResolution": "node16",
+    "moduleResolution": "bundler",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "importHelpers": true,
