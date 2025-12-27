@@ -19,6 +19,7 @@ describe("Package Entrypoints", () => {
       expect(mainExports.INJECTION_GROUP_SYMBOL).toBeDefined();
       expect(mainExports.NodeContainer).toBeDefined();
       expect(mainExports.InjectionContext).toBeDefined();
+      expect(mainExports.InjectionError).toBeDefined();
     });
   });
 
