@@ -1,24 +1,10 @@
-import { InjectionContext, type iInjectionNode } from "../context";
+import { NodeContainer } from "../container/container";
+import { InjectionContext } from "../context";
 import { InjectionError } from "../errors";
 import { INJECTION_SYMBOL, NodeInjectable } from "./decorator";
 import { nodeInject } from "./injection";
+import { SHAPE_SHIFTER } from "./proxy";
 import { MultiNodeToken, NodeToken } from "./token";
-
-function asInjectionNode<T = any>(node: any): iInjectionNode<T> {
-  return node as iInjectionNode<T>;
-}
-
-function expectNode<T>(
-  target: any,
-  token: NodeToken<T> | MultiNodeToken<T>,
-  optional?: boolean,
-): void {
-  const node = asInjectionNode(target);
-  expect(node.token).toBe(token);
-
-  if (typeof optional === "undefined") return;
-  expect(node.optional).toBe(optional);
-}
 
 describe("nodeInject", () => {
   afterEach(() => {
@@ -40,7 +26,11 @@ describe("nodeInject", () => {
       InjectionContext.open();
 
       const result = nodeInject(token);
-      expectNode(result, token, false);
+
+      expect(result).toBe(SHAPE_SHIFTER);
+      const calls = InjectionContext.closeAndReport();
+      expect(calls.size).toBe(1);
+      expect(Array.from(calls)[0].token).toBe(token);
     });
   });
 
@@ -63,7 +53,10 @@ describe("nodeInject", () => {
 
       const result = nodeInject(TestService);
       const token = (TestService as any)[INJECTION_SYMBOL];
-      expectNode(result, token, false);
+
+      const calls = InjectionContext.closeAndReport();
+      expect(calls.size).toBe(1);
+      expect(Array.from(calls)[0].token).toBe(token);
     });
 
     it("should throw error for undecorated class", () => {
@@ -125,7 +118,11 @@ describe("nodeInject", () => {
       InjectionContext.open();
 
       const result = nodeInject(token, { optional: true });
-      expectNode(result, token, true);
+      const calls = InjectionContext.closeAndReport();
+
+      expect(result).toBe(SHAPE_SHIFTER);
+      expect(calls.size).toBe(1);
+      expect(Array.from(calls)[0].optional).toBe(true);
     });
 
     it("should create InjectionNode with optional=false when explicitly specified", () => {
@@ -133,7 +130,11 @@ describe("nodeInject", () => {
       InjectionContext.open();
 
       const result = nodeInject(token, { optional: false });
-      expectNode(result, token, false);
+      const calls = InjectionContext.closeAndReport();
+
+      expect(result).toBe(SHAPE_SHIFTER);
+      expect(calls.size).toBe(1);
+      expect(Array.from(calls)[0].optional).toBe(false);
     });
   });
 
@@ -247,7 +248,12 @@ describe("nodeInject", () => {
 
       InjectionContext.open();
       const result = nodeInject(ServiceA);
-      expectNode(result, extractedToken);
+      expect(result).toBe(SHAPE_SHIFTER);
+
+      const calls = InjectionContext.closeAndReport();
+      expect(calls.size).toBe(1);
+      const [call] = Array.from(calls);
+      expect(call.token).toBe(extractedToken);
     });
 
     it("should handle class without INJECTION_SYMBOL", () => {
@@ -265,7 +271,7 @@ describe("nodeInject", () => {
       InjectionContext.open(null as any);
 
       const result = nodeInject(token);
-      expectNode(result, token);
+      expect(result).toBe(SHAPE_SHIFTER);
     });
 
     it("should handle injector throwing error", () => {
@@ -293,8 +299,10 @@ describe("nodeInject", () => {
       InjectionContext.open();
       const result = nodeInject(token);
 
-      expectNode(result, token, false);
-      expect(InjectionContext.closeAndReport().size).toBe(1);
+      expect(result).toBe(SHAPE_SHIFTER);
+      const injections = InjectionContext.closeAndReport();
+      expect(injections.size).toBe(1);
+      expect(Array.from(injections)[0].token).toBe(token);
     });
   });
 
@@ -342,6 +350,28 @@ describe("nodeInject", () => {
 
       expect(result).toBe("instantiated");
       expect(mockInjector).toHaveBeenCalledWith(token, undefined);
+    });
+  });
+
+  describe("Proxy", () => {
+    it("should not throw when accessing injected node while scanning", () => {
+      const token = new NodeToken<{ test: () => { hello: string } }>("TestToken");
+      const container = new NodeContainer();
+
+      const target = { test: () => ({ hello: "world" }) };
+      container.provide(token.withValue(target));
+
+      @NodeInjectable()
+      class TestService {
+        public readonly injected = nodeInject(token).test().hello;
+      }
+
+      container.provide(TestService);
+
+      container.bootstrap();
+
+      const service = container.get(TestService);
+      expect(service.injected).toBe("world");
     });
   });
 });

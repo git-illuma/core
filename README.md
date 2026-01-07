@@ -23,6 +23,12 @@ A lightweight, type-safe dependency injection container for TypeScript. Zero dep
 npm install @illuma/core
 ```
 
+## 🤝 Compatibility
+
+Anything that supports ES2015+ (ES6+).
+Practically the library is compatible with Node.js (v14+) and all modern browsers.
+For older environments, consider using a transpiler like Babel or TypeScript or provide polyfills as needed.
+
 ## 🚀 Quick Start
 
 ```typescript

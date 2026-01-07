@@ -2,6 +2,7 @@ import { InjectionContext } from "../context";
 import { InjectionError } from "../errors";
 import type { ExtractInjectedType, iNodeInjectorOptions } from "../types";
 import { getInjectableToken, isInjectable } from "./decorator";
+import { SHAPE_SHIFTER } from "./proxy";
 import type { MultiNodeToken, NodeToken } from "./token";
 import { isNodeBase } from "./token";
 
@@ -83,7 +84,7 @@ export function nodeInject<
     return InjectionContext.injector(token, options?.optional);
   }
 
-  return injection;
+  return SHAPE_SHIFTER;
 }
 
 /**

@@ -116,9 +116,7 @@ Internally, the system uses two lightweight types of node representations:
 
 `InjectionContext` is a global state manager that tracks dependency injection calls during factory execution, allowing Illuma to discover dependencies dynamically.
 
-While scanning, factories are being called in complete isolation. It means, `nodeInject` function does not actually provide a value, but a placeholder.
-
-If a factory throws an error during scanning (e.g. you are trying to access a dependency right away), it's caught and scan execution stops halfway, so injection calls that are made before the error are still recorded, but those made after **are not**.
+While scanning, factories are being called in complete isolation. It means, `nodeInject` function does not actually provide a value, but a placeholder proxy object instead, while recording the injection calls for later processing.
 
 ## The Container
 
@@ -248,7 +246,7 @@ class ProtoNodeTransparent<T> {
 
 Transparent nodes allow you to provide implementations directly without creating dedicated tokens for each one.
 
-Aliases are also being resolved to transparent nodes with factory of `() => nodeInject(OriginalService)`.
+Aliases are also being resolved to standard proto nodes with a factory of `() => nodeInject(OriginalService)`.
 
 ## Tree Nodes
 
@@ -349,7 +347,8 @@ The `InjectionContext` is a global singleton that manages the state during facto
 ```typescript
 abstract class InjectionContext {
   public static contextOpen = false;
-  public static calls = new Set<iInjectionNode<any>>();
+  // Internal set of calls
+  private static readonly _calls = new Set<iInjectionNode<any>>();
   public static injector: InjectorFn | null = null;
 }
 ```
@@ -367,17 +366,14 @@ When a factory is registered, Illuma scans it to discover dependencies:
 ```typescript
 const factory = () => new UserService();
 
-// Illuma opens a context and tries to execute the factory
-InjectionContext.open();
-try {
-  factory(); // This will fail but that's okay
-} catch {
-  // Errors are expected since dependencies don't exist yet
-}
+// Illuma scans the factory to discover dependencies
+const dependencies = InjectionContext.scan(factory);
 
-// Now InjectionContext.calls contains all nodeInject() calls
-const dependencies = InjectionContext.getCalls();
-InjectionContext.close();
+// Internally, scan():
+// 1. Opens a new context
+// 2. Executes the factory (expecting it might fail or return proxies)
+// 3. Catches any errors
+// 4. Returns the collected dependencies
 ```
 
 During scanning:
@@ -439,9 +435,9 @@ The function behaves differently depending on the context state:
 const LoggerToken = new NodeToken<Logger>('Logger');
 
 const userServiceFactory = () => {
-  // During scanning, nodeInject creates and returns an iInjectionNode
-  // It's recorded in InjectionContext.calls
-  return new UserService();i
+  // During scanning, nodeInject adds an iInjectionNode to InjectionContext
+  // and returns a proxy object (ShapeShifter) to prevent runtime errors
+  return new UserService();
 };
 ```
 
@@ -603,14 +599,12 @@ class TreeNodeSingle<T> {
     const retriever = (token, optional) => {
       const depNode = this._deps.get(token);
       if (!depNode && !optional) throw InjectionError.untracked(token);
-      return depNode?.instance ?? null;
-    };
+    // (Detailed retriever logic handles local deps and transparent deps)
+    const retriever = retrieverFactory(this.proto.token, this._deps, this._transparent);
 
     // 3. Execute factory within injection context
     const factory = this.proto.factory ?? this.proto.token.opts?.factory;
-    this._instance = InjectionContext.instantiate(factory, retriever);
-
-    // 4. Mark as resolved and add to pool
+    if (!factory) throw InjectionError.notFound(this.proto.token)
     this._resolved = true;
     if (pool) pool.set(this.proto.token, this);
   }
