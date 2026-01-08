@@ -1,8 +1,8 @@
 import { NodeInjectable, NodeToken } from "../api";
 import { NodeContainer } from "../container";
-import { injectLazy } from "./lazy";
+import { injectDefer } from "./defer";
 
-describe("injectLazy", () => {
+describe("injectDefer", () => {
   let container: NodeContainer;
 
   beforeEach(() => {
@@ -14,7 +14,7 @@ describe("injectLazy", () => {
 
     @NodeInjectable()
     class Service {
-      private readonly lazy = injectLazy(token);
+      private readonly lazy = injectDefer(token);
 
       get value() {
         return this.lazy();
@@ -37,7 +37,7 @@ describe("injectLazy", () => {
 
     @NodeInjectable()
     class Service {
-      private readonly lazy = injectLazy(Dependency);
+      private readonly lazy = injectDefer(Dependency);
 
       get dependency() {
         return this.lazy();
@@ -59,7 +59,7 @@ describe("injectLazy", () => {
 
     @NodeInjectable()
     class Service {
-      public readonly lazy = injectLazy(token);
+      public readonly lazy = injectDefer(token);
     }
 
     container.provide({
@@ -88,7 +88,7 @@ describe("injectLazy", () => {
 
     @NodeInjectable()
     class Service {
-      public readonly lazy = injectLazy(token, { optional: true });
+      public readonly lazy = injectDefer(token, { optional: true });
     }
 
     container.provide(Service);
@@ -103,7 +103,7 @@ describe("injectLazy", () => {
 
     @NodeInjectable()
     class Service {
-      public readonly lazy = injectLazy(token, { optional: true });
+      public readonly lazy = injectDefer(token, { optional: true });
     }
 
     container.provide(Service);
@@ -119,7 +119,7 @@ describe("injectLazy", () => {
 
     @NodeInjectable()
     class Service {
-      public readonly lazy = injectLazy(token);
+      public readonly lazy = injectDefer(token);
     }
 
     container.provide(Service);
@@ -132,7 +132,7 @@ describe("injectLazy", () => {
   it("should solve simple recursion issues", () => {
     @NodeInjectable()
     class ServiceA {
-      private readonly lazyB = injectLazy(ServiceB);
+      private readonly lazyB = injectDefer(ServiceB);
 
       get serviceB() {
         return this.lazyB();
@@ -141,7 +141,7 @@ describe("injectLazy", () => {
 
     @NodeInjectable()
     class ServiceB {
-      private readonly lazyA = injectLazy(ServiceA);
+      private readonly lazyA = injectDefer(ServiceA);
 
       get serviceA() {
         return this.lazyA();
@@ -170,7 +170,7 @@ describe("injectLazy", () => {
   it("should throw for invalid provider", () => {
     @NodeInjectable()
     class Service {
-      public readonly lazy = injectLazy("invalid" as any);
+      public readonly lazy = injectDefer("invalid" as any);
     }
 
     container.provide(Service);
@@ -184,7 +184,7 @@ describe("injectLazy", () => {
 
     @NodeInjectable()
     class Service {
-      public readonly lazy = injectLazy(token, { optional: true });
+      public readonly lazy = injectDefer(token, { optional: true });
     }
 
     container.provide({ provide: token, value: "value" });
@@ -205,7 +205,7 @@ describe("injectLazy", () => {
     const token = new NodeToken<string>("present");
     @NodeInjectable()
     class Service {
-      public readonly lazy = injectLazy(token, { optional: true });
+      public readonly lazy = injectDefer(token, { optional: true });
     }
 
     container.provide({ provide: token, value: "present" });

@@ -1,3 +1,3 @@
 export * from "./inheritance";
 export * from "./injector";
-export * from "./lazy";
+export * from "./defer";

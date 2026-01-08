@@ -8,7 +8,7 @@ describe("Package Entrypoints", () => {
       expect(mainExports.MultiNodeToken).toBeDefined();
       expect(mainExports.NodeBase).toBeDefined();
       expect(mainExports.nodeInject).toBeDefined();
-      expect(mainExports.injectLazy).toBeDefined();
+      expect(mainExports.injectDefer).toBeDefined();
       expect(mainExports.NodeInjectable).toBeDefined();
       expect(mainExports.makeInjectable).toBeDefined();
       expect(mainExports.isInjectable).toBeDefined();

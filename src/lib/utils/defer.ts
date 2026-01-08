@@ -7,7 +7,7 @@ import { InjectionError, isNotFoundError } from "../errors";
 import type { ExtractInjectedType, iNodeInjectorOptions } from "../types/injection";
 import { Injector } from "./injector";
 
-export function injectLazy<N>(
+export function injectDefer<N>(
   token: N,
   options: iNodeInjectorOptions & { optional: true },
 ): () => N extends MultiNodeToken<infer V>
@@ -19,7 +19,7 @@ export function injectLazy<N>(
         ) => infer T
       ? T | null
       : never;
-export function injectLazy<N>(
+export function injectDefer<N>(
   token: N,
   options?: iNodeInjectorOptions,
 ): () => N extends MultiNodeToken<infer V>
@@ -31,11 +31,11 @@ export function injectLazy<N>(
         ) => infer T
       ? T
       : never;
-export function injectLazy<N extends NodeToken<unknown> | MultiNodeToken<unknown>>(
+export function injectDefer<N extends NodeToken<unknown> | MultiNodeToken<unknown>>(
   token: N,
   options?: iNodeInjectorOptions,
 ): () => ExtractInjectedType<N>;
-export function injectLazy<
+export function injectDefer<
   N extends
     | NodeToken<unknown>
     | MultiNodeToken<unknown>

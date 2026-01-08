@@ -8,7 +8,7 @@ Complete API documentation for Illuma's core classes, functions, and decorators.
 - [NodeToken](#nodetoken)
 - [MultiNodeToken](#multinodetoken)
 - [nodeInject](#nodeinject)
-- [injectLazy](#injectlazy)
+- [injectDefer](#injectdefer)
 - [Injector](#injector)
 - [Decorators](#decorators)
 - [Async Injection Functions](#async-injection-functions)
@@ -207,16 +207,16 @@ class UserService {
 
 ---
 
-## injectLazy
+## injectDefer
 
 Lazily inject a dependency. Useful for handling circular dependencies or deferring resolution in a cost of transparency while bootstrapping.
 
-If the only injection point for the dependency is via `injectLazy`, it may appear unused in diagnostics.
+If the only injection point for the dependency is via `injectDefer`, it may appear unused in diagnostics.
 
 ### Signature
 
 ```typescript
-function injectLazy<T>(
+function injectDefer<T>(
   token: Token<T>,
   options?: { optional?: boolean }
 ): () => T
@@ -233,7 +233,7 @@ function injectLazy<T>(
 @NodeInjectable()
 class ServiceA {
   // Returns a function that resolves the dependency when called
-  private readonly injectB = injectLazy(ServiceB);
+  private readonly injectB = injectDefer(ServiceB);
 
   private get b(): ServiceB {
     return this.injectB();
@@ -244,7 +244,7 @@ class ServiceA {
     this.b.method();
   }
 }
-// Note: injectLazy returns a function, so you must call it to get the instance or array of instances.
+// Note: injectDefer returns a function, so you must call it to get the instance or array of instances.
 ```
 
 ---

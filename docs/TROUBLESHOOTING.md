@@ -637,14 +637,14 @@ class ServiceB {
 // ✅ ServiceB depends on A, but A doesn't depend on B
 ```
 
-**Option 3: Use Lazy Injection**
-You can use `injectLazy` to defer the resolution of one of the dependencies. This works because the dependency is not resolved until the function is called, breaking the cycle during instantiation in a cost of transparency on bootstrap.
+**Option 3: Use defer Injection**
+You can use `injectDefer` to defer the resolution of one of the dependencies. This works because the dependency is not resolved until the function is called, breaking the cycle during instantiation in a cost of transparency on bootstrap.
 
 ```typescript
 @NodeInjectable()
 class ServiceA {
-  // injectLazy returns a function () => ServiceB
-  private readonly injectB = injectLazy(ServiceB);
+  // injectDefer returns a function () => ServiceB
+  private readonly injectB = injectDefer(ServiceB);
   private get b() {
     return this.injectB();
   }
