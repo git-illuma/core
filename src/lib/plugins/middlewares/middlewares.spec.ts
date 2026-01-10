@@ -178,6 +178,5 @@ describe("Plugin: Middlewares", () => {
 
     expect(container.get(Token)).toBe("val");
     expect(logs).toContain("deferred");
-
   });
 });

@@ -3,8 +3,8 @@ import type { InjectorFn } from "../api/types";
 import { InjectionContext } from "../context/context";
 import { InjectionError } from "../errors";
 import type { iInstantiationParams, iMiddleware } from "../plugins/middlewares";
+import { Injector } from "../utils/injector";
 import type { ProtoNodeMulti, ProtoNodeSingle, ProtoNodeTransparent } from "./proto";
-import { Injector } from '../utils/injector';
 
 /** @deprecated */
 export type DependencyPool = Map<NodeBase<any>, TreeNode<any>>;
