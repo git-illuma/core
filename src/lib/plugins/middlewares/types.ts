@@ -1,4 +1,5 @@
 import type { NodeBase } from "../../api/token";
+import type { Token } from "../../provider/types";
 
 /**
  * Instantiation parameters for creating a new instance of a type `T`.
@@ -7,6 +8,7 @@ import type { NodeBase } from "../../api/token";
 export interface iInstantiationParams<T = unknown> {
   readonly token: NodeBase<T>;
   readonly factory: () => T;
+  readonly deps: Set<Token<unknown>>;
 }
 
 export type iMiddleware<T = unknown> = (

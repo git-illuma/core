@@ -517,14 +517,33 @@ Illuma.extendContextScanner(myScanner);
 
 ### Diagnostics
 
+#### `enableIllumaDiagnostics(): void`
+
+Enable the built-in diagnostics system, which includes a default reporter and performance tracking middleware. This function must be called before bootstrapping any container that should have diagnostics enabled.
+
+```typescript
+import { enableIllumaDiagnostics } from '@illuma/core/plugins';
+
+// Enable diagnostics before creating containers
+enableIllumaDiagnostics();
+
+// Now containers will report diagnostics after bootstrap
+const container = new NodeContainer();
+container.provide([...]);
+container.bootstrap();
+// → Diagnostics output will be logged
+```
+
+> **Note**: The `diagnostics: true` option in `NodeContainer` constructor is deprecated. Use `enableIllumaDiagnostics()` instead.
+
 #### `Illuma.extendDiagnostics(module: iDiagnosticsModule): void`
 
 Register a custom diagnostics module. These modules receive a report after a container is bootstrapped, providing insights into the dependency graph.
 
-The container must be initialized with `diagnostics: true`.
+You must call `enableIllumaDiagnostics()` before bootstrapping to enable the diagnostics system.
 
 ```typescript
-import { Illuma, type iDiagnosticsModule } from '@illuma/core/plugins';
+import { Illuma, enableIllumaDiagnostics, type iDiagnosticsModule } from '@illuma/core/plugins';
 
 const reporter: iDiagnosticsModule = {
   onReport(report) {
@@ -534,6 +553,8 @@ const reporter: iDiagnosticsModule = {
   }
 };
 
+// Enable diagnostics and register custom reporter
+enableIllumaDiagnostics();
 Illuma.extendDiagnostics(reporter);
 ```
 
@@ -636,6 +657,7 @@ Parameters passed to middleware.
 interface iInstantiationParams<T = unknown> {
   readonly token: NodeBase<T>;
   readonly factory: () => T;
+  readonly deps: Set<Token<unknown>>;
 }
 ```
 

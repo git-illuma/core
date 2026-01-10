@@ -11,7 +11,7 @@ const tokenRegistry = new WeakMap<object, NodeToken<any>>();
 /**
  * Symbol used to mark classes as injectable and store their associated token.
  * @internal
- * @deprecated Use internal registry instead
+ * @deprecated Use internal registry instead. Will be removed in next major versions.
  */
 export const INJECTION_SYMBOL = Symbol("Injectable");
 

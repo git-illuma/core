@@ -12,11 +12,11 @@ A lightweight, type-safe dependency injection container for TypeScript. Zero dep
 - 🎯 **Type-Safe** – Full TypeScript support with excellent type inference
 - 🪶 **Lightweight** – Zero dependencies, minimal bundle size
 - 🔄 **Flexible** – Classes, factories, values, and aliases
-- 🎨 **Decorators** – Optional Angular-style `@NodeInjectable()` decorator
+- 🎨 **Optional decorators** – Angular-style `@NodeInjectable()` decorator
 - 🔗 **Multi-Tokens** – Built-in multi-provider support
-- 🔌 **Plugin System** – Extensible architecture with custom scanners and diagnostics
+- 🔌 **Plugin System** – Extensible architecture with custom middlewares, scanners, and diagnostics
+- 🧪 **Testkit** – Utilities for easy unit testing and mocking
 - 🌍 **Universal** – Node.js, Deno, browser, and Electron
-
 ## 📦 Installation
 
 ```bash

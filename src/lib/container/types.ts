@@ -15,6 +15,8 @@ export interface iContainerOptions {
   measurePerformance?: boolean;
 
   /**
+   * @deprecated Will be removed in next major versions.
+   *
    * When true, enables diagnostics reporting after bootstrap.
    * @default false
    */

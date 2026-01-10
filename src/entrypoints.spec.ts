@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/complexity/useLiteralKeys: Accessing internal API for testing */
 describe("Package Entrypoints", () => {
   describe("Main entrypoint (@illuma/core)", () => {
     it("should export core API modules", async () => {
@@ -23,6 +24,18 @@ describe("Package Entrypoints", () => {
       expect(mainExports.InjectionContext).toBeDefined();
       expect(mainExports.InjectionError).toBeDefined();
       expect(mainExports.ILLUMA_ERR_CODES).toBeDefined();
+
+      // @ts-expect-error Accessing internal API for testing
+      expect(mainExports["Illuma"]).not.toBeDefined();
+
+      // @ts-expect-error Accessing internal API for testing
+      expect(mainExports["DiagnosticsDefaultReporter"]).not.toBeDefined();
+
+      // @ts-expect-error Accessing internal API for testing
+      expect(mainExports["enableIllumaDiagnostics"]).not.toBeDefined();
+
+      // @ts-expect-error Accessing internal API for testing
+      expect(mainExports["createTestFactory"]).not.toBeDefined();
     });
   });
 
@@ -41,6 +54,8 @@ describe("Package Entrypoints", () => {
 
       expect(pluginsExports.Illuma).toBeDefined();
       expect(pluginsExports.DiagnosticsDefaultReporter).toBeDefined();
+      expect(pluginsExports.enableIllumaDiagnostics).toBeDefined();
+      expect(typeof pluginsExports.enableIllumaDiagnostics).toBe("function");
     });
   });
 });

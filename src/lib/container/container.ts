@@ -5,7 +5,6 @@ import { extractToken, isNodeBase, MultiNodeToken, NodeToken } from "../api/toke
 import { InjectionContext } from "../context";
 import { InjectionError } from "../errors";
 import { Illuma } from "../plugins/core/plugin-container";
-import { DiagnosticsDefaultReporter } from "../plugins/diagnostics/default-impl";
 import type { iMiddleware } from "../plugins/middlewares";
 import {
   extractProvider,
@@ -29,13 +28,21 @@ export class NodeContainer extends Illuma implements iDIContainer {
   private readonly _protoNodes = new Map<NodeToken<any>, ProtoNodeSingle<any>>();
   private readonly _multiProtoNodes = new Map<MultiNodeToken<any>, ProtoNodeMulti<any>>();
 
-  constructor(private readonly _opts?: iContainerOptions) {
+  constructor(protected readonly _opts?: iContainerOptions) {
     super();
 
-    this._parent = _opts?.parent;
     if (_opts?.diagnostics) {
-      Illuma.extendDiagnostics(new DiagnosticsDefaultReporter());
+      console.warn(
+        "[Illuma] Deprecation Warning: The 'diagnostics' option in iContainerOptions is deprecated and will be removed in future versions. Please use the `enableIllumaDiagnostics` from '@illuma/core/plugins` instead.",
+      );
+
+      const m = require("../plugins/diagnostics/built-in");
+      if (m.enabled) return;
+
+      m.enableIllumaDiagnostics();
     }
+
+    this._parent = _opts?.parent;
   }
 
   /**
@@ -259,7 +266,8 @@ export class NodeContainer extends Illuma implements iDIContainer {
       console.log(`[Illuma] 🚀 Bootstrapped in ${duration.toFixed(2)} ms`);
     }
 
-    if (this._opts?.diagnostics) {
+    // Run diagnostics if enabled via opts.diagnostics (deprecated) or if diagnostics modules are registered
+    if (this._opts?.diagnostics || Illuma.hasDiagnostics()) {
       const allNodes = this._rootNode.dependencies.size;
       const unusedNodes = Array.from(this._rootNode.dependencies)
         .filter((node) => node.allocations === 0)

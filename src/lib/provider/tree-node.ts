@@ -6,7 +6,7 @@ import type { iInstantiationParams, iMiddleware } from "../plugins/middlewares";
 import { Injector } from "../utils/injector";
 import type { ProtoNodeMulti, ProtoNodeSingle, ProtoNodeTransparent } from "./proto";
 
-/** @deprecated */
+/** @deprecated Will be removed in next major versions. */
 export type DependencyPool = Map<NodeBase<any>, TreeNode<any>>;
 export type InjectionPool =
   | Map<NodeBase<any>, TreeNode<any>>
@@ -134,6 +134,10 @@ export class TreeNodeSingle<T = any> {
     this._instance = runMiddlewares(middlewares, {
       token: this.proto.token,
       factory: contextFactory,
+      deps: new Set([
+        ...this._deps.keys(),
+        ...Array.from(this._transparent).map((n) => n.proto.parent.token),
+      ]),
     });
 
     this._resolved = true;
@@ -188,6 +192,10 @@ export class TreeNodeTransparent<T = any> {
     this._instance = runMiddlewares(middlewares, {
       token: this.proto.parent.token,
       factory: refFactory,
+      deps: new Set([
+        ...this._deps.keys(),
+        ...Array.from(this._transparent).map((n) => n.proto.parent.token),
+      ]),
     });
 
     this._resolved = true;

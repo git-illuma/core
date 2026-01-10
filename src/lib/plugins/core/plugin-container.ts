@@ -6,7 +6,7 @@ import type { iMiddleware } from "../middlewares/types";
  * Global plugin container for managing core plugins such as diagnostics and context scanners.
  */
 export abstract class Illuma {
-  private static readonly _diagnostics = [] as iDiagnosticsModule[];
+  private static readonly _diagnostics = new Set<iDiagnosticsModule>();
   private static readonly _scanners = [] as iContextScanner[];
   protected static readonly _middlewares = [] as iMiddleware[];
 
@@ -22,7 +22,7 @@ export abstract class Illuma {
    * @param m - The diagnostics module instance to add
    */
   public static extendDiagnostics(m: iDiagnosticsModule): void {
-    Illuma._diagnostics.push(m);
+    Illuma._diagnostics.add(m);
   }
 
   /**
@@ -53,5 +53,23 @@ export abstract class Illuma {
 
   protected static onReport(report: iDiagnosticsReport): void {
     for (const diag of Illuma._diagnostics) diag.onReport(report);
+  }
+
+  /**
+   * @internal
+   * Check if diagnostics modules are registered
+   */
+  protected static hasDiagnostics(): boolean {
+    return Illuma._diagnostics.size > 0;
+  }
+
+  /**
+   * @internal
+   * Reset all plugin registrations
+   */
+  protected static __resetPlugins(): void {
+    Illuma._diagnostics.clear();
+    Illuma._scanners.length = 0;
+    Illuma._middlewares.length = 0;
   }
 }

@@ -8,6 +8,7 @@ import {
 import { NodeContainer } from "../../container";
 import type { TreeNode } from "../../provider";
 import { Illuma } from "../core";
+import * as builtIn from "./built-in";
 
 describe("Performance measurement", () => {
   it("should measure performance when enabled", () => {
@@ -177,14 +178,18 @@ describe("Plugin: Diagnostics", () => {
 
   beforeEach(() => {
     consoleLogSpy = jest.spyOn(console, "log").mockImplementation();
+    // Reset the enabled flag and plugin registrations before each test
+    builtIn.__resetDiagnosticsState();
+    // biome-ignore lint/complexity/useLiteralKeys: Accessing internal reset method for testing
+    Illuma["__resetPlugins"]();
   });
 
   afterEach(() => {
     consoleLogSpy.mockRestore();
   });
 
-  it("should not call diagnostics plugins when disabled", () => {
-    const container = new NodeContainer({ diagnostics: false });
+  it("should not call diagnostics plugins when not enabled", () => {
+    const container = new NodeContainer();
     const token = new NodeToken<string>("Token");
 
     container.provide({
@@ -204,9 +209,10 @@ describe("Plugin: Diagnostics", () => {
       onReport: jest.fn(),
     };
 
+    builtIn.enableIllumaDiagnostics();
     Illuma.extendDiagnostics(mockDiagnosticsModule);
 
-    const container = new NodeContainer({ diagnostics: true });
+    const container = new NodeContainer();
     const token = new NodeToken<string>("Token");
 
     container.provide({
@@ -230,9 +236,10 @@ describe("Plugin: Diagnostics", () => {
       onReport: jest.fn(),
     };
 
+    builtIn.enableIllumaDiagnostics();
     Illuma.extendDiagnostics(mockDiagnosticsModule);
 
-    const container = new NodeContainer({ diagnostics: true });
+    const container = new NodeContainer();
     const usedToken = new NodeToken<string>("Used");
     const unusedToken = new NodeToken<string>("Unused");
 
@@ -260,7 +267,8 @@ describe("Plugin: Diagnostics", () => {
   });
 
   it("should call default diagnostics reporter when enabled", () => {
-    const container = new NodeContainer({ diagnostics: true });
+    builtIn.enableIllumaDiagnostics();
+    const container = new NodeContainer();
     const token = new NodeToken<string>("Token");
 
     container.provide({
@@ -277,7 +285,8 @@ describe("Plugin: Diagnostics", () => {
   });
 
   it("should report unused nodes in diagnostics", () => {
-    const container = new NodeContainer({ diagnostics: true });
+    builtIn.enableIllumaDiagnostics();
+    const container = new NodeContainer();
     const usedToken = new NodeToken<string>("Used");
     const unusedToken = new NodeToken<string>("Unused");
 
@@ -300,7 +309,8 @@ describe("Plugin: Diagnostics", () => {
   });
 
   it("should not list nodes with allocations as unused", () => {
-    const container = new NodeContainer({ diagnostics: true });
+    builtIn.enableIllumaDiagnostics();
+    const container = new NodeContainer();
     const usedToken = new NodeToken<string>("Used");
     const consumerToken = new NodeToken<string>("Consumer");
 
@@ -323,7 +333,8 @@ describe("Plugin: Diagnostics", () => {
   });
 
   it("should work with multi-node tokens in diagnostics", () => {
-    const container = new NodeContainer({ diagnostics: true });
+    builtIn.enableIllumaDiagnostics();
+    const container = new NodeContainer();
     const multiToken = new MultiNodeToken<string>("Multi");
 
     container.provide({ provide: multiToken, value: "item1" });
@@ -346,10 +357,11 @@ describe("Plugin: Diagnostics", () => {
       onReport: jest.fn(),
     };
 
+    builtIn.enableIllumaDiagnostics();
     Illuma.extendDiagnostics(mockModule1);
     Illuma.extendDiagnostics(mockModule2);
 
-    const container = new NodeContainer({ diagnostics: true });
+    const container = new NodeContainer();
     const token = new NodeToken<string>("Token");
 
     container.provide({
@@ -375,9 +387,10 @@ describe("Plugin: Diagnostics", () => {
       onReport: jest.fn(),
     };
 
+    builtIn.enableIllumaDiagnostics();
     Illuma.extendDiagnostics(mockDiagnosticsModule);
 
-    const container = new NodeContainer({ diagnostics: true });
+    const container = new NodeContainer();
     const token = new NodeToken<string>("Token");
 
     container.provide({

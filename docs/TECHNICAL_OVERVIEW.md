@@ -706,6 +706,7 @@ type iMiddleware<T = unknown> = (
 interface iInstantiationParams<T = unknown> {
   readonly token: NodeBase<T>;
   readonly factory: () => T;
+  readonly deps: Set<Token<unknown>>;
 }
 ```
 
@@ -719,7 +720,7 @@ Middlewares can be registered at two scopes:
 1.  **Container Scope**: Applies only to providers instantiated by a specific container.
     ```typescript
     container.registerMiddleware((params, next) => {
-      console.log(`Instantiating ${params.token.name}`);
+      console.log(`Instantiating ${params.token.name} with ${params.deps.size} dependencies`);
       return next(params);
     });
     ```
