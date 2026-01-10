@@ -80,13 +80,15 @@ const service = container.get(UserService);
 
 When you apply `@NodeInjectable()` to a class, the decorator:
 1. Creates a `NodeToken<T>` with the name `_ClassName`
-2. Attaches the token to the class using a special symbol (`INJECTION_SYMBOL`)
+2. Registers the class and token in an internal `WeakMap` registry
 3. Associates a factory function `() => new ClassName()` with the token
 
 This allows the container to:
 - Recognize the class as injectable via `isInjectable()`
 - Extract the associated token via `getInjectableToken()`
 - Use the class constructor as the provider
+
+The use of `WeakMap` ensures that storing this metadata avoids memory leaks by not preventing garbage collection of the class definitions. Plugins can also utilize this mechanism via `registerClassAsInjectable` to implement custom decorators.
 
 **Alternative for non-decorator environments:**
 

@@ -333,6 +333,32 @@ export type UserService = _UserService;
 export const UserService = makeInjectable(_UserService);
 ```
 
+### registerClassAsInjectable() (internal)
+
+Registers a class as injectable with a specific token using the internal `WeakMap` registry.
+This is primarily used internally by both `@NodeInjectable` and `makeInjectable` but is exposed for plugins to implement custom decorators.
+
+```typescript
+function registerClassAsInjectable<T>(ctor: Ctor<T>, token: NodeToken<T>): void
+```
+
+| Parameter | Type           | Description                       |
+| --------- | -------------- | --------------------------------- |
+| `ctor`    | `Ctor<T>`      | The class constructor to register |
+| `token`   | `NodeToken<T>` | The token to associate with it    |
+
+**Example: Creating a custom decorator**
+
+```typescript
+function CustomService(name: string) {
+  return (ctor: any) => {
+    const token = new NodeToken(name, { factory: () => new ctor() });
+    registerClassAsInjectable(ctor, token);
+    return ctor;
+  };
+}
+```
+
 ---
 
 ## Async injection functions
