@@ -3,7 +3,7 @@ import type { InjectorFn } from "../api/types";
 import { InjectionContext } from "../context/context";
 import { InjectionError } from "../errors";
 import type { iMiddleware } from "../plugins/middlewares";
-import { runMiddlewares } from '../plugins/middlewares/runner';
+import { runMiddlewares } from "../plugins/middlewares/runner";
 import { Injector } from "../utils/injector";
 import type { ProtoNodeMulti, ProtoNodeSingle, ProtoNodeTransparent } from "./proto";
 
@@ -38,7 +38,7 @@ export class TreeRootNode {
   constructor(
     public readonly instant = true,
     protected readonly middlewares: iMiddleware[] = [],
-  ) { }
+  ) {}
 
   public get dependencies(): Set<TreeNode<any>> {
     return this._deps;
@@ -153,7 +153,7 @@ export class TreeNodeTransparent<T = any> {
     return this._instance as T;
   }
 
-  constructor(public readonly proto: ProtoNodeTransparent<T>) { }
+  constructor(public readonly proto: ProtoNodeTransparent<T>) {}
 
   public addDependency(node: TreeNode<any>): void {
     if (node instanceof TreeNodeTransparent) this._transparent.add(node);
@@ -208,7 +208,7 @@ export class TreeNodeMulti<T = any> {
   private _resolved = false;
   public allocations = 0;
 
-  constructor(public readonly proto: ProtoNodeMulti<T>) { }
+  constructor(public readonly proto: ProtoNodeMulti<T>) {}
 
   public collectPool(pool: InjectionPool): void {
     for (const dep of this._deps) dep.collectPool(pool);

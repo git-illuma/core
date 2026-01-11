@@ -2,12 +2,12 @@ import { getInjectableToken, isConstructor, isInjectable } from "../api/decorato
 import { nodeInject } from "../api/injection";
 import type { NodeBase } from "../api/token";
 import { extractToken, isNodeBase, MultiNodeToken, NodeToken } from "../api/token";
-import type { InjectorFn } from '../api/types';
+import type { InjectorFn } from "../api/types";
 import { InjectionContext } from "../context";
 import { InjectionError } from "../errors";
 import { Illuma } from "../plugins/core/plugin-container";
 import type { iMiddleware } from "../plugins/middlewares";
-import { runMiddlewares } from '../plugins/middlewares/runner';
+import { runMiddlewares } from "../plugins/middlewares/runner";
 import {
   extractProvider,
   ProtoNodeMulti,
@@ -220,8 +220,8 @@ export class NodeContainer extends Illuma implements iDIContainer {
   protected collectMiddlewares(): iMiddleware[] {
     return [
       ...(this._parent &&
-        "collectMiddlewares" in this._parent &&
-        typeof this._parent.collectMiddlewares === "function"
+      "collectMiddlewares" in this._parent &&
+      typeof this._parent.collectMiddlewares === "function"
         ? this._parent.collectMiddlewares()
         : []),
       ...this.middlewares,
