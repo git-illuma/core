@@ -1742,6 +1742,40 @@ describe("NodeContainer", () => {
       expect(factorySpy).toHaveBeenCalledTimes(2);
     });
 
+    it("should handle multi nodes in produce() within injectable class", () => {
+      const container = new NodeContainer(params);
+      const token = new MultiNodeToken<string>("TOKEN");
+      const factorySpy1 = jest.fn(() => "deferred-value-1");
+      const factorySpy2 = jest.fn(() => "deferred-value-2");
+
+      @NodeInjectable()
+      class TestClass {
+        public readonly values = container.produce(() => {
+          return nodeInject(token);
+        });
+      }
+
+      container.provide(TestClass);
+      container.provide(token.withFactory(factorySpy1));
+      container.provide(token.withFactory(factorySpy2));
+
+      // Dry run
+      expect(factorySpy1).toHaveBeenCalledTimes(1);
+      expect(factorySpy2).toHaveBeenCalledTimes(1);
+
+      container.bootstrap();
+
+      // Still not called
+      expect(factorySpy1).toHaveBeenCalledTimes(1);
+      expect(factorySpy2).toHaveBeenCalledTimes(1);
+
+      const instance = container.get(TestClass);
+      expect(instance.values).toEqual(["deferred-value-1", "deferred-value-2"]);
+      // Both factories called now
+      expect(factorySpy1).toHaveBeenCalledTimes(2);
+      expect(factorySpy2).toHaveBeenCalledTimes(2);
+    });
+
     it("should throw on circular dependencies", () => {
       const container = new NodeContainer(params);
       const tokenA = new NodeToken<string>("TOKEN_A");
@@ -1844,6 +1878,54 @@ describe("NodeContainer", () => {
 
       const instance = container.get(TestClass);
       expect(instance.value).toBeNull();
+    });
+
+    it("should work with anonymous classes", () => {
+      const container = new NodeContainer(params);
+      const token = new NodeToken<string>("TOKEN");
+      const classToken = new NodeToken<any>("ANONYMOUS_CLASS");
+
+      const TestClass = class {
+        public readonly value = nodeInject(token);
+      };
+
+      container.provide(token.withValue('hello'));
+      container.provide(classToken.withClass(TestClass));
+      container.bootstrap();
+
+      const instance = container.get(classToken);
+      expect(instance.value).toBe('hello');
+    });
+
+    it("should work with class factories", () => {
+      const container = new NodeContainer(params);
+      const token = new MultiNodeToken<string>("TOKEN");
+      const classToken = new NodeToken<BaseClass>("BASE_CLASS");
+
+      abstract class BaseClass {
+        constructor(public readonly value: string[]) { }
+        public getValues(): string[] {
+          return this.value;
+        }
+      }
+
+      const factory = (t: MultiNodeToken<string>) => {
+        return class extends BaseClass {
+          constructor() {
+            super(nodeInject(t));
+          }
+        };
+      };
+
+      container.provide(token.withFactory(() => 'value-1'));
+      container.provide(token.withFactory(() => 'value-2'));
+      container.provide(classToken.withClass(factory(token)));
+
+      container.bootstrap();
+
+      const instance = container.get(classToken);
+      expect(instance).toBeInstanceOf(BaseClass);
+      expect(instance.getValues()).toEqual(['value-1', 'value-2']);
     });
   });
 });
