@@ -159,6 +159,12 @@ Illuma supports a plugin system for extending functionality. Check out these plu
 
 See [Plugins Guide](./docs/PLUGINS.md) for creating your own plugins.
 
+## 🤝 Contributing
+
+Thank you for considering contributing to Illuma! I deeply appreciate your interest in making this project better.
+
+Anyways, to get you started, please take a look at the [Contributing Guide](./CONTRIBUTING.md) for guidelines on how to setup development environment, run tests, and submit pull requests.
+
 ## 📄 License
 
 MIT © [bebrasmell](https://github.com/bebrasmell)

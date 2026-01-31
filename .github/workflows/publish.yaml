@@ -15,18 +15,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      # Setup Node.js environment
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      # Setup Bun
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
         with:
+          bun-version: latest
           registry-url: https://registry.npmjs.org/
-          node-version: "20.x"
-          cache: "yarn"
-          cache-dependency-path: yarn.lock
 
       # Install dependencies (required by Run tests step)
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       # Configure Git
       - name: Git configuration
@@ -49,7 +47,7 @@ jobs:
       - name: Bump pre-release version
         if: startsWith(github.event.inputs.release-type, 'pre')
         run: |
-          echo "NEW_VERSION=$(npm --no-git-tag-version --preid=beta version $RELEASE_TYPE
+          echo "NEW_VERSION=$(npm --no-git-tag-version --preid=beta version $RELEASE_TYPE)" >> $GITHUB_ENV
           echo "RELEASE_TAG=beta" >> $GITHUB_ENV
         env:
           RELEASE_TYPE: ${{ github.event.inputs.release-type }}
@@ -72,11 +70,11 @@ jobs:
 
       # Build
       - name: Build
-        run: yarn build
+        run: bun run build
 
       # Publish version to public repository
       - name: Publish
-        run: yarn publish --verbose --access public --tag ${{ env.RELEASE_TAG }}
+        run: bun publish --verbose --access public --tag ${{ env.RELEASE_TAG }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
