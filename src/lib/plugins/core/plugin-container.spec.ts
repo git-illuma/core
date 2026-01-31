@@ -1,4 +1,5 @@
-import { vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { iInjectionNode } from "../../context";
 import type { iContextScanner } from "../context/types";
 import type { iDiagnosticsModule, iDiagnosticsReport } from "../diagnostics/types";
 import { Illuma } from "./plugin-container";
@@ -68,7 +69,7 @@ describe("Illuma", () => {
   describe("extendContextScanner", () => {
     it("should register context scanner", () => {
       const mockScanner: iContextScanner = {
-        scan: vi.fn(() => new Set()),
+        scan: vi.fn(() => new Set<iInjectionNode<unknown>>()),
       };
 
       Illuma.extendContextScanner(mockScanner);
@@ -79,8 +80,12 @@ describe("Illuma", () => {
     });
 
     it("should register multiple scanners in order", () => {
-      const mockScanner1: iContextScanner = { scan: vi.fn(() => new Set()) };
-      const mockScanner2: iContextScanner = { scan: vi.fn(() => new Set()) };
+      const mockScanner1: iContextScanner = {
+        scan: vi.fn(() => new Set<iInjectionNode<unknown>>()),
+      };
+      const mockScanner2: iContextScanner = {
+        scan: vi.fn(() => new Set<iInjectionNode<unknown>>()),
+      };
 
       Illuma.extendContextScanner(mockScanner1);
       Illuma.extendContextScanner(mockScanner2);

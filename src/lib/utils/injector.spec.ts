@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { MultiNodeToken, NodeInjectable, NodeToken, nodeInject } from "../api";
 import { NodeContainer } from "../container";
 import { Injector, InjectorImpl } from "./injector";

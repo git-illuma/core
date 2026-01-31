@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { MultiNodeToken, NodeInjectable, NodeToken, nodeInject } from "../api";
 import { InjectionError } from "../errors";
 import { createTestFactory } from "./helpers";

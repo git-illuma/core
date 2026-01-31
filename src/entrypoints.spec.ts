@@ -1,4 +1,5 @@
-/** biome-ignore-all lint/complexity/useLiteralKeys: Accessing internal API for testing */
+import { describe, expect, it } from "vitest";
+
 describe("Package Entrypoints", () => {
   describe("Main entrypoint (@illuma/core)", () => {
     it("should export core API modules", async () => {
@@ -26,16 +27,16 @@ describe("Package Entrypoints", () => {
       expect(mainExports.ILLUMA_ERR_CODES).toBeDefined();
 
       // @ts-expect-error Accessing internal API for testing
-      expect(mainExports["Illuma"]).not.toBeDefined();
+      expect(mainExports.Illuma).not.toBeDefined();
 
       // @ts-expect-error Accessing internal API for testing
-      expect(mainExports["DiagnosticsDefaultReporter"]).not.toBeDefined();
+      expect(mainExports.DiagnosticsDefaultReporter).not.toBeDefined();
 
       // @ts-expect-error Accessing internal API for testing
-      expect(mainExports["enableIllumaDiagnostics"]).not.toBeDefined();
+      expect(mainExports.enableIllumaDiagnostics).not.toBeDefined();
 
       // @ts-expect-error Accessing internal API for testing
-      expect(mainExports["createTestFactory"]).not.toBeDefined();
+      expect(mainExports.createTestFactory).not.toBeDefined();
     });
   });
 

@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   extractToken,
   MultiNodeToken,
@@ -13,7 +13,7 @@ import * as builtIn from "./built-in";
 
 describe("Performance measurement", () => {
   it("should measure performance when enabled", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation();
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const container = new NodeContainer({ measurePerformance: true });
     container.bootstrap();
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("Bootstrapped in"));
@@ -178,7 +178,7 @@ describe("Plugin: Diagnostics", () => {
   let consoleLogSpy: import("vitest").MockInstance;
 
   beforeEach(() => {
-    consoleLogSpy = vi.spyOn(console, "log").mockImplementation();
+    consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     // Reset the enabled flag and plugin registrations before each test
     builtIn.__resetDiagnosticsState();
     // biome-ignore lint/complexity/useLiteralKeys: Accessing internal reset method for testing

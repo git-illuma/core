@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { NodeToken } from "../api";
 import { InjectionError } from "../errors";
 import { extractProvider } from "./extractor";

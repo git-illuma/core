@@ -1,13 +1,13 @@
-import { vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DiagnosticsDefaultReporter } from "./default-impl";
 import type { iDiagnosticsReport } from "./types";
 
 describe("DiagnosticsDefaultReporter", () => {
-  let consoleLogSpy: import("vitest").MockInstance;
+  let consoleLogSpy: import("vitest").MockInstance<typeof console.log>;
   let reporter: DiagnosticsDefaultReporter;
 
   beforeEach(() => {
-    consoleLogSpy = vi.spyOn(console, "log").mockImplementation();
+    consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     reporter = new DiagnosticsDefaultReporter();
   });
 

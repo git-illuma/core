@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   extractToken,
   INJECTION_SYMBOL,
@@ -1890,12 +1890,12 @@ describe("NodeContainer", () => {
         public readonly value = nodeInject(token);
       };
 
-      container.provide(token.withValue('hello'));
+      container.provide(token.withValue("hello"));
       container.provide(classToken.withClass(TestClass));
       container.bootstrap();
 
       const instance = container.get(classToken);
-      expect(instance.value).toBe('hello');
+      expect(instance.value).toBe("hello");
     });
 
     it("should work with class factories", () => {
@@ -1904,7 +1904,7 @@ describe("NodeContainer", () => {
       const classToken = new NodeToken<BaseClass>("BASE_CLASS");
 
       abstract class BaseClass {
-        constructor(public readonly value: string[]) { }
+        constructor(public readonly value: string[]) {}
         public getValues(): string[] {
           return this.value;
         }
@@ -1918,15 +1918,15 @@ describe("NodeContainer", () => {
         };
       };
 
-      container.provide(token.withFactory(() => 'value-1'));
-      container.provide(token.withFactory(() => 'value-2'));
+      container.provide(token.withFactory(() => "value-1"));
+      container.provide(token.withFactory(() => "value-2"));
       container.provide(classToken.withClass(factory(token)));
 
       container.bootstrap();
 
       const instance = container.get(classToken);
       expect(instance).toBeInstanceOf(BaseClass);
-      expect(instance.getValues()).toEqual(['value-1', 'value-2']);
+      expect(instance.getValues()).toEqual(["value-1", "value-2"]);
     });
   });
 });

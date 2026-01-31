@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { SHAPE_SHIFTER } from "./proxy";
 
 describe("proxy", () => {

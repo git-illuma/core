@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { MultiNodeToken, NodeToken, nodeInject } from "../api";
 import { InjectionError } from "../errors";
 import {

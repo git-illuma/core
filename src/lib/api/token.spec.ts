@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { InjectionError } from "../errors";
 import type { Token } from "../provider/types";
 import { INJECTION_SYMBOL } from "./decorator";
