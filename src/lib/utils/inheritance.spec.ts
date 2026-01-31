@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { MultiNodeToken, NodeInjectable, NodeToken, nodeInject } from "../api";
 import { NodeContainer } from "../container";
 import { InjectionError } from "../errors";
@@ -551,7 +552,7 @@ describe("injectEntryAsync", () => {
 
   it("should reproduce ASYNC_INJECTION.md example", async () => {
     const parent = new NodeContainer();
-    const logSpy = jest.fn();
+    const logSpy = vi.fn();
 
     @NodeInjectable()
     class Logger {

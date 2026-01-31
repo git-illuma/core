@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { NodeInjectable, NodeToken } from "../api";
 import { NodeContainer } from "../container";
 import { injectDefer } from "./defer";
@@ -193,7 +194,7 @@ describe("injectDefer", () => {
 
     const service = container.get(Service);
 
-    jest.spyOn(container, "get").mockImplementation((t) => {
+    vi.spyOn(container, "get").mockImplementation((t) => {
       if (t === (token as any)) throw error;
       return "val" as any;
     });
@@ -219,7 +220,7 @@ describe("injectDefer", () => {
   it("should work with deferred containers", () => {
     const container = new NodeContainer({ instant: false });
     const token = new NodeToken<string>("TOKEN");
-    const factorySpy = jest.fn(() => "deferred-value");
+    const factorySpy = vi.fn(() => "deferred-value");
 
     @NodeInjectable()
     class TestClass {

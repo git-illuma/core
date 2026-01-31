@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import {
   extractToken,
   MultiNodeToken,
@@ -12,7 +13,7 @@ import * as builtIn from "./built-in";
 
 describe("Performance measurement", () => {
   it("should measure performance when enabled", () => {
-    const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation();
     const container = new NodeContainer({ measurePerformance: true });
     container.bootstrap();
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("Bootstrapped in"));
@@ -174,10 +175,10 @@ describe("allocation tracking", () => {
 });
 
 describe("Plugin: Diagnostics", () => {
-  let consoleLogSpy: jest.SpyInstance;
+  let consoleLogSpy: import("vitest").MockInstance;
 
   beforeEach(() => {
-    consoleLogSpy = jest.spyOn(console, "log").mockImplementation();
+    consoleLogSpy = vi.spyOn(console, "log").mockImplementation();
     // Reset the enabled flag and plugin registrations before each test
     builtIn.__resetDiagnosticsState();
     // biome-ignore lint/complexity/useLiteralKeys: Accessing internal reset method for testing
@@ -206,7 +207,7 @@ describe("Plugin: Diagnostics", () => {
 
   it("should call registered diagnostics modules when enabled", () => {
     const mockDiagnosticsModule = {
-      onReport: jest.fn(),
+      onReport: vi.fn(),
     };
 
     builtIn.enableIllumaDiagnostics();
@@ -233,7 +234,7 @@ describe("Plugin: Diagnostics", () => {
 
   it("should pass correct report data to diagnostics modules", () => {
     const mockDiagnosticsModule = {
-      onReport: jest.fn(),
+      onReport: vi.fn(),
     };
 
     builtIn.enableIllumaDiagnostics();
@@ -351,10 +352,10 @@ describe("Plugin: Diagnostics", () => {
 
   it("should call multiple diagnostics modules in sequence", () => {
     const mockModule1 = {
-      onReport: jest.fn(),
+      onReport: vi.fn(),
     };
     const mockModule2 = {
-      onReport: jest.fn(),
+      onReport: vi.fn(),
     };
 
     builtIn.enableIllumaDiagnostics();
@@ -384,7 +385,7 @@ describe("Plugin: Diagnostics", () => {
 
   it("should include bootstrap duration in diagnostics report", () => {
     const mockDiagnosticsModule = {
-      onReport: jest.fn(),
+      onReport: vi.fn(),
     };
 
     builtIn.enableIllumaDiagnostics();

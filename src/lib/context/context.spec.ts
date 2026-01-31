@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { NodeToken } from "../api";
 import { InjectionError } from "../errors";
 import { InjectionContext } from "./context";
@@ -10,7 +11,7 @@ describe("InjectionContext", () => {
 
   describe("open", () => {
     it("should open context with injector", () => {
-      const mockInjector = jest.fn();
+      const mockInjector = vi.fn();
       InjectionContext.open(mockInjector);
 
       expect(InjectionContext.contextOpen).toBe(true);
@@ -30,7 +31,7 @@ describe("InjectionContext", () => {
 
   describe("close", () => {
     it("should close context and reset state", () => {
-      const mockInjector = jest.fn();
+      const mockInjector = vi.fn();
       const token = new NodeToken("test");
 
       InjectionContext.open(mockInjector);
@@ -116,7 +117,7 @@ describe("InjectionContext", () => {
 
   describe("instantiate", () => {
     it("should instantiate factory with injector and return result", () => {
-      const mockInjector = jest.fn();
+      const mockInjector = vi.fn();
       const factory = () => "result";
 
       const result = InjectionContext.instantiate(factory, mockInjector);
@@ -126,7 +127,7 @@ describe("InjectionContext", () => {
     });
 
     it("should make injector available during factory execution", () => {
-      const mockInjector = jest.fn();
+      const mockInjector = vi.fn();
       let injectorDuringExecution: any = null;
 
       const factory = () => {
@@ -140,7 +141,7 @@ describe("InjectionContext", () => {
     });
 
     it("should close context even if factory throws", () => {
-      const mockInjector = jest.fn();
+      const mockInjector = vi.fn();
       const factory = () => {
         throw new Error("Factory error");
       };

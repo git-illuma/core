@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { MultiNodeToken, NodeToken, nodeInject } from "../api";
 import { InjectionError } from "../errors";
 import { ProtoNodeMulti, ProtoNodeSingle } from "./proto";
@@ -153,7 +154,7 @@ describe("resolveTreeNode", () => {
     const upstreamNode = new TreeNodeSingle(
       new ProtoNodeSingle(new NodeToken("upstream"), () => "upstream"),
     );
-    const upstreamGetter = jest.fn().mockReturnValue(upstreamNode);
+    const upstreamGetter = vi.fn().mockReturnValue(upstreamNode);
 
     const node = resolveTreeNode(proto, cache, singleNodes, multiNodes, upstreamGetter);
 
@@ -189,7 +190,7 @@ describe("resolveTreeNode", () => {
     const multiNodes = new Map([[token, proto]]);
 
     const upstreamNode = new TreeNodeMulti(new ProtoNodeMulti(token));
-    const upstreamGetter = jest.fn().mockReturnValue(upstreamNode);
+    const upstreamGetter = vi.fn().mockReturnValue(upstreamNode);
 
     const node = resolveTreeNode(proto, cache, singleNodes, multiNodes, upstreamGetter);
     expect(node).toBeInstanceOf(TreeNodeMulti);
@@ -281,7 +282,7 @@ describe("resolveTreeNode", () => {
     const token = new MultiNodeToken<string>("multi");
     const proto = new ProtoNodeMulti(token);
     const upstreamNode = new TreeNodeSingle(new ProtoNodeSingle(new NodeToken("single")));
-    const upstreamGetter = jest.fn().mockReturnValue(upstreamNode);
+    const upstreamGetter = vi.fn().mockReturnValue(upstreamNode);
 
     const cache = new Map();
     const singleNodes = new Map();

@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { NodeContainer } from "../container/container";
 import { InjectionContext } from "../context";
 import { InjectionError } from "../errors";
@@ -141,7 +142,7 @@ describe("nodeInject", () => {
   describe("Injector function delegation", () => {
     it("should delegate to injector function when set", () => {
       const token = new NodeToken<string>("TestToken");
-      const mockInjector = jest.fn().mockReturnValue("injected value");
+      const mockInjector = vi.fn().mockReturnValue("injected value");
 
       InjectionContext.open(mockInjector);
 
@@ -153,7 +154,7 @@ describe("nodeInject", () => {
 
     it("should pass optional parameter to injector", () => {
       const token = new NodeToken<string>("TestToken");
-      const mockInjector = jest.fn().mockReturnValue(null);
+      const mockInjector = vi.fn().mockReturnValue(null);
 
       InjectionContext.open(mockInjector);
 
@@ -167,7 +168,7 @@ describe("nodeInject", () => {
       @NodeInjectable()
       class TestService {}
 
-      const mockInjector = jest.fn().mockReturnValue(new TestService());
+      const mockInjector = vi.fn().mockReturnValue(new TestService());
       InjectionContext.open(mockInjector);
 
       nodeInject(TestService);
@@ -180,7 +181,7 @@ describe("nodeInject", () => {
 
     it("should still register injection even when injector is present", () => {
       const token = new NodeToken<string>("TestToken");
-      const mockInjector = jest.fn().mockReturnValue("value");
+      const mockInjector = vi.fn().mockReturnValue("value");
 
       InjectionContext.open(mockInjector);
 
@@ -194,7 +195,7 @@ describe("nodeInject", () => {
   describe("Return type behavior", () => {
     it("should return array type for MultiNodeToken with injector", () => {
       const token = new MultiNodeToken<string>("MultiToken");
-      const mockInjector = jest.fn().mockReturnValue(["value1", "value2"]);
+      const mockInjector = vi.fn().mockReturnValue(["value1", "value2"]);
 
       InjectionContext.open(mockInjector);
 
@@ -206,7 +207,7 @@ describe("nodeInject", () => {
 
     it("should return single value for NodeToken with injector", () => {
       const token = new NodeToken<string>("SingleToken");
-      const mockInjector = jest.fn().mockReturnValue("single value");
+      const mockInjector = vi.fn().mockReturnValue("single value");
 
       InjectionContext.open(mockInjector);
 
@@ -217,7 +218,7 @@ describe("nodeInject", () => {
 
     it("should return null for optional NodeToken when not found", () => {
       const token = new NodeToken<string>("OptionalToken");
-      const mockInjector = jest.fn().mockReturnValue(null);
+      const mockInjector = vi.fn().mockReturnValue(null);
 
       InjectionContext.open(mockInjector);
 
@@ -228,7 +229,7 @@ describe("nodeInject", () => {
 
     it("should return empty array for MultiNodeToken when no providers exist", () => {
       const token = new MultiNodeToken<string>("EmptyMultiToken");
-      const mockInjector = jest.fn().mockReturnValue([]);
+      const mockInjector = vi.fn().mockReturnValue([]);
 
       InjectionContext.open(mockInjector);
 
@@ -276,7 +277,7 @@ describe("nodeInject", () => {
 
     it("should handle injector throwing error", () => {
       const token = new NodeToken<string>("TestToken");
-      const mockInjector = jest.fn().mockImplementation(() => {
+      const mockInjector = vi.fn().mockImplementation(() => {
         throw new Error("Injector error");
       });
 
@@ -340,7 +341,7 @@ describe("nodeInject", () => {
 
     it("should work with InjectionContext.instantiate pattern", () => {
       const token = new NodeToken<string>("TestToken");
-      const mockInjector = jest.fn().mockReturnValue("instantiated");
+      const mockInjector = vi.fn().mockReturnValue("instantiated");
 
       const factory = () => {
         return nodeInject(token);

@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { MultiNodeToken, NodeToken, nodeInject } from "../api";
 import { InjectionError } from "../errors";
 import {
@@ -138,7 +139,7 @@ describe("TreeRootNode", () => {
       const root = new TreeRootNode(false);
 
       const token = new NodeToken<string>("test");
-      const factorySpy = jest.fn(() => "value");
+      const factorySpy = vi.fn(() => "value");
 
       const node = createSingleNode(token, factorySpy);
 
@@ -165,7 +166,7 @@ describe("TreeRootNode", () => {
       const node1Token = new NodeToken<string>("node1");
       const node2Token = new NodeToken<string>("node2");
 
-      const sharedFactorySpy = jest.fn(() => "shared-value");
+      const sharedFactorySpy = vi.fn(() => "shared-value");
       const node1Factory = () => nodeInject(sharedToken).slice(0, 6);
       const node2Factory = () => nodeInject(sharedToken).slice(7);
 
@@ -199,9 +200,9 @@ describe("TreeRootNode", () => {
       const token1 = new NodeToken<string>("node1");
       const token2 = new NodeToken<string>("node2");
 
-      const deepFactorySpy = jest.fn(() => "shared-value");
-      const node1FactorySpy = jest.fn(() => nodeInject(deepToken).slice(0, 6));
-      const node2FactorySpy = jest.fn(() => nodeInject(token1).slice(3));
+      const deepFactorySpy = vi.fn(() => "shared-value");
+      const node1FactorySpy = vi.fn(() => nodeInject(deepToken).slice(0, 6));
+      const node2FactorySpy = vi.fn(() => nodeInject(token1).slice(3));
 
       const deepNode = createSingleNode(deepToken, deepFactorySpy);
       expect(deepFactorySpy).toHaveBeenCalledTimes(1);

@@ -1,12 +1,13 @@
+import { vi } from "vitest";
 import { DiagnosticsDefaultReporter } from "./default-impl";
 import type { iDiagnosticsReport } from "./types";
 
 describe("DiagnosticsDefaultReporter", () => {
-  let consoleLogSpy: jest.SpyInstance;
+  let consoleLogSpy: import("vitest").MockInstance;
   let reporter: DiagnosticsDefaultReporter;
 
   beforeEach(() => {
-    consoleLogSpy = jest.spyOn(console, "log").mockImplementation();
+    consoleLogSpy = vi.spyOn(console, "log").mockImplementation();
     reporter = new DiagnosticsDefaultReporter();
   });
 

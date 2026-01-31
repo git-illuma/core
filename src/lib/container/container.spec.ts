@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import {
   extractToken,
   INJECTION_SYMBOL,
@@ -77,7 +78,7 @@ describe("NodeContainer", () => {
 
     it("should prefer token factory for decorated class", () => {
       const container = new NodeContainer();
-      const spyFn = jest.fn(() => ({ value: "from-factory" }));
+      const spyFn = vi.fn(() => ({ value: "from-factory" }));
 
       @NodeInjectable()
       class TestClass {
@@ -1580,7 +1581,7 @@ describe("NodeContainer", () => {
     it("should defer instantiation until first get", () => {
       const container = new NodeContainer(params);
       const token = new NodeToken<number>("TOKEN");
-      const tFactorySpy = jest.fn(() => 42);
+      const tFactorySpy = vi.fn(() => 42);
 
       container.provide(token.withFactory(tFactorySpy));
 
@@ -1606,8 +1607,8 @@ describe("NodeContainer", () => {
       const container = new NodeContainer(params);
       const tokenA = new NodeToken<number>("TOKEN_A");
       const tokenB = new NodeToken<number>("TOKEN_B");
-      const factoryASpy = jest.fn(() => 7);
-      const factoryBSpy = jest.fn(() => {
+      const factoryASpy = vi.fn(() => 7);
+      const factoryBSpy = vi.fn(() => {
         const a = nodeInject(tokenA);
         return a * 3;
       });
@@ -1640,7 +1641,7 @@ describe("NodeContainer", () => {
     it("should defer instantiation in injectable classes", () => {
       const container = new NodeContainer(params);
       const token = new NodeToken<string>("TOKEN");
-      const factorySpy = jest.fn(() => "deferred-value");
+      const factorySpy = vi.fn(() => "deferred-value");
 
       @NodeInjectable()
       class TestClass {
@@ -1683,13 +1684,13 @@ describe("NodeContainer", () => {
       const tokenA = new NodeToken<string>("TOKEN_A");
       const tokenB = new NodeToken<string>("TOKEN_B");
 
-      const factoryASpy = jest.fn(() => "value-a");
-      const factoryBSpy = jest.fn(() => {
+      const factoryASpy = vi.fn(() => "value-a");
+      const factoryBSpy = vi.fn(() => {
         const a = nodeInject(tokenA);
         return `value-b-depends-on-${a}`;
       });
 
-      const classSpy = jest.fn();
+      const classSpy = vi.fn();
       @NodeInjectable()
       class MainService {
         public readonly depB = nodeInject(tokenB);
@@ -1725,7 +1726,7 @@ describe("NodeContainer", () => {
     it("should work with produce()", () => {
       const container = new NodeContainer(params);
       const token = new NodeToken<string>("TOKEN");
-      const factorySpy = jest.fn(() => "deferred-value");
+      const factorySpy = vi.fn(() => "deferred-value");
 
       container.provide(token.withFactory(factorySpy));
       container.bootstrap();
@@ -1745,8 +1746,8 @@ describe("NodeContainer", () => {
     it("should handle multi nodes in produce() within injectable class", () => {
       const container = new NodeContainer(params);
       const token = new MultiNodeToken<string>("TOKEN");
-      const factorySpy1 = jest.fn(() => "deferred-value-1");
-      const factorySpy2 = jest.fn(() => "deferred-value-2");
+      const factorySpy1 = vi.fn(() => "deferred-value-1");
+      const factorySpy2 = vi.fn(() => "deferred-value-2");
 
       @NodeInjectable()
       class TestClass {
@@ -1799,7 +1800,7 @@ describe("NodeContainer", () => {
       const parent = new NodeContainer(params);
       const child = new NodeContainer({ parent, ...params });
       const token = new NodeToken<string>("TOKEN");
-      const factorySpy = jest.fn(() => "deferred-value");
+      const factorySpy = vi.fn(() => "deferred-value");
 
       parent.provide(token.withFactory(factorySpy));
 
@@ -1820,8 +1821,8 @@ describe("NodeContainer", () => {
     it("should work with multi-token providers", () => {
       const container = new NodeContainer(params);
       const token = new MultiNodeToken<string>("TOKEN");
-      const factorySpy1 = jest.fn(() => "deferred-value-1");
-      const factorySpy2 = jest.fn(() => "deferred-value-2");
+      const factorySpy1 = vi.fn(() => "deferred-value-1");
+      const factorySpy2 = vi.fn(() => "deferred-value-2");
 
       container.provide(token.withFactory(factorySpy1));
       container.provide(token.withFactory(factorySpy2));
@@ -1846,7 +1847,7 @@ describe("NodeContainer", () => {
       const container = new NodeContainer(params);
       const tokenA = new NodeToken<string>("TOKEN_A");
       const tokenB = new NodeToken<string>("TOKEN_B");
-      const factorySpy = jest.fn(() => "deferred-value");
+      const factorySpy = vi.fn(() => "deferred-value");
 
       container.provide(tokenA.withFactory(factorySpy));
       container.provide({ provide: tokenB, alias: tokenA });

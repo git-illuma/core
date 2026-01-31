@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import type { iContextScanner } from "../context/types";
 import type { iDiagnosticsModule, iDiagnosticsReport } from "../diagnostics/types";
 import { Illuma } from "./plugin-container";
@@ -26,7 +27,7 @@ describe("Illuma", () => {
   describe("extendDiagnostics", () => {
     it("should register and call diagnostics module", () => {
       const mockModule: iDiagnosticsModule = {
-        onReport: jest.fn(),
+        onReport: vi.fn(),
       };
 
       Illuma.extendDiagnostics(mockModule);
@@ -45,10 +46,10 @@ describe("Illuma", () => {
     it("should call multiple modules in order", () => {
       const callOrder: number[] = [];
       const mockModule1: iDiagnosticsModule = {
-        onReport: jest.fn(() => callOrder.push(1)),
+        onReport: vi.fn(() => callOrder.push(1)),
       };
       const mockModule2: iDiagnosticsModule = {
-        onReport: jest.fn(() => callOrder.push(2)),
+        onReport: vi.fn(() => callOrder.push(2)),
       };
 
       Illuma.extendDiagnostics(mockModule1);
@@ -67,7 +68,7 @@ describe("Illuma", () => {
   describe("extendContextScanner", () => {
     it("should register context scanner", () => {
       const mockScanner: iContextScanner = {
-        scan: jest.fn(() => new Set()),
+        scan: vi.fn(() => new Set()),
       };
 
       Illuma.extendContextScanner(mockScanner);
@@ -78,8 +79,8 @@ describe("Illuma", () => {
     });
 
     it("should register multiple scanners in order", () => {
-      const mockScanner1: iContextScanner = { scan: jest.fn(() => new Set()) };
-      const mockScanner2: iContextScanner = { scan: jest.fn(() => new Set()) };
+      const mockScanner1: iContextScanner = { scan: vi.fn(() => new Set()) };
+      const mockScanner2: iContextScanner = { scan: vi.fn(() => new Set()) };
 
       Illuma.extendContextScanner(mockScanner1);
       Illuma.extendContextScanner(mockScanner2);
