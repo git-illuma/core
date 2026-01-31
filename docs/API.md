@@ -560,14 +560,40 @@ Illuma.extendDiagnostics(reporter);
 
 ### `Illuma.registerGlobalMiddleware(middleware: iMiddleware): void`
 
-Register a middleware function that will run for **all** containers and providers.
+Register a middleware function that will run for **all** containers and providers. This allows you to intercept the instantiation of every provider in your application, which is useful for cross-cutting concerns like logging, performance profiling, mocking, or instance transformation.
+
+Each middleware receives an `iInstantiationParams` object and a `next` function. You must call `next(params)` to proceed with the instantiation (or return a custom value to bypass it).
+
+#### Interface
 
 ```typescript
-import { Illuma } from 'illuma';
+type iMiddleware<T = unknown> = (
+  params: iInstantiationParams<T>,
+  next: (params: iInstantiationParams<T>) => T,
+) => T;
+
+interface iInstantiationParams<T> {
+  readonly token: NodeBase<T>;        // The token being resolved
+  readonly factory: () => T;          // The factory function that creates the instance
+  readonly deps: Set<Token<unknown>>; // Dependencies detected for this node
+}
+```
+
+#### Example: Performance logging middleware
+
+```typescript
+import { Illuma } from '@illuma/core/plugins';
 
 Illuma.registerGlobalMiddleware((params, next) => {
-  // Logic goes here
-  return next(params);
+  const start = performance.now();
+  
+  // Proceed with instantiation
+  const instance = next(params);
+  
+  const end = performance.now();
+  console.log(`[${params.token.name}] instantiated in ${(end - start).toFixed(2)}ms`);
+  
+  return instance;
 });
 ```
 
