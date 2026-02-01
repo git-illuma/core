@@ -7,6 +7,7 @@ This guide covers advanced dependency injection patterns using `injectAsync`, `i
 - [🔗 Async Injection \& Sub-Containers](#-async-injection--sub-containers)
   - [Table of contents](#table-of-contents)
   - [Overview](#overview)
+    - [Explicit Injector Context](#explicit-injector-context)
   - [injectAsync](#injectasync)
     - [Basic usage](#basic-usage)
     - [Use cases](#use-cases)
@@ -55,6 +56,20 @@ All utilities support:
 - ✅ Full type inference
 - ✅ Dependency overrides
 - ✅ Parent container access
+- ✅ Optional explicit injector context
+
+### Explicit Injector Context
+
+By default, `injectAsync` inherits from the injector of the current context. You can manually specify a parent injector using the `injector` option. This is useful when creating factories outside of the injection context or when you want to use a specific injector instance.
+
+```typescript
+const getService = injectAsync(
+  async () => MyService,
+  { injector: myParentInjector }
+);
+
+const service = await getService();
+```
 
 ## injectAsync
 

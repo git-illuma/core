@@ -387,14 +387,16 @@ function injectAsync<T>(
   options?: {
     withCache?: boolean;
     overrides?: Provider[];
+    injector?: iInjector;
   }
 ): () => Promise<T | T[]>
 ```
 
-| Option      | Type         | Default | Description                                |
-| ----------- | ------------ | ------- | ------------------------------------------ |
-| `withCache` | `boolean`    | `true`  | Cache the resolved instance                |
-| `overrides` | `Provider[]` | `[]`    | Additional providers for the sub-container |
+| Option      | Type         | Default     | Description                                |
+| ----------- | ------------ | ----------- | ------------------------------------------ |
+| `withCache` | `boolean`    | `true`      | Cache the resolved instance                |
+| `overrides` | `Provider[]` | `[]`        | Additional providers for the sub-container |
+| `injector`  | `iInjector`  | `undefined` | Explicit injector to use instead of context|
 
 ```typescript
 private readonly getAnalytics = injectAsync(
@@ -417,6 +419,7 @@ function injectGroupAsync(
   options?: {
     withCache?: boolean;
     overrides?: Provider[];
+    injector?: iInjector;
   }
 ): () => Promise<iInjector>
 ```
@@ -442,6 +445,7 @@ function injectEntryAsync<T>(
   options?: {
     withCache?: boolean;
     overrides?: Provider[];
+    injector?: iInjector;
   }
 ): () => Promise<T | T[]>
 ```

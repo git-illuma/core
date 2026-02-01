@@ -14,12 +14,20 @@ interface iInjectionOptions {
    * @default true
    */
   withCache?: boolean;
+
   /**
    * Overrides to provide to the sub-container
    * These will be provided in addition to the main injection
    * @default []
    */
   overrides?: Provider[];
+
+  /**
+   * Allows to use the function with specified injector outside of Injection Context.
+   * By default, the injector is obtained from the current injection context.
+   * @default undefined
+   */
+  injector?: iInjector;
 }
 
 /**
@@ -37,7 +45,7 @@ export function injectGroupAsync(
   fn: MaybeAsyncFactory<Provider[]>,
   opts?: iInjectionOptions,
 ): () => Promise<iInjector> {
-  const { container: parent } = nodeInject(Injector);
+  const { container: parent } = opts?.injector ?? nodeInject(Injector);
   const factory = async () => {
     const providers = await fn();
 
@@ -88,7 +96,7 @@ export function injectAsync<T>(
   fn: MaybeAsyncFactory<Token<T>>,
   opts?: iInjectionOptions,
 ): () => Promise<T | T[]> {
-  const { container: parent } = nodeInject(Injector);
+  const { container: parent } = opts?.injector ?? nodeInject(Injector);
   const factory = (async () => {
     const token = await fn();
     const tempContainer = new NodeContainer({ parent });
@@ -143,7 +151,7 @@ export function injectEntryAsync<T>(
   fn: MaybeAsyncFactory<iEntrypointConfig<Token<T>>>,
   opts?: iInjectionOptions,
 ): () => Promise<T | T[]> {
-  const { container: parent } = nodeInject(Injector);
+  const { container: parent } = opts?.injector ?? nodeInject(Injector);
   const factory = (async () => {
     const { entrypoint, providers } = await fn();
 
