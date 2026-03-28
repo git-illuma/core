@@ -152,7 +152,7 @@ describe("TreeRootNode", () => {
 
       expect(factorySpy).toHaveBeenCalledTimes(1); // <- not called yet
 
-      const foundNode = root.find(token);
+      const foundNode = root.obtain(token);
 
       expect(foundNode?.instance).toBe("value");
       expect(foundNode).toBe(node);
@@ -184,11 +184,11 @@ describe("TreeRootNode", () => {
       root.build();
       expect(sharedFactorySpy).toHaveBeenCalledTimes(1);
 
-      const foundNode1 = root.find(node1Token);
+      const foundNode1 = root.obtain(node1Token);
       expect(sharedFactorySpy).toHaveBeenCalledTimes(2);
       expect(foundNode1?.instance).toBe("shared");
 
-      const foundNode2 = root.find(node2Token);
+      const foundNode2 = root.obtain(node2Token);
       expect(sharedFactorySpy).toHaveBeenCalledTimes(2);
       expect(foundNode2?.instance).toBe("value");
     });
@@ -218,13 +218,13 @@ describe("TreeRootNode", () => {
       root.addDependency(node2);
       root.build();
 
-      const foundNode1 = root.find(token1);
+      const foundNode1 = root.obtain(token1);
       expect(deepFactorySpy).toHaveBeenCalledTimes(2); // <- actual call
       expect(node1FactorySpy).toHaveBeenCalledTimes(2); // <- actual call
       expect(node2FactorySpy).toHaveBeenCalledTimes(1); // <- never called yet
       expect(foundNode1?.instance).toBe("shared");
 
-      const foundNode2 = root.find(token2);
+      const foundNode2 = root.obtain(token2);
       expect(deepFactorySpy).toHaveBeenCalledTimes(2); // <- never called again
       expect(node1FactorySpy).toHaveBeenCalledTimes(2); // <- never called again
       expect(node2FactorySpy).toHaveBeenCalledTimes(2); // <- actual call

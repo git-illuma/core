@@ -196,11 +196,11 @@ describe("Injector token", () => {
     expect(plugins).toEqual(["plugin-1", "plugin-2"]);
   });
 
-  it("should maintain singleton behavior when accessed through injector", () => {
+  it("should maintain behavior when accessed through injector", () => {
     const container = new NodeContainer();
 
     @NodeInjectable()
-    class SingletonService {
+    class Service {
       public readonly id = Math.random();
     }
 
@@ -209,18 +209,18 @@ describe("Injector token", () => {
       private readonly _injector = nodeInject(Injector);
 
       public getService() {
-        return this._injector.get(SingletonService);
+        return this._injector.get(Service);
       }
     }
 
-    container.provide(SingletonService);
+    container.provide(Service);
     container.provide(ServiceWithInjector);
     container.bootstrap();
 
     const service = container.get(ServiceWithInjector);
     const instance1 = service.getService();
     const instance2 = service.getService();
-    const directInstance = container.get(SingletonService);
+    const directInstance = container.get(Service);
 
     expect(instance1.id).toBe(instance2.id);
     expect(instance1.id).toBe(directInstance.id);

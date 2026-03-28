@@ -1,24 +1,23 @@
 import { InjectionError } from "../errors";
 import type {
   Ctor,
+  ImplementationShape,
   iNodeAliasProvider,
   iNodeClassProvider,
   iNodeFactoryProvider,
   iNodeProvider,
   iNodeTokenBaseOptions,
   iNodeValueProvider,
-  ImplementationShape,
   Token,
 } from "../provider/types";
 import { getInjectableToken, isInjectable } from "./decorator";
 
 /**
- * Base class for dependency injection tokens.
- * This class should not be instantiated directly. Use {@link NodeToken} or {@link MultiNodeToken} instead.
- *
+ * Base class for dependency injection tokens. Should not be instantiated directly.
+ * Use {@link NodeToken} or {@link MultiNodeToken} instead.
  * @template T - The type of value this token represents
  */
-export class NodeBase<T> {
+export abstract class NodeBase<T> {
   constructor(
     public readonly name: string,
     public readonly opts?: iNodeTokenBaseOptions<T>,
@@ -94,7 +93,6 @@ export class NodeBase<T> {
  */
 export class NodeToken<T> extends NodeBase<T> {
   public readonly multi = false as const;
-
   public override toString(): string {
     return `NodeToken[${this.name}]`;
   }
@@ -117,7 +115,6 @@ export class NodeToken<T> extends NodeBase<T> {
  */
 export class MultiNodeToken<T> extends NodeBase<T> {
   public readonly multi = true as const;
-
   public override toString(): string {
     return `MultiNodeToken[${this.name}]`;
   }
@@ -127,14 +124,12 @@ export class MultiNodeToken<T> extends NodeBase<T> {
  * Type guard to check if a value is a valid dependency injection token.
  *
  * @template T - The type of value the token represents
- * @param specimen - The value to check
- * @returns True if the specimen is a NodeToken or MultiNodeToken, false otherwise
+ * @param obj - The value to check
+ * @returns True if the object is a NodeToken or MultiNodeToken, false otherwise
  * @internal
  */
-export function isNodeBase<T>(
-  specimen: unknown,
-): specimen is NodeToken<T> | MultiNodeToken<T> {
-  return specimen instanceof NodeToken || specimen instanceof MultiNodeToken;
+export function isNodeBase<T>(obj: unknown): obj is NodeToken<T> | MultiNodeToken<T> {
+  return obj instanceof NodeToken || obj instanceof MultiNodeToken;
 }
 
 /**
@@ -154,15 +149,13 @@ export function extractToken<T>(
   provider: Token<T>,
   isAlias = false,
 ): NodeToken<T> | MultiNodeToken<T> {
-  let token: NodeBase<T> | null = null;
-  if (isInjectable<T>(provider)) {
-    token = getInjectableToken<T>(provider);
-  } else if (isNodeBase<T>(provider)) token = provider;
+  if (isNodeBase<T>(provider)) return provider;
 
-  if (!token || !isNodeBase<T>(token)) {
-    if (isAlias) throw InjectionError.invalidAlias(provider);
-    throw InjectionError.invalidProvider(JSON.stringify(provider));
+  if (typeof provider === "function") {
+    if (!isInjectable<T>(provider)) throw InjectionError.invalidCtor(provider);
+    return getInjectableToken<T>(provider);
   }
 
-  return token;
+  if (isAlias) throw InjectionError.invalidAlias(provider);
+  throw InjectionError.invalidProvider(String(provider));
 }

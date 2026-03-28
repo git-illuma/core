@@ -14,6 +14,9 @@ This guide will walk you through setting up Illuma and creating your first depen
   - [Injecting dependencies](#injecting-dependencies)
     - [Optional dependencies](#optional-dependencies)
   - [Using tokens](#using-tokens)
+  - [Root-scoped singletons](#root-scoped-singletons)
+    - [How it works](#how-it-works)
+    - [Important behavior](#important-behavior)
   - [Next steps](#next-steps)
 
 ## Installation
@@ -187,6 +190,45 @@ container.provide(
 container.bootstrap();
 const config = container.get(CONFIG_TOKEN);
 ```
+
+## Root-scoped singletons
+
+Use `{ singleton: true }` to make an injectable class behave like Angular's `providedIn: 'root'`.
+
+```typescript
+import { NodeContainer, NodeInjectable } from '@illuma/core';
+
+@NodeInjectable({ singleton: true })
+class GlobalService {
+  public readonly id = Math.random();
+}
+
+const root = new NodeContainer();
+const childA = new NodeContainer({ parent: root });
+const childB = new NodeContainer({ parent: root });
+
+root.bootstrap();
+childA.bootstrap();
+childB.bootstrap();
+
+const a = childA.get(GlobalService);
+const b = childB.get(GlobalService);
+const r = root.get(GlobalService);
+
+console.log(a === b && b === r); // true
+```
+
+### How it works
+
+1. The singleton class stores metadata on its token.
+2. On first resolution from any child/root container, Illuma attaches that provider to the root container tree.
+3. The same root instance is then reused across descendants.
+
+### Important behavior
+
+1. Child overrides (using `.provide()`) still work locally and do not replace the root singleton globally.
+2. Root singletons can only inject dependencies visible from root (not child-only providers).
+3. Circular dependency detection works the same as for normal providers.
 
 ## Next steps
 

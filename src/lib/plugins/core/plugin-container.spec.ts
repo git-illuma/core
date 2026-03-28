@@ -4,6 +4,8 @@ import type { iContextScanner } from "../context/types";
 import type { iDiagnosticsModule, iDiagnosticsReport } from "../diagnostics/types";
 import { Illuma } from "./plugin-container";
 
+vi.spyOn(console, "log").mockImplementation(() => {});
+
 // Test subclass to expose protected methods
 class TestPluginContainer extends Illuma {
   public static triggerReport(report: iDiagnosticsReport): void {

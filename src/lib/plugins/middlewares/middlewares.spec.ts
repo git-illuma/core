@@ -1,8 +1,10 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { NodeToken } from "../../api/token";
 import { NodeContainer } from "../../container/container";
 import { Illuma } from "../core/plugin-container";
 import type { iMiddleware } from "./types";
+
+vi.spyOn(console, "log").mockImplementation(() => {});
 
 describe("Plugin: Middlewares", () => {
   afterEach(() => {
@@ -163,7 +165,7 @@ describe("Plugin: Middlewares", () => {
     expect(() => container.bootstrap()).toThrow("Middleware error");
   });
 
-  it("experimental: should work with deferred containers", () => {
+  it("should work with deferred containers", () => {
     const Token = new NodeToken<any>("Token");
     const container = new NodeContainer({ instant: false });
     const logs: string[] = [];

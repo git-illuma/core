@@ -26,7 +26,6 @@ The main dependency injection container.
 ```typescript
 new NodeContainer(options?: { 
   measurePerformance?: boolean;
-  diagnostics?: boolean;
   instant?: boolean;
   parent?: iDIContainer;
 })
@@ -35,7 +34,6 @@ new NodeContainer(options?: {
 | Parameter                    | Type      | Default | Description                                                                              |
 | ---------------------------- | --------- | ------- | ---------------------------------------------------------------------------------------- |
 | `options.measurePerformance` | `boolean` | `false` | Enable performance monitoring                                                            |
-| `options.diagnostics`        | `boolean` | `false` | Enable diagnostics reporting                                                             |
 | `options.instant`            | `boolean` | `true`  | Whether to instantiate consumers immediately on bootstrap (true) or lazily (false)       |
 | `options.parent`             | `iDIContainer` | `undefined` | Optional parent container for hierarchical injection                                   |
 
@@ -72,7 +70,9 @@ container.provide([UserService, DatabaseService]);
 container.bootstrap();
 ```
 
-#### `get<T>(token: Token<T>): T`
+#### `get<T>(token: MultiNodeToken<T>): T[]`
+
+#### `get<T>(token: NodeToken<T> | Ctor<T>): T`
 
 Retrieve an instance from the container. Container must be bootstrapped first.
 
@@ -123,13 +123,22 @@ A token for identifying non-class dependencies.
 ### Constructor
 
 ```typescript
-new NodeToken<T>(name: string, options?: { factory?: () => T })
+new NodeToken<T>(
+  name: string,
+  options?: {
+    factory?: () => T;
+    singleton?: boolean;
+  }
+)
 ```
 
 | Parameter         | Type      | Description                        |
 | ----------------- | --------- | ---------------------------------- |
 | `name`            | `string`  | Unique identifier for the token    |
 | `options.factory` | `() => T` | Optional factory for default value |
+| `options.singleton` | `boolean` | Marks token as root-scoped singleton in parent-child containers |
+
+When `singleton: true`, there's no need to call `provide` for this token. It will be automatically provided as a singleton in the root container when first requested until you want to override it in a child container.
 
 ### Provider Helper Methods
 
@@ -161,7 +170,7 @@ const DB = new NodeToken<Database>('DB');
 container.provide(DB.withAlias(PRIMARY_DB));
 ```
 
-#### `implement(shape: ProviderImplementation<T>): iNodeProvider<T>`
+#### `implement(shape: ImplementationShape<T>): iNodeProvider<T>`
 
 ```typescript
 const LOGGER = new NodeToken<Logger>('LOGGER');
@@ -207,9 +216,19 @@ Inject a dependency into a class field or factory function.
 
 ```typescript
 function nodeInject<T>(
-  token: Token<T>,
+  token: MultiNodeToken<T>,
   options?: { optional?: boolean }
+): T[]
+
+function nodeInject<T>(
+  token: NodeToken<T> | Ctor<T>,
+  options?: { optional?: false }
 ): T
+
+function nodeInject<T>(
+  token: NodeToken<T> | Ctor<T>,
+  options: { optional: true }
+): T | null
 ```
 
 | Parameter          | Type       | Description                              |
@@ -244,9 +263,19 @@ If the only injection point for the dependency is via `injectDefer`, it may appe
 
 ```typescript
 function injectDefer<T>(
-  token: Token<T>,
+  token: MultiNodeToken<T>,
   options?: { optional?: boolean }
+): () => T[]
+
+function injectDefer<T>(
+  token: NodeToken<T> | Ctor<T>,
+  options?: { optional?: false }
 ): () => T
+
+function injectDefer<T>(
+  token: NodeToken<T> | Ctor<T>,
+  options: { optional: true }
+): () => T | null
 ```
 
 | Parameter          | Type       | Description                                       |
@@ -282,7 +311,9 @@ Token for accessing the DI container from within services.
 
 ### Methods
 
-#### `get<T>(token: Token<T>): T`
+#### `get<T>(token: MultiNodeToken<T>): T[]`
+
+#### `get<T>(token: NodeToken<T> | Ctor<T>): T`
 
 Retrieve a registered instance from the container.
 
@@ -326,16 +357,20 @@ class FactoryService {
 
 ## Decorators
 
-### @NodeInjectable()
+### @NodeInjectable(options?)
 
 Mark a class as injectable.
 
 ```typescript
-@NodeInjectable()
+@NodeInjectable({ singleton: true })
 class UserService {
   private readonly db = nodeInject(DatabaseService);
 }
 ```
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `singleton` | `boolean` | `false` | Marks this injectable class as root-scoped singleton |
 
 **Requires:** `experimentalDecorators: true` in `tsconfig.json`
 
@@ -351,8 +386,28 @@ class _UserService {
 }
 
 export type UserService = _UserService;
-export const UserService = makeInjectable(_UserService);
+export const UserService = makeInjectable(_UserService, { singleton: true });
 ```
+
+### Root singleton semantics
+
+`{ singleton: true }` implements Angular-like root scope for single providers:
+
+1. The singleton flag is stored on the generated `NodeToken`.
+2. During dependency resolution, if the token is missing locally and upstream, Illuma materializes a singleton proto node from token metadata.
+3. When requested from child containers, singleton registration is forwarded through parents to root and attached to root tree state.
+4. The resulting instance is shared across root and all descendants unless a child explicitly overrides that provider locally.
+
+Instantiation timing is still controlled by the root container `instant` option:
+
+1. `instant: true` on root: singleton is instantiated when attached to root.
+2. `instant: false` on root: singleton is attached but instantiated only on first actual resolve.
+
+Important constraints:
+
+1. Root singleton providers can only inject dependencies visible from root. Child-only providers are not visible to root singletons.
+2. Circular dependency checks still apply and throw as usual.
+3. The feature is intended for `NodeToken` and class injectables. `MultiNodeToken` behavior is unchanged.
 
 ### registerClassAsInjectable() (internal)
 
@@ -393,7 +448,7 @@ function injectAsync<T>(
   fn: () => Token<T> | Promise<Token<T>>,
   options?: {
     withCache?: boolean;
-    overrides?: Provider[];
+    config?: Provider[];
     injector?: iInjector;
   }
 ): () => Promise<T | T[]>
@@ -402,7 +457,7 @@ function injectAsync<T>(
 | Option      | Type         | Default     | Description                                |
 | ----------- | ------------ | ----------- | ------------------------------------------ |
 | `withCache` | `boolean`    | `true`      | Cache the resolved instance                |
-| `overrides` | `Provider[]` | `[]`        | Additional providers for the sub-container |
+| `config`    | `Provider[]` | `[]`        | Additional providers for the sub-container |
 | `injector`  | `iInjector`  | `undefined` | Explicit injector to use instead of context|
 
 ```typescript
@@ -425,7 +480,7 @@ function injectGroupAsync(
   fn: () => Provider<unknown>[] | Promise<Provider<unknown>[]>,
   options?: {
     withCache?: boolean;
-    overrides?: Provider[];
+    config?: Provider[];
     injector?: iInjector;
   }
 ): () => Promise<iInjector>
@@ -451,7 +506,7 @@ function injectEntryAsync<T>(
   fn: () => iEntrypointConfig<Token<T>> | Promise<iEntrypointConfig<Token<T>>>,
   options?: {
     withCache?: boolean;
-    overrides?: Provider[];
+    config?: Provider[];
     injector?: iInjector;
   }
 ): () => Promise<T | T[]>
@@ -545,7 +600,7 @@ container.bootstrap();
 // → Diagnostics output will be logged
 ```
 
-> **Note**: The `diagnostics: true` option in `NodeContainer` constructor is deprecated. Use `enableIllumaDiagnostics()` instead.
+> **Note**: The `diagnostics: true` option in `NodeContainer` constructor is no longer supported since version `2.0.0`. Use `enableIllumaDiagnostics()` instead.
 
 #### `Illuma.extendDiagnostics(module: iDiagnosticsModule): void`
 
@@ -670,7 +725,9 @@ Interface for container/injector access.
 
 ```typescript
 interface iInjector {
-  get<T>(token: Token<T>): T;
+  get<T>(token: MultiNodeToken<T>): T[];
+  get<T>(token: NodeToken<T>): T;
+  get<T>(token: Ctor<T>): T;
   produce<T>(fn: Ctor<T> | (() => T)): T;
 }
 ```

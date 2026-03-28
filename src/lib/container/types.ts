@@ -15,21 +15,12 @@ export interface iContainerOptions {
   measurePerformance?: boolean;
 
   /**
-   * @deprecated Will be removed in next major versions.
-   *
-   * When true, enables diagnostics reporting after bootstrap.
-   * @default false
-   */
-  diagnostics?: boolean;
-
-  /**
    * @internal
    * The parent container for hierarchical dependency resolution.
    */
   parent?: iDIContainer;
 
   /**
-   * @experimental
    * Whether to instantiate dependencies immediately.
    * If disabled, providers instantiation will happen when first requested.
    * This helps improve startup performance for large containers.

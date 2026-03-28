@@ -36,22 +36,22 @@ export abstract class InjectionContext {
    *
    * @param injector - Optional injector function to use for resolving dependencies
    */
-  /**
-   * Scans a factory function for dependencies.
-   * Executes the factory in a dry-run mode to capture `nodeInject` calls.
-   * Also runs registered context scanners.
-   *
-   * @param factory - The factory function to scan
-   * @returns A set of detected injection nodes
-   */
   public static open(injector?: InjectorFn): void {
     InjectionContext._calls.clear();
     InjectionContext.contextOpen = true;
     InjectionContext.injector = injector || null;
   }
 
-  public static scan(factory: any): Set<iInjectionNode<any>> {
-    if (typeof factory !== "function") return new Set();
+  /**
+   * Scans a factory function for dependencies and puts them into the target set.
+   * Executes the factory in a dry-run mode to capture `nodeInject` calls.
+   * Also runs registered context scanners.
+   *
+   * @param factory - The factory function to scan
+   * @param target - The set to populate with detected injection nodes
+   */
+  public static scanInto(factory: any, target: Set<iInjectionNode<any>>): void {
+    if (typeof factory !== "function") return;
     InjectionContext.open();
 
     try {
@@ -61,45 +61,70 @@ export abstract class InjectionContext {
     }
 
     const scanners = InjectionContext._scanners;
+    if (!scanners.length) {
+      InjectionContext._flushInto(target);
+      InjectionContext.close();
+      return;
+    }
+
     for (const scanner of scanners) {
-      /**
-       * Instantiates a value using a factory function within an injection context.
-       *
-       * @template T - The type of the value being instantiated
-       * @param factory - The factory function to execute
-       * @param injector - The injector function to resolve dependencies
-       * @returns The instantiated value
-       */
       const scanned = scanner.scan(factory);
       for (const node of scanned) InjectionContext._calls.add(node);
     }
 
-    const injections = InjectionContext.closeAndReport();
-    return injections;
+    InjectionContext._flushInto(target);
+    InjectionContext.close();
   }
 
+  /**
+   * Scans a factory function for dependencies and returns a set of injection nodes.
+   *
+   * @param factory - The factory function to scan
+   * @returns A set of injection nodes detected during the scan
+   */
+  public static scan(factory: any): Set<iInjectionNode<any>> {
+    const deps = new Set<iInjectionNode<any>>();
+    InjectionContext.scanInto(factory, deps);
+    return deps;
+  }
+
+  /**
+   * Instantiates a value using a factory function within an injection context.
+   *
+   * @template T - The type of the value being instantiated
+   * @param factory - The factory function to execute
+   * @param injector - The injector function to resolve dependencies
+   * @returns The instantiated value
+   */
   public static instantiate<T>(factory: () => T, injector: InjectorFn): T {
-    /**
-     * Closes the current injection context.
-     * Resets the context state and returns the collected dependencies.
-     *
-     * @returns A set of injection nodes collected during the context session
-     */
     InjectionContext.open(injector);
+
     try {
       return factory();
     } finally {
-      InjectionContext.closeAndReport();
+      InjectionContext.close();
     }
   }
 
-  public static closeAndReport(): Set<iInjectionNode<any>> {
-    const calls = new Set(InjectionContext._calls);
-
+  /** Closes the current injection context. */
+  public static close(): void {
     InjectionContext.contextOpen = false;
     InjectionContext._calls.clear();
     InjectionContext.injector = null;
+  }
 
+  /**
+   * Closes current injection context and returns the set of injection nodes
+   * that were called during the context.
+   * @returns A set of injection nodes that were called during the context
+   */
+  public static closeAndReport(): Set<iInjectionNode<any>> {
+    const calls = new Set(InjectionContext._calls);
+    InjectionContext.close();
     return calls;
+  }
+
+  private static _flushInto(target: Set<iInjectionNode<any>>): void {
+    for (const call of InjectionContext._calls) target.add(call);
   }
 }

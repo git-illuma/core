@@ -19,6 +19,10 @@ Heavily inspired by Angular's DI system, but designed to work in any environment
 - **TestKit** – Unit testing and mocking utilities for any testing framework
 - **Universal** – Node.js, Bun, Deno, browser, and Electron
 
+## V2 is out now!
+
+Please check out the [migration guide](./docs/MIGRATION.md) for details on what's new and how to upgrade from v1. 
+
 ## Installation
 
 ```bash

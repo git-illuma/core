@@ -271,7 +271,7 @@ container.bootstrap();
 - Modules execute in registration order
 - Set `measurePerformance: true` in container options to get accurate timing
 
-> **Note**: The `diagnostics: true` option in `NodeContainer` constructor is deprecated. Use `enableIllumaDiagnostics()` instead.
+> **Note**: The `diagnostics: true` option in `NodeContainer` constructor is no longer supported since version `2.0.0`. Use `enableIllumaDiagnostics()` instead.
 
 ---
 
