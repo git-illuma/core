@@ -3,7 +3,7 @@ import { nodeInject } from "../api/injection";
 import type { NodeBase } from "../api/token";
 import { extractToken, isNodeBase, MultiNodeToken, NodeToken } from "../api/token";
 import type { InjectorFn } from "../api/types";
-import { InjectionContext } from "../context";
+import { InjectionContext, type iInjectionNode } from "../context";
 import { InjectionError } from "../errors";
 import { Illuma } from "../plugins/core/plugin-container";
 import type { iMiddleware } from "../plugins/middlewares";
@@ -418,7 +418,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
    * Must be called after {@link bootstrap}.
    *
    * @template T - The type of the class being instantiated
-   * @param factory - Factory or class constructor to instantiate
+   * @param fn - Factory function or class constructor to instantiate
    * @returns A new instance of the class with dependencies injected
    * @throws {InjectionError} If called before bootstrap or if the constructor is invalid
    */
@@ -460,7 +460,8 @@ export class NodeContainer extends Illuma implements iDIContainer {
       return contextFactory();
     }
 
-    const deps = InjectionContext.scan(factory);
+    const deps = new Set<iInjectionNode<any>>();
+    InjectionContext.scanInto(factory, deps);
 
     return runMiddlewares(middlewares, {
       token: new NodeToken<T>("ProducedNode"),

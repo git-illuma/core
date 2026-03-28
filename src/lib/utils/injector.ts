@@ -23,7 +23,7 @@ export interface iInjector {
    * Class does not get registered in the container and cannot be retrieved via {@link get} or {@link nodeInject}.
    *
    * @template T - The type of the class being instantiated
-   * @param ctor - The constructor of the class to instantiate
+   * @param fn - Factory function or class constructor to instantiate
    * @returns A new instance of the class with dependencies injected
    * @throws {InjectionError} If called before bootstrap or if the constructor is invalid
    * Must be called after {@link bootstrap}.
@@ -54,7 +54,6 @@ export class InjectorImpl implements iInjector {
  * @example
  * ```typescript
  * import { Injector, nodeInject, NodeInjectable, NodeContainer } from "@illuma/core";
-import { iDIContainer } from '../container/types';
  *
  * @NodeInjectable()
  * class MyService {

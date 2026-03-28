@@ -26,7 +26,6 @@ The main dependency injection container.
 ```typescript
 new NodeContainer(options?: { 
   measurePerformance?: boolean;
-  diagnostics?: boolean;
   instant?: boolean;
   parent?: iDIContainer;
 })
@@ -35,7 +34,6 @@ new NodeContainer(options?: {
 | Parameter                    | Type      | Default | Description                                                                              |
 | ---------------------------- | --------- | ------- | ---------------------------------------------------------------------------------------- |
 | `options.measurePerformance` | `boolean` | `false` | Enable performance monitoring                                                            |
-| `options.diagnostics`        | `boolean` | `false` | Enable diagnostics reporting                                                             |
 | `options.instant`            | `boolean` | `true`  | Whether to instantiate consumers immediately on bootstrap (true) or lazily (false)       |
 | `options.parent`             | `iDIContainer` | `undefined` | Optional parent container for hierarchical injection                                   |
 
@@ -72,7 +70,9 @@ container.provide([UserService, DatabaseService]);
 container.bootstrap();
 ```
 
-#### `get<T>(token: Token<T>): T`
+#### `get<T>(token: MultiNodeToken<T>): T[]`
+
+#### `get<T>(token: NodeToken<T> | Ctor<T>): T`
 
 Retrieve an instance from the container. Container must be bootstrapped first.
 
@@ -170,7 +170,7 @@ const DB = new NodeToken<Database>('DB');
 container.provide(DB.withAlias(PRIMARY_DB));
 ```
 
-#### `implement(shape: ProviderImplementation<T>): iNodeProvider<T>`
+#### `implement(shape: ImplementationShape<T>): iNodeProvider<T>`
 
 ```typescript
 const LOGGER = new NodeToken<Logger>('LOGGER');
@@ -216,9 +216,19 @@ Inject a dependency into a class field or factory function.
 
 ```typescript
 function nodeInject<T>(
-  token: Token<T>,
+  token: MultiNodeToken<T>,
   options?: { optional?: boolean }
+): T[]
+
+function nodeInject<T>(
+  token: NodeToken<T> | Ctor<T>,
+  options?: { optional?: false }
 ): T
+
+function nodeInject<T>(
+  token: NodeToken<T> | Ctor<T>,
+  options: { optional: true }
+): T | null
 ```
 
 | Parameter          | Type       | Description                              |
@@ -253,9 +263,19 @@ If the only injection point for the dependency is via `injectDefer`, it may appe
 
 ```typescript
 function injectDefer<T>(
-  token: Token<T>,
+  token: MultiNodeToken<T>,
   options?: { optional?: boolean }
+): () => T[]
+
+function injectDefer<T>(
+  token: NodeToken<T> | Ctor<T>,
+  options?: { optional?: false }
 ): () => T
+
+function injectDefer<T>(
+  token: NodeToken<T> | Ctor<T>,
+  options: { optional: true }
+): () => T | null
 ```
 
 | Parameter          | Type       | Description                                       |
@@ -291,7 +311,9 @@ Token for accessing the DI container from within services.
 
 ### Methods
 
-#### `get<T>(token: Token<T>): T`
+#### `get<T>(token: MultiNodeToken<T>): T[]`
+
+#### `get<T>(token: NodeToken<T> | Ctor<T>): T`
 
 Retrieve a registered instance from the container.
 
@@ -703,7 +725,9 @@ Interface for container/injector access.
 
 ```typescript
 interface iInjector {
-  get<T>(token: Token<T>): T;
+  get<T>(token: MultiNodeToken<T>): T[];
+  get<T>(token: NodeToken<T>): T;
+  get<T>(token: Ctor<T>): T;
   produce<T>(fn: Ctor<T> | (() => T)): T;
 }
 ```
