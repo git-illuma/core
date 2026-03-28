@@ -20,13 +20,6 @@ interface StackFrame {
   processed: boolean;
 }
 
-function createTreeNode(p: ProtoNode): TreeNode {
-  if (p instanceof ProtoNodeSingle) return new TreeNodeSingle(p);
-  if (p instanceof ProtoNodeMulti) return new TreeNodeMulti(p);
-  if (p instanceof ProtoNodeTransparent) return new TreeNodeTransparent(p);
-  throw new Error("Unknown ProtoNode type");
-}
-
 export function resolveTreeNode<T>(
   rootProto: ProtoNode<T>,
   cache: Map<ProtoNode, TreeNode>,
@@ -54,11 +47,7 @@ export function resolveTreeNode<T>(
     }
 
     if (visiting.has(proto) && isNotTransparentProto(proto)) {
-      const path = stack.map((f) => f.proto).filter((p) => isNotTransparentProto(p));
-      const index = path.indexOf(proto);
-      const cycle = path.slice(index);
-      const cycleTokens = cycle.map((p) => p.token);
-      throw InjectionError.circularDependency(proto.token, cycleTokens);
+      throwCircularDependencyCycle(stack, proto);
     }
 
     visiting.add(proto);
@@ -160,12 +149,7 @@ export function resolveTreeNode<T>(
       }
 
       if (visiting.has(depProto) && isNotTransparentProto(depProto)) {
-        const path = stack.map((f) => f.proto).filter((p) => isNotTransparentProto(p));
-        const index = path.indexOf(depProto);
-        const cycle = [...path.slice(index), depProto];
-        const cycleTokens = cycle.map((p) => p.token);
-
-        throw InjectionError.circularDependency(depProto.token, cycleTokens);
+        throwCircularDependencyCycle(stack, depProto, true);
       }
 
       const childNode = createTreeNode(depProto);
@@ -175,4 +159,23 @@ export function resolveTreeNode<T>(
   }
 
   return rootNode;
+}
+
+function createTreeNode(p: ProtoNode): TreeNode {
+  if (p instanceof ProtoNodeSingle) return new TreeNodeSingle(p);
+  if (p instanceof ProtoNodeMulti) return new TreeNodeMulti(p);
+  if (p instanceof ProtoNodeTransparent) return new TreeNodeTransparent(p);
+  throw new Error("Unknown ProtoNode type");
+}
+
+function throwCircularDependencyCycle(
+  stack: StackFrame[],
+  depProto: ProtoNodeSingle<any> | ProtoNodeMulti<any>,
+  includeCurrent = false,
+): never {
+  const path = stack.map((f) => f.proto).filter((p) => isNotTransparentProto(p));
+  const index = path.indexOf(depProto);
+  const cycle = includeCurrent ? [...path.slice(index), depProto] : path.slice(index);
+  const cycleTokens = cycle.map((p) => p.token);
+  throw InjectionError.circularDependency(depProto.token, cycleTokens);
 }

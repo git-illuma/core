@@ -12,25 +12,6 @@ export type InjectionPool =
   | Map<NodeBase<any>, TreeNode<any>>
   | WeakMap<NodeBase<any>, TreeNode<any>>;
 
-function retrieverFactory<T>(
-  node: NodeBase<T>,
-  deps: InjectionPool,
-  transparentDeps: Map<NodeBase<any>, TreeNodeTransparent>,
-): InjectorFn {
-  return (token: NodeBase<T>, optional: boolean | undefined): T | null => {
-    const depNode = deps.get(token);
-    if (!depNode && !optional) {
-      const transparent = transparentDeps.get(token);
-      if (transparent) return transparent.instance;
-      if (token instanceof MultiNodeToken) return [] as unknown as T;
-
-      throw InjectionError.untracked(token, node);
-    }
-
-    return depNode ? depNode.instance : null;
-  };
-}
-
 // Tree Nodes
 export class TreeRootNode {
   private readonly _deps: Set<TreeNode<any>> = new Set();
@@ -124,27 +105,13 @@ export class TreeNodeSingle<T = any> {
     if (node instanceof TreeNodeTransparent) {
       const token = node.proto.parent.token;
       this._transparentMap.set(token, node);
-
-      const existingIndex = this._transparentIndex.get(token);
-      if (existingIndex === undefined) {
-        this._transparentIndex.set(token, this._transparentList.length);
-        this._transparentList.push(node);
-      } else {
-        this._transparentList[existingIndex] = node;
-      }
+      upsertIndexedDependency(token, node, this._transparentIndex, this._transparentList);
 
       this._depsTokens.add(token);
     } else {
       const token = node.proto.token;
       this._deps.set(token, node);
-
-      const existingIndex = this._depsIndex.get(token);
-      if (existingIndex === undefined) {
-        this._depsIndex.set(token, this._depsList.length);
-        this._depsList.push(node);
-      } else {
-        this._depsList[existingIndex] = node;
-      }
+      upsertIndexedDependency(token, node, this._depsIndex, this._depsList);
 
       this._depsTokens.add(token);
     }
@@ -236,27 +203,13 @@ export class TreeNodeTransparent<T = any> {
     if (node instanceof TreeNodeTransparent) {
       const token = node.proto.parent.token;
       this._transparentMap.set(token, node);
-
-      const existingIndex = this._transparentIndex.get(token);
-      if (existingIndex === undefined) {
-        this._transparentIndex.set(token, this._transparentList.length);
-        this._transparentList.push(node);
-      } else {
-        this._transparentList[existingIndex] = node;
-      }
+      upsertIndexedDependency(token, node, this._transparentIndex, this._transparentList);
 
       this._depsTokens.add(token);
     } else {
       const token = node.proto.token;
       this._deps.set(token, node);
-
-      const existingIndex = this._depsIndex.get(token);
-      if (existingIndex === undefined) {
-        this._depsIndex.set(token, this._depsList.length);
-        this._depsList.push(node);
-      } else {
-        this._depsList[existingIndex] = node;
-      }
+      upsertIndexedDependency(token, node, this._depsIndex, this._depsList);
 
       this._depsTokens.add(token);
     }
@@ -383,3 +336,38 @@ export type TreeNode<T = any> =
   | TreeNodeSingle<T>
   | TreeNodeMulti<T>
   | TreeNodeTransparent<T>;
+
+function retrieverFactory<T>(
+  node: NodeBase<T>,
+  deps: InjectionPool,
+  transparentDeps: Map<NodeBase<any>, TreeNodeTransparent>,
+): InjectorFn {
+  return (token: NodeBase<T>, optional: boolean | undefined): T | null => {
+    const depNode = deps.get(token);
+    if (!depNode && !optional) {
+      const transparent = transparentDeps.get(token);
+      if (transparent) return transparent.instance;
+      if (token instanceof MultiNodeToken) return [] as unknown as T;
+
+      throw InjectionError.untracked(token, node);
+    }
+
+    return depNode ? depNode.instance : null;
+  };
+}
+
+function upsertIndexedDependency<TNode>(
+  token: NodeBase<any>,
+  node: TNode,
+  indexMap: Map<NodeBase<any>, number>,
+  list: TNode[],
+): void {
+  const existingIndex = indexMap.get(token);
+  if (existingIndex === undefined) {
+    indexMap.set(token, list.length);
+    list.push(node);
+    return;
+  }
+
+  list[existingIndex] = node;
+}

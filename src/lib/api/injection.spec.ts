@@ -67,7 +67,7 @@ describe("nodeInject", () => {
 
       expect(() => nodeInject(UnDecoratedService as any)).toThrow(InjectionError);
       expect(() => nodeInject(UnDecoratedService as any)).toThrow(
-        /Cannot use provider as it is neither a NodeToken nor MultiNodeToken/,
+        /Cannot use constructor for token "UnDecoratedService"/,
       );
     });
   });

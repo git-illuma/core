@@ -1,10 +1,10 @@
-import { getInjectableToken, isInjectable } from "../api/decorator";
 import { nodeInject } from "../api/injection";
 import { SHAPE_SHIFTER } from "../api/proxy";
 import type { MultiNodeToken, NodeToken } from "../api/token";
-import { isNodeBase } from "../api/token";
+import { extractToken } from "../api/token";
 import type { ExtractInjectedType, iNodeInjectorOptions } from "../api/types";
-import { InjectionError, isNotFoundError } from "../errors";
+import { isNotFoundError } from "../errors";
+import type { Token } from "../provider/types";
 import { Injector } from "./injector";
 
 export function injectDefer<N>(
@@ -45,10 +45,7 @@ export function injectDefer<
 >(provider: N, options?: iNodeInjectorOptions) {
   const injector = nodeInject(Injector);
 
-  let token: any = provider;
-
-  if (isInjectable(provider)) token = getInjectableToken(provider);
-  if (!isNodeBase(token)) throw InjectionError.invalidProvider(String(token));
+  const token = extractToken(provider as Token<unknown>);
 
   let resolved = false;
   let instance: ExtractInjectedType<N> | typeof SHAPE_SHIFTER | null = SHAPE_SHIFTER;

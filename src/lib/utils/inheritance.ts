@@ -45,27 +45,11 @@ export function injectGroupAsync(
   fn: MaybeAsyncFactory<Provider[]>,
   opts?: iInjectionOptions,
 ): () => Promise<iInjector> {
-  const { container: parent } = opts?.injector ?? nodeInject(Injector);
-  const factory = async () => {
-    const providers = await fn();
-
-    const subContainer = new NodeContainer({ parent });
-
-    if (opts?.config) subContainer.provide(opts.config);
-    subContainer.provide(providers);
+  return createSubContainerCache(opts, async (subContainer) => {
+    subContainer.provide(await fn());
     subContainer.bootstrap();
-
     return subContainer.get(Injector);
-  };
-
-  const withCache = opts?.withCache ?? true;
-  if (!withCache) return factory;
-
-  let cache: Promise<iInjector> | null = null;
-  return () => {
-    cache ??= factory();
-    return cache;
-  };
+  });
 }
 
 /**
@@ -96,26 +80,12 @@ export function injectAsync<T>(
   fn: MaybeAsyncFactory<Token<T>>,
   opts?: iInjectionOptions,
 ): () => Promise<T | T[]> {
-  const { container: parent } = opts?.injector ?? nodeInject(Injector);
-  const factory = (async () => {
+  return createSubContainerCache(opts, async (subContainer) => {
     const token = await fn();
-    const tempContainer = new NodeContainer({ parent });
-
-    if (opts?.config) tempContainer.provide(opts.config);
-    tempContainer.provide(token);
-    tempContainer.bootstrap();
-
-    return tempContainer.get(extractToken(token) as any);
-  }) as () => Promise<T | T[]>;
-
-  const withCache = opts?.withCache ?? true;
-  if (!withCache) return factory;
-
-  let cache: Promise<T | T[]> | null = null;
-  return () => {
-    cache ??= factory();
-    return cache;
-  };
+    subContainer.provide(token);
+    subContainer.bootstrap();
+    return subContainer.get(extractToken(token) as any);
+  });
 }
 
 export interface iEntrypointConfig<T extends Token<any>> {
@@ -151,23 +121,29 @@ export function injectEntryAsync<T>(
   fn: MaybeAsyncFactory<iEntrypointConfig<Token<T>>>,
   opts?: iInjectionOptions,
 ): () => Promise<T | T[]> {
-  const { container: parent } = opts?.injector ?? nodeInject(Injector);
-  const factory = (async () => {
+  return createSubContainerCache(opts, async (subContainer) => {
     const { entrypoint, providers } = await fn();
-
-    const subContainer = new NodeContainer({ parent });
-
-    if (opts?.config) subContainer.provide(opts.config);
     subContainer.provide(providers);
     subContainer.bootstrap();
-
     return subContainer.get(extractToken(entrypoint) as any);
-  }) as () => Promise<T | T[]>;
+  });
+}
+
+function createSubContainerCache<T>(
+  opts: iInjectionOptions | undefined,
+  factoryFn: (subContainer: NodeContainer) => Promise<T>,
+): () => Promise<T> {
+  const { container: parent } = opts?.injector ?? nodeInject(Injector);
+  const factory = () => {
+    const subContainer = new NodeContainer({ parent });
+    if (opts?.config) subContainer.provide(opts.config);
+    return factoryFn(subContainer);
+  };
 
   const withCache = opts?.withCache ?? true;
   if (!withCache) return factory;
 
-  let cache: Promise<T | T[]> | null = null;
+  let cache: Promise<T> | null = null;
   return () => {
     cache ??= factory();
     return cache;

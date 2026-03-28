@@ -68,8 +68,7 @@ export class InjectionError extends Error {
 
   // Alias errors
   public static invalidAlias(alias: unknown): InjectionError {
-    const aliasStr =
-      typeof alias === "function" ? (alias as any).name || "Unknown" : String(alias);
+    const aliasStr = formatNodeName(alias);
     return new InjectionError(
       ERR_CODES.INVALID_ALIAS,
       `Invalid alias target "${aliasStr}". Alias must be a NodeToken, MultiNodeToken, or a class decorated with @NodeInjectable().`,
@@ -117,11 +116,8 @@ export class InjectionError extends Error {
     provider: NodeBase<unknown> | Ctor<unknown>,
     path: (NodeBase<unknown> | Ctor<unknown>)[],
   ): InjectionError {
-    const providerStr =
-      provider instanceof NodeBase ? provider.toString() : provider.name;
-    const pathStr = path
-      .map((p) => (p instanceof NodeBase ? p.toString() : p.name))
-      .join(" -> ");
+    const providerStr = formatNodeName(provider);
+    const pathStr = path.map((p) => formatNodeName(p)).join(" -> ");
 
     return new InjectionError(
       ERR_CODES.CIRCULAR_DEPENDENCY,
@@ -134,8 +130,8 @@ export class InjectionError extends Error {
     token: NodeBase<unknown> | Ctor<unknown>,
     parent: NodeBase<unknown> | Ctor<unknown>,
   ): InjectionError {
-    const tokenStr = token instanceof NodeBase ? token.toString() : token.name;
-    const parentStr = parent instanceof NodeBase ? parent.toString() : parent.name;
+    const tokenStr = formatNodeName(token);
+    const parentStr = formatNodeName(parent);
     return new InjectionError(
       ERR_CODES.UNTRACKED,
       `Cannot instantiate ${parentStr} because it depends on untracked injection ${tokenStr}. Please make sure all injections are properly tracked.`,
@@ -143,7 +139,7 @@ export class InjectionError extends Error {
   }
 
   public static outsideContext(token: NodeBase<unknown> | Ctor<unknown>): InjectionError {
-    const tokenStr = token instanceof NodeBase ? token.toString() : token.name;
+    const tokenStr = formatNodeName(token);
     return new InjectionError(
       ERR_CODES.OUTSIDE_CONTEXT,
       `Cannot inject "${tokenStr}" outside of an injection context.`,
@@ -174,4 +170,10 @@ export class InjectionError extends Error {
 
 export function isNotFoundError(error: unknown): boolean {
   return error instanceof InjectionError && error.code === ERR_CODES.NOT_FOUND;
+}
+
+function formatNodeName(node: unknown): string {
+  if (node instanceof NodeBase) return node.toString();
+  if (typeof node === "function") return node.name || "Unknown";
+  return String(node);
 }

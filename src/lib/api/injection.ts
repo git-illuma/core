@@ -1,9 +1,9 @@
 import { InjectionContext } from "../context/context";
 import { InjectionError } from "../errors";
-import { getInjectableToken, isInjectable } from "./decorator";
+import type { Token } from "../provider/types";
 import { SHAPE_SHIFTER } from "./proxy";
 import type { MultiNodeToken, NodeToken } from "./token";
-import { isNodeBase } from "./token";
+import { extractToken } from "./token";
 import type { ExtractInjectedType, iNodeInjectorOptions } from "./types";
 
 /**
@@ -68,14 +68,11 @@ export function nodeInject<
         ...args: any[]
       ) => unknown) = NodeToken<unknown>,
 >(provider: N, options?: iNodeInjectorOptions) {
-  let token: any = provider;
-  if (isInjectable(provider)) token = getInjectableToken(provider);
+  const token = extractToken(provider as Token<unknown>);
 
   if (!InjectionContext.contextOpen) {
     throw InjectionError.outsideContext(token);
   }
-
-  if (!isNodeBase(token)) throw InjectionError.invalidProvider(String(token));
 
   const injection = { token, optional: options?.optional ?? false };
   InjectionContext.addDep(injection);
