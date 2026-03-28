@@ -453,9 +453,14 @@ export class NodeContainer extends Illuma implements iDIContainer {
       return null;
     };
 
-    const deps = InjectionContext.scan(factory);
     const middlewares = [...Illuma._middlewares, ...this.collectMiddlewares()];
     const contextFactory = () => InjectionContext.instantiate(factory, retriever);
+
+    if (!middlewares.length) {
+      return contextFactory();
+    }
+
+    const deps = InjectionContext.scan(factory);
 
     return runMiddlewares(middlewares, {
       token: new NodeToken<T>("ProducedNode"),

@@ -152,12 +152,16 @@ export class TreeNodeSingle<T = any> {
     const factory = this.proto.factory ?? this.proto.token.opts?.factory;
     if (!factory) throw InjectionError.notFound(this.proto.token);
 
-    const contextFactory = () => InjectionContext.instantiate(factory, retriever);
-    this._instance = runMiddlewares(middlewares, {
-      token: this.proto.token,
-      factory: contextFactory,
-      deps: new Set(this._depsTokens),
-    });
+    if (!middlewares.length) {
+      this._instance = InjectionContext.instantiate(factory, retriever);
+    } else {
+      const contextFactory = () => InjectionContext.instantiate(factory, retriever);
+      this._instance = runMiddlewares(middlewares, {
+        token: this.proto.token,
+        factory: contextFactory,
+        deps: new Set(this._depsTokens),
+      });
+    }
 
     this._resolved = true;
 
@@ -221,12 +225,16 @@ export class TreeNodeTransparent<T = any> {
       this._transparentMap,
     );
 
-    const refFactory = () => InjectionContext.instantiate(this.proto.factory, retriever);
-    this._instance = runMiddlewares(middlewares, {
-      token: this.proto.parent.token,
-      factory: refFactory,
-      deps: new Set(this._depsTokens),
-    });
+    if (!middlewares.length) {
+      this._instance = InjectionContext.instantiate(this.proto.factory, retriever);
+    } else {
+      const refFactory = () => InjectionContext.instantiate(this.proto.factory, retriever);
+      this._instance = runMiddlewares(middlewares, {
+        token: this.proto.parent.token,
+        factory: refFactory,
+        deps: new Set(this._depsTokens),
+      });
+    }
 
     this._resolved = true;
   }
