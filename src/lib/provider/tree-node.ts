@@ -148,7 +148,11 @@ export class TreeNodeSingle<T = any> {
     for (const node of this._deps.values()) node.instantiate(pool, middlewares);
     for (const dep of this._transparent) dep.instantiate(pool, middlewares);
 
-    const retriever = retrieverFactory(this.proto.token, this._deps, this._transparentMap);
+    const retriever = retrieverFactory(
+      this.proto.token,
+      this._deps,
+      this._transparentMap,
+    );
     const factory = this.proto.factory ?? this.proto.token.opts?.factory;
     if (!factory) throw InjectionError.notFound(this.proto.token);
 
@@ -228,7 +232,10 @@ export class TreeNodeTransparent<T = any> {
     if (!middlewares.length) {
       this._instance = InjectionContext.instantiate(this.proto.factory, retriever);
     } else {
-      const refFactory = () => InjectionContext.instantiate(this.proto.factory, retriever);
+      const refFactory = () => {
+        return InjectionContext.instantiate(this.proto.factory, retriever);
+      };
+
       this._instance = runMiddlewares(middlewares, {
         token: this.proto.parent.token,
         factory: refFactory,

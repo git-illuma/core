@@ -51,7 +51,13 @@ export abstract class InjectionContext {
   }
 
   public static scan(factory: any): Set<iInjectionNode<any>> {
-    if (typeof factory !== "function") return new Set();
+    const calls = new Set<iInjectionNode<any>>();
+    InjectionContext.scanInto(factory, calls);
+    return calls;
+  }
+
+  public static scanInto(factory: any, target: Set<iInjectionNode<any>>): void {
+    if (typeof factory !== "function") return;
     InjectionContext.open();
 
     try {
@@ -61,6 +67,12 @@ export abstract class InjectionContext {
     }
 
     const scanners = InjectionContext._scanners;
+    if (!scanners.length) {
+      InjectionContext._flushInto(target);
+      InjectionContext.close();
+      return;
+    }
+
     for (const scanner of scanners) {
       /**
        * Instantiates a value using a factory function within an injection context.
@@ -74,8 +86,8 @@ export abstract class InjectionContext {
       for (const node of scanned) InjectionContext._calls.add(node);
     }
 
-    const injections = InjectionContext.closeAndReport();
-    return injections;
+    InjectionContext._flushInto(target);
+    InjectionContext.close();
   }
 
   public static instantiate<T>(factory: () => T, injector: InjectorFn): T {
@@ -89,17 +101,23 @@ export abstract class InjectionContext {
     try {
       return factory();
     } finally {
-      InjectionContext.closeAndReport();
+      InjectionContext.close();
     }
+  }
+
+  public static close(): void {
+    InjectionContext.contextOpen = false;
+    InjectionContext._calls.clear();
+    InjectionContext.injector = null;
   }
 
   public static closeAndReport(): Set<iInjectionNode<any>> {
     const calls = new Set(InjectionContext._calls);
-
-    InjectionContext.contextOpen = false;
-    InjectionContext._calls.clear();
-    InjectionContext.injector = null;
-
+    InjectionContext.close();
     return calls;
+  }
+
+  private static _flushInto(target: Set<iInjectionNode<any>>): void {
+    for (const call of InjectionContext._calls) target.add(call);
   }
 }

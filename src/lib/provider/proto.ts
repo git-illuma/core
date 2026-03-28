@@ -7,15 +7,18 @@ import { InjectionError } from "../errors";
 export class ProtoNodeSingle<T = any> {
   // Metadata
   public readonly token: NodeToken<T>;
-  public readonly injections: Set<iInjectionNode<any>>;
+  public readonly injections = new Set<iInjectionNode<any>>();
 
   // Instantiation
   public factory: (() => T) | null = null;
 
   constructor(token: NodeToken<T>, factory?: () => T) {
     this.token = token;
-    this.factory = factory ?? null;
-    this.injections = factory ? InjectionContext.scan(factory) : new Set();
+
+    if (factory) {
+      this.factory = factory;
+      InjectionContext.scanInto(factory, this.injections);
+    }
   }
 
   public hasFactory(): boolean {
@@ -26,10 +29,7 @@ export class ProtoNodeSingle<T = any> {
     if (this.factory) throw InjectionError.duplicateFactory(this.token);
     this.factory = factory;
 
-    const scanned = InjectionContext.scan(factory);
-    for (const injection of scanned) {
-      this.injections.add(injection);
-    }
+    InjectionContext.scanInto(factory, this.injections);
   }
 
   public toString(): string {
@@ -39,14 +39,14 @@ export class ProtoNodeSingle<T = any> {
 
 export class ProtoNodeTransparent<T = any> {
   public readonly factory: () => T;
-  public readonly injections: Set<iInjectionNode<any>>;
+  public readonly injections = new Set<iInjectionNode<any>>();
 
   constructor(
     public readonly parent: ProtoNodeSingle<T> | ProtoNodeMulti<T>,
     factory: () => T,
   ) {
     this.factory = factory;
-    this.injections = InjectionContext.scan(factory);
+    InjectionContext.scanInto(factory, this.injections);
   }
 
   public toString(): string {
