@@ -8,6 +8,14 @@ import { NodeToken } from "./token";
  */
 const tokenRegistry = new WeakMap<object, NodeToken<any>>();
 
+export interface iNodeInjectableOptions {
+  /**
+   * Marks injectable as root-scoped singleton in hierarchical containers.
+   * This injectable will be provided automatically without calling `provide`.
+   */
+  readonly singleton?: boolean;
+}
+
 /**
  * Decorator that marks a class as injectable in the dependency injection system.
  * Automatically creates and associates a NodeToken with the class.
@@ -29,10 +37,11 @@ const tokenRegistry = new WeakMap<object, NodeToken<any>>();
  * const service = container.get(UserService);
  * ```
  */
-export function NodeInjectable<T>() {
+export function NodeInjectable<T>(opts?: iNodeInjectableOptions) {
   return (ctor: Ctor<T>): Ctor<T> => {
     const nodeToken = new NodeToken<T>(`_${ctor.name}`, {
       factory: () => new ctor(),
+      singleton: opts?.singleton,
     });
 
     registerClassAsInjectable(ctor, nodeToken);
@@ -61,9 +70,10 @@ import { InjectionError } from '../errors';
  * export const UserService = makeInjectable(_UserService);
  * ```
  */
-export function makeInjectable<T>(ctor: Ctor<T>): Ctor<T> {
+export function makeInjectable<T>(ctor: Ctor<T>, opts?: iNodeInjectableOptions): Ctor<T> {
   const nodeToken = new NodeToken<T>(`_${ctor.name}`, {
     factory: () => new ctor(),
+    singleton: opts?.singleton,
   });
 
   registerClassAsInjectable(ctor, nodeToken);

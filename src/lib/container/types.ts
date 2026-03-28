@@ -21,7 +21,6 @@ export interface iContainerOptions {
   parent?: iDIContainer;
 
   /**
-   * @experimental
    * Whether to instantiate dependencies immediately.
    * If disabled, providers instantiation will happen when first requested.
    * This helps improve startup performance for large containers.

@@ -21,6 +21,11 @@ export interface iNodeTokenBaseOptions<T> {
    * Optional factory function to create instances of this token.
    */
   factory?: () => NoInfer<T>;
+
+  /**
+   * Marks token as root-scoped singleton in hierarchical containers.
+   */
+  singleton?: boolean;
 }
 
 /**

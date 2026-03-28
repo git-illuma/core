@@ -1,13 +1,13 @@
 import { InjectionError } from "../errors";
 import type {
   Ctor,
+  ImplementationShape,
   iNodeAliasProvider,
   iNodeClassProvider,
   iNodeFactoryProvider,
   iNodeProvider,
   iNodeTokenBaseOptions,
   iNodeValueProvider,
-  ImplementationShape,
   Token,
 } from "../provider/types";
 import { getInjectableToken, isInjectable } from "./decorator";

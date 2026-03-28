@@ -159,17 +159,97 @@ export class NodeContainer extends Illuma implements iDIContainer {
 
     if (isInjectable<T>(token)) {
       const node = getInjectableToken<T>(token);
+      return this._rootNode.obtain(node);
+    }
+
+    const treeNode = this._rootNode.obtain(token as NodeBase<T>);
+    return treeNode;
+  }
+
+  private _findNode<T>(token: Token<T>): TreeNode<T> | null {
+    if (!this._rootNode) return null;
+    if (!this._bootstrapped) return null;
+
+    if (isInjectable<T>(token)) {
+      const node = getInjectableToken<T>(token);
       return this._rootNode.find(node);
     }
 
-    const treeNode = this._rootNode.find(token as NodeBase<T>);
-    return treeNode;
+    if (!isNodeBase<T>(token)) return null;
+    return this._rootNode.find(token as NodeBase<T>);
+  }
+
+  private _getRootSingleton<T>(
+    token: NodeToken<T>,
+    instantiate = false,
+  ): TreeNode<T> | null {
+    if (!token.opts?.singleton) return null;
+    let root: NodeContainer = this;
+
+    while (root._parent instanceof NodeContainer) root = root._parent;
+
+    const existing = this._findNode(token);
+    if (existing) {
+      if (!this._rootNode) return existing;
+      return instantiate ? this._rootNode.obtain(token) : existing;
+    }
+
+    let proto = this._protoNodes.get(token) as ProtoNodeSingle<T> | undefined;
+    if (!proto) {
+      proto = new ProtoNodeSingle(token, token.opts.factory);
+      this._protoNodes.set(token, proto);
+    } else if (!proto.hasFactory() && token.opts.factory) {
+      proto.setFactory(token.opts.factory);
+    }
+
+    if (!this._bootstrapped || !this._rootNode) {
+      return null;
+    }
+
+    const cache = new Map<ProtoNode, TreeNode>();
+    const upstream: UpstreamGetter = (upstreamToken) => {
+      const local = this._findNode(upstreamToken);
+      if (local) return local;
+      return this._resolverFromParent(upstreamToken);
+    };
+
+    const treeNode = resolveTreeNode(
+      proto,
+      cache,
+      this._protoNodes,
+      this._multiProtoNodes,
+      upstream,
+    );
+
+    this._rootNode.registerDependency(treeNode);
+    return instantiate ? this._rootNode.obtain(token) : this._rootNode.find(token);
   }
 
   private _getFromParent<T>(token: Token<T>): TreeNode<T> | null {
     if (!this._parent) return null;
     const parentNode = this._parent as NodeContainer;
-    return parentNode.findNode(token);
+
+    const upstream = parentNode.findNode(token);
+    if (upstream) return upstream;
+
+    if (token instanceof NodeToken && token.opts?.singleton) {
+      return parentNode._getRootSingleton(token, true);
+    }
+
+    return null;
+  }
+
+  private _resolverFromParent<T>(token: Token<T>): TreeNode<T> | null {
+    if (!this._parent || !(this._parent instanceof NodeContainer)) return null;
+
+    const upstream = this._parent._findNode(token);
+    if (upstream) return upstream;
+
+    if (token instanceof NodeToken && token.opts?.singleton) {
+      return this._parent._getRootSingleton(token, false);
+    }
+
+    return null;
   }
 
   private _buildInjectionTree(): TreeRootNode {
@@ -182,7 +262,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
       ...this._multiProtoNodes.values(),
     ];
 
-    const upstreamGetter: UpstreamGetter = this._getFromParent.bind(this);
+    const upstreamGetter: UpstreamGetter = this._resolverFromParent.bind(this);
 
     for (const node of nodes) {
       if (cache.has(node)) continue;
@@ -315,10 +395,15 @@ export class NodeContainer extends Illuma implements iDIContainer {
       throw InjectionError.invalidProvider(JSON.stringify(provider));
     }
 
-    const treeNode = this._rootNode.find(token);
+    const treeNode = this._rootNode.obtain(token);
     if (!treeNode) {
       const upstream = this._getFromParent(token);
       if (upstream) return upstream.instance;
+
+      if (token instanceof NodeToken && token.opts?.singleton) {
+        const rootSingleton = this._getRootSingleton(token, true);
+        if (rootSingleton) return rootSingleton.instance;
+      }
 
       if (token instanceof MultiNodeToken) return [];
       throw InjectionError.notFound(token);
@@ -360,7 +445,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
     if (!rootNode) throw InjectionError.notBootstrapped();
 
     const retriever: InjectorFn = (token, optional) => {
-      const node = rootNode.find<T>(token);
+      const node = rootNode.obtain<T>(token);
 
       if (node) return node.instance;
       if (token instanceof MultiNodeToken) return [];

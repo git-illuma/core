@@ -49,6 +49,18 @@ export class TreeRootNode {
     this._deps.add(node);
   }
 
+  public registerDependency(node: TreeNode<any>): void {
+    this._deps.add(node);
+
+    if ("token" in node.proto) {
+      const existing = this._treePool.get(node.proto.token);
+      if (existing) return;
+    }
+
+    if (this.instant) node.instantiate(this._treePool, this.middlewares);
+    else node.collectPool(this._treePool);
+  }
+
   public build(): void {
     for (const dep of this._deps) {
       if ("token" in dep.proto) this._treePool.set(dep.proto.token, dep);
@@ -58,11 +70,17 @@ export class TreeRootNode {
     }
   }
 
-  public find<T>(token: NodeBase<T>): TreeNode<T> | null {
+  public obtain<T>(token: NodeBase<T>): TreeNode<T> | null {
     const node = this._treePool.get(token);
     if (!node) return null;
 
     if (!this.instant) node.instantiate(this._treePool, this.middlewares);
+    return node as TreeNode<T>;
+  }
+
+  public find<T>(token: NodeBase<T>): TreeNode<T> | null {
+    const node = this._treePool.get(token);
+    if (!node) return null;
     return node as TreeNode<T>;
   }
 

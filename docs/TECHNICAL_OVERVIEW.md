@@ -108,6 +108,74 @@ export type UserService = _UserService;
 export const UserService = makeInjectable(_UserService);
 ```
 
+### Root-scoped singletons (`{ singleton: true }`)
+
+Illuma supports root-scoped singletons for class injectables and `NodeToken` providers.
+
+You can mark a class as root-scoped singleton with:
+
+```typescript
+@NodeInjectable({ singleton: true })
+class AppConfigService {}
+```
+
+or without decorators:
+
+```typescript
+class _AppConfigService {}
+const AppConfigService = makeInjectable(_AppConfigService, { singleton: true });
+```
+
+#### Internal contract
+
+1. `singleton: true` is metadata on the token options.
+2. Singleton registration is root-scoped in parent-child container hierarchies.
+3. Instance caching remains `TreeNodeSingle`-based; root scope changes where the node is attached, not how instances are cached.
+
+#### Lifecycle integration
+
+1. **Registration phase**:
+  - Explicit `provide()` still creates proto nodes as usual.
+  - Decorated singleton classes can also be auto-materialized from token metadata when first resolved.
+2. **Bootstrap phase**:
+  - Each container builds its local tree from known proto nodes.
+  - Root singleton nodes discovered later can still be added to root runtime tree state.
+3. **Retrieval phase (`get`/`nodeInject`)**:
+  - Local tree lookup is attempted first.
+  - Parent chain is checked next.
+  - If token is singleton and unresolved, the token is forwarded to root and attached there.
+
+#### Instantiation timing and `instant`
+
+Root singleton instantiation follows the root container strategy:
+
+1. `instant: true` on root:
+  - Singleton is instantiated as soon as it is attached to root.
+2. `instant: false` on root:
+  - Singleton is attached to root pool first.
+  - Instantiation happens on first actual access.
+
+This keeps singleton semantics consistent with all other nodes.
+
+#### Tree resolution behavior
+
+During dependency graph resolution:
+
+1. Resolver checks local proto maps.
+2. If missing, resolver checks upstream (parent/root).
+3. If still missing and token is singleton, resolver creates a `ProtoNodeSingle` from token factory metadata.
+4. That proto node becomes part of the resolved tree and is attached to root container state.
+
+This is why singleton classes can resolve without explicit `provide()` as long as they were made injectable.
+
+#### Visibility and override rules
+
+1. A root singleton can only consume dependencies visible from root.
+2. Child-only providers are not visible to root singleton resolution (including other singleton tokens, but not local overrides in children).
+3. Child explicit overrides remain local to that child container.
+4. Sibling containers continue sharing the same root singleton instance.
+5. Circular dependency checks remain active and unchanged.
+
 **Without `@NodeInjectable` and `makeInjectable`:**
 
 If you don't use the decorator, you must manually create and use tokens:

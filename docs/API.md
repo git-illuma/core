@@ -123,13 +123,22 @@ A token for identifying non-class dependencies.
 ### Constructor
 
 ```typescript
-new NodeToken<T>(name: string, options?: { factory?: () => T })
+new NodeToken<T>(
+  name: string,
+  options?: {
+    factory?: () => T;
+    singleton?: boolean;
+  }
+)
 ```
 
 | Parameter         | Type      | Description                        |
 | ----------------- | --------- | ---------------------------------- |
 | `name`            | `string`  | Unique identifier for the token    |
 | `options.factory` | `() => T` | Optional factory for default value |
+| `options.singleton` | `boolean` | Marks token as root-scoped singleton in parent-child containers |
+
+When `singleton: true`, there's no need to call `provide` for this token. It will be automatically provided as a singleton in the root container when first requested until you want to override it in a child container.
 
 ### Provider Helper Methods
 
@@ -326,16 +335,20 @@ class FactoryService {
 
 ## Decorators
 
-### @NodeInjectable()
+### @NodeInjectable(options?)
 
 Mark a class as injectable.
 
 ```typescript
-@NodeInjectable()
+@NodeInjectable({ singleton: true })
 class UserService {
   private readonly db = nodeInject(DatabaseService);
 }
 ```
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `singleton` | `boolean` | `false` | Marks this injectable class as root-scoped singleton |
 
 **Requires:** `experimentalDecorators: true` in `tsconfig.json`
 
@@ -351,8 +364,28 @@ class _UserService {
 }
 
 export type UserService = _UserService;
-export const UserService = makeInjectable(_UserService);
+export const UserService = makeInjectable(_UserService, { singleton: true });
 ```
+
+### Root singleton semantics
+
+`{ singleton: true }` implements Angular-like root scope for single providers:
+
+1. The singleton flag is stored on the generated `NodeToken`.
+2. During dependency resolution, if the token is missing locally and upstream, Illuma materializes a singleton proto node from token metadata.
+3. When requested from child containers, singleton registration is forwarded through parents to root and attached to root tree state.
+4. The resulting instance is shared across root and all descendants unless a child explicitly overrides that provider locally.
+
+Instantiation timing is still controlled by the root container `instant` option:
+
+1. `instant: true` on root: singleton is instantiated when attached to root.
+2. `instant: false` on root: singleton is attached but instantiated only on first actual resolve.
+
+Important constraints:
+
+1. Root singleton providers can only inject dependencies visible from root. Child-only providers are not visible to root singletons.
+2. Circular dependency checks still apply and throw as usual.
+3. The feature is intended for `NodeToken` and class injectables. `MultiNodeToken` behavior is unchanged.
 
 ### registerClassAsInjectable() (internal)
 

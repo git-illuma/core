@@ -87,6 +87,13 @@ export function resolveTreeNode<T>(
         return;
       }
 
+      if (token instanceof NodeToken && token.opts?.singleton) {
+        const singletonProto = new ProtoNodeSingle(token, token.opts.factory);
+        singleNodes.set(token, singletonProto);
+        deps.push(singletonProto);
+        return;
+      }
+
       if (!optional) {
         if (token instanceof MultiNodeToken) return;
         if (isInjectable(token)) {
