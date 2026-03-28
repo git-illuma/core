@@ -1,4 +1,4 @@
-import type { NodeBase } from "../api/token";
+import { MultiNodeToken, type NodeBase } from "../api/token";
 import type { InjectorFn } from "../api/types";
 import { InjectionContext } from "../context/context";
 import { InjectionError } from "../errors";
@@ -7,7 +7,6 @@ import { runMiddlewares } from "../plugins/middlewares/runner";
 import { Injector } from "../utils/injector";
 import type { ProtoNodeMulti, ProtoNodeSingle, ProtoNodeTransparent } from "./proto";
 
-/** @deprecated Will be removed in next major versions. */
 export type DependencyPool = Map<NodeBase<any>, TreeNode<any>>;
 export type InjectionPool =
   | Map<NodeBase<any>, TreeNode<any>>
@@ -23,6 +22,8 @@ function retrieverFactory<T>(
     if (!depNode && !optional) {
       const transparent = transparentDeps.get(token);
       if (transparent) return transparent.instance;
+      if (token instanceof MultiNodeToken) return [] as unknown as T;
+
       throw InjectionError.untracked(token, node);
     }
 

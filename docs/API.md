@@ -393,7 +393,7 @@ function injectAsync<T>(
   fn: () => Token<T> | Promise<Token<T>>,
   options?: {
     withCache?: boolean;
-    overrides?: Provider[];
+    config?: Provider[];
     injector?: iInjector;
   }
 ): () => Promise<T | T[]>
@@ -402,7 +402,7 @@ function injectAsync<T>(
 | Option      | Type         | Default     | Description                                |
 | ----------- | ------------ | ----------- | ------------------------------------------ |
 | `withCache` | `boolean`    | `true`      | Cache the resolved instance                |
-| `overrides` | `Provider[]` | `[]`        | Additional providers for the sub-container |
+| `config`    | `Provider[]` | `[]`        | Additional providers for the sub-container |
 | `injector`  | `iInjector`  | `undefined` | Explicit injector to use instead of context|
 
 ```typescript
@@ -425,7 +425,7 @@ function injectGroupAsync(
   fn: () => Provider<unknown>[] | Promise<Provider<unknown>[]>,
   options?: {
     withCache?: boolean;
-    overrides?: Provider[];
+    config?: Provider[];
     injector?: iInjector;
   }
 ): () => Promise<iInjector>
@@ -451,7 +451,7 @@ function injectEntryAsync<T>(
   fn: () => iEntrypointConfig<Token<T>> | Promise<iEntrypointConfig<Token<T>>>,
   options?: {
     withCache?: boolean;
-    overrides?: Provider[];
+    config?: Provider[];
     injector?: iInjector;
   }
 ): () => Promise<T | T[]>
@@ -545,7 +545,7 @@ container.bootstrap();
 // → Diagnostics output will be logged
 ```
 
-> **Note**: The `diagnostics: true` option in `NodeContainer` constructor is deprecated. Use `enableIllumaDiagnostics()` instead.
+> **Note**: The `diagnostics: true` option in `NodeContainer` constructor is no longer supported since version `2.0.0`. Use `enableIllumaDiagnostics()` instead.
 
 #### `Illuma.extendDiagnostics(module: iDiagnosticsModule): void`
 

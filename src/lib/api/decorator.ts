@@ -9,13 +9,6 @@ import { NodeToken } from "./token";
 const tokenRegistry = new WeakMap<object, NodeToken<any>>();
 
 /**
- * Symbol used to mark classes as injectable and store their associated token.
- * @internal
- * @deprecated Use internal registry instead. Will be removed in next major versions.
- */
-export const INJECTION_SYMBOL = Symbol("Injectable");
-
-/**
  * Decorator that marks a class as injectable in the dependency injection system.
  * Automatically creates and associates a NodeToken with the class.
  *
@@ -79,23 +72,13 @@ export function makeInjectable<T>(ctor: Ctor<T>): Ctor<T> {
 
 /** @internal */
 export function isInjectable<T>(ctor: unknown): ctor is Ctor<T> {
-  return (
-    typeof ctor === "function" &&
-    isConstructor(ctor) &&
-    (tokenRegistry.has(ctor) || INJECTION_SYMBOL in ctor)
-  );
+  return isConstructor(ctor) && tokenRegistry.has(ctor);
 }
 
 /** @internal */
 export function getInjectableToken<T>(ctor: Ctor<T>): NodeToken<T> {
   // biome-ignore lint/style/noNonNullAssertion: We explicitly check for existence above
   if (tokenRegistry.has(ctor)) return tokenRegistry.get(ctor)!;
-
-  // Deprecated path for backward compatibility
-  if (INJECTION_SYMBOL in ctor) {
-    return (ctor as any)[INJECTION_SYMBOL] as NodeToken<T>;
-  }
-
   throw InjectionError.invalidCtor(ctor);
 }
 

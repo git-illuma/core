@@ -32,18 +32,6 @@ export class NodeContainer extends Illuma implements iDIContainer {
 
   constructor(protected readonly _opts?: iContainerOptions) {
     super();
-
-    if (_opts?.diagnostics) {
-      console.warn(
-        "[Illuma] Deprecation Warning: The 'diagnostics' option in iContainerOptions is deprecated and will be removed in future versions. Please use the `enableIllumaDiagnostics` from '@illuma/core/plugins` instead.",
-      );
-
-      const m = require("../plugins/diagnostics/built-in");
-      if (m.enabled) return;
-
-      m.enableIllumaDiagnostics();
-    }
-
     this._parent = _opts?.parent;
   }
 
@@ -268,8 +256,8 @@ export class NodeContainer extends Illuma implements iDIContainer {
       console.log(`[Illuma] 🚀 Bootstrapped in ${duration.toFixed(2)} ms`);
     }
 
-    // Run diagnostics if enabled via opts.diagnostics (deprecated) or if diagnostics modules are registered
-    if (this._opts?.diagnostics || Illuma.hasDiagnostics()) {
+    // Run diagnostics if enabled or diagnostics modules are registered
+    if (Illuma.hasDiagnostics()) {
       const allNodes = this._rootNode.dependencies.size;
       const unusedNodes = Array.from(this._rootNode.dependencies)
         .filter((node) => node.allocations === 0)
@@ -373,9 +361,11 @@ export class NodeContainer extends Illuma implements iDIContainer {
 
     const retriever: InjectorFn = (token, optional) => {
       const node = rootNode.find<T>(token);
-      if (!node && !optional) throw InjectionError.notFound(token);
 
-      return node ? node.instance : null;
+      if (node) return node.instance;
+      if (token instanceof MultiNodeToken) return [];
+      if (!optional) throw InjectionError.notFound(token);
+      return null;
     };
 
     const deps = InjectionContext.scan(factory);

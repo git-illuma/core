@@ -239,7 +239,33 @@ describe("nodeInject", () => {
     });
   });
 
-  describe("INJECTION_SYMBOL handling", () => {
+  it("should inject to abstract class when inherited", () => {
+    const node = new NodeToken<string>("AbstractService");
+    const container = new NodeContainer();
+
+    container.provide(node.withValue("abstract value"));
+
+    abstract class AbstractService {
+      protected readonly injected = nodeInject(node);
+      public abstract getValue(): string;
+    }
+
+    @NodeInjectable()
+    class Service extends AbstractService {
+      public getValue(): string {
+        return this.injected;
+      }
+    }
+
+    container.provide(Service);
+
+    container.bootstrap();
+
+    const service = container.get(Service);
+    expect(service.getValue()).toBe("abstract value");
+  });
+
+  describe("Injectable class handling", () => {
     it("should extract token from class with getInjectableToken", () => {
       @NodeInjectable()
       class ServiceA {}
@@ -257,12 +283,20 @@ describe("nodeInject", () => {
       expect(call.token).toBe(extractedToken);
     });
 
-    it("should handle class without INJECTION_SYMBOL", () => {
+    it("should produce error for class that is not injectable", () => {
       class PlainClass {}
 
       InjectionContext.open();
 
       expect(() => nodeInject(PlainClass as any)).toThrow(InjectionError);
+    });
+
+    it("should produce error for non-class constructor", () => {
+      function notAClass() {}
+
+      InjectionContext.open();
+      expect(() => getInjectableToken(notAClass as any)).toThrow(InjectionError);
+      expect(() => nodeInject(notAClass as any)).toThrow(InjectionError);
     });
   });
 

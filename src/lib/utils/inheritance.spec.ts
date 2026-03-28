@@ -96,7 +96,7 @@ describe("injectAsync", () => {
     expect(service1).not.toBe(service2);
   });
 
-  it("should apply overrides to temp container", async () => {
+  it("should apply config to temp container", async () => {
     const parent = new NodeContainer();
     const configToken = new NodeToken<string>("config");
 
@@ -112,7 +112,7 @@ describe("injectAsync", () => {
     @NodeInjectable()
     class ParentService {
       private readonly _getService = injectAsync(() => TestService, {
-        overrides: [{ provide: configToken, value: "override-config" }],
+        config: [{ provide: configToken, value: "override-config" }],
       });
 
       public getService() {
@@ -129,7 +129,7 @@ describe("injectAsync", () => {
     expect(service.config).toBe("override-config");
   });
 
-  it("should allow overrides to shadow parent container values", async () => {
+  it("should allow config to shadow parent container values", async () => {
     const parent = new NodeContainer();
     const configToken = new NodeToken<string>("config");
 
@@ -147,7 +147,7 @@ describe("injectAsync", () => {
     @NodeInjectable()
     class ParentService {
       private readonly _getService = injectAsync(() => TestService, {
-        overrides: [{ provide: configToken, value: "overridden-config" }],
+        config: [{ provide: configToken, value: "overridden-config" }],
       });
 
       public getService() {
@@ -344,7 +344,7 @@ describe("injectGroupAsync", () => {
     expect(subInjector1).not.toBe(subInjector2);
   });
 
-  it("should apply overrides to sub-container", async () => {
+  it("should apply config to sub-container", async () => {
     const parent = new NodeContainer();
     const tokenA = new NodeToken<string>("tokenA");
     const tokenB = new NodeToken<string>("tokenB");
@@ -368,7 +368,7 @@ describe("injectGroupAsync", () => {
       private readonly _getSubContainer = injectGroupAsync(
         () => [{ provide: tokenA, value: "value-a" }, ChildService],
         {
-          overrides: [{ provide: tokenB, value: "value-b" }],
+          config: [{ provide: tokenB, value: "value-b" }],
         },
       );
 
@@ -388,7 +388,7 @@ describe("injectGroupAsync", () => {
     expect(childService.getValueB()).toBe("value-b");
   });
 
-  it("should throw error if overrides duplicate provider tokens", async () => {
+  it("should throw error if config duplicate provider tokens", async () => {
     const parent = new NodeContainer();
     const token = new NodeToken<string>("TOKEN");
 
@@ -397,7 +397,7 @@ describe("injectGroupAsync", () => {
       private readonly _getSubContainer = injectGroupAsync(
         () => [{ provide: token, value: "original-value" }],
         {
-          overrides: [{ provide: token, value: "overridden-value" }],
+          config: [{ provide: token, value: "overridden-value" }],
         },
       );
 
@@ -504,6 +504,41 @@ describe("injectEntryAsync", () => {
 
     expect(childService).toBeInstanceOf(ChildService);
     expect(childService.value).toBe("value");
+  });
+
+  it("should provide config to sub-container", async () => {
+    const parent = new NodeContainer();
+    const token = new NodeToken<string>("token");
+
+    @NodeInjectable()
+    class ChildService {
+      public readonly value = nodeInject(token);
+    }
+
+    @NodeInjectable()
+    class ParentService {
+      private readonly _getEntrypoint = injectEntryAsync(
+        () => ({
+          entrypoint: ChildService,
+          providers: [ChildService],
+        }),
+        {
+          config: [{ provide: token, value: "overridden-value" }],
+        },
+      );
+
+      public getEntrypoint() {
+        return this._getEntrypoint();
+      }
+    }
+
+    parent.provide(ParentService);
+    parent.bootstrap();
+
+    const parentService = parent.get(ParentService);
+    const childService = await parentService.getEntrypoint();
+
+    expect(childService.value).toBe("overridden-value");
   });
 
   it("should reproduce API.md example", async () => {

@@ -20,7 +20,7 @@ interface iInjectionOptions {
    * These will be provided in addition to the main injection
    * @default []
    */
-  overrides?: Provider[];
+  config?: Provider[];
 
   /**
    * Allows to use the function with specified injector outside of Injection Context.
@@ -51,7 +51,7 @@ export function injectGroupAsync(
 
     const subContainer = new NodeContainer({ parent });
 
-    if (opts?.overrides) subContainer.provide(opts.overrides);
+    if (opts?.config) subContainer.provide(opts.config);
     subContainer.provide(providers);
     subContainer.bootstrap();
 
@@ -101,7 +101,7 @@ export function injectAsync<T>(
     const token = await fn();
     const tempContainer = new NodeContainer({ parent });
 
-    if (opts?.overrides) tempContainer.provide(opts.overrides);
+    if (opts?.config) tempContainer.provide(opts.config);
     tempContainer.provide(token);
     tempContainer.bootstrap();
 
@@ -157,7 +157,7 @@ export function injectEntryAsync<T>(
 
     const subContainer = new NodeContainer({ parent });
 
-    if (opts?.overrides) subContainer.provide(opts.overrides);
+    if (opts?.config) subContainer.provide(opts.config);
     subContainer.provide(providers);
     subContainer.bootstrap();
 

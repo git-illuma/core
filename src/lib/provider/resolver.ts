@@ -88,6 +88,7 @@ export function resolveTreeNode<T>(
       }
 
       if (!optional) {
+        if (token instanceof MultiNodeToken) return;
         if (isInjectable(token)) {
           const nodeToken = getInjectableToken(token);
           throw InjectionError.notFound(nodeToken);

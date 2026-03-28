@@ -54,7 +54,7 @@ All utilities support:
 - ✅ Dynamic imports for code splitting
 - ✅ Optional caching
 - ✅ Full type inference
-- ✅ Dependency overrides
+- ✅ Additional dependencies configuration
 - ✅ Parent container access
 - ✅ Optional explicit injector context
 
@@ -203,7 +203,7 @@ class MyService {
   private readonly getApiService = injectAsync(
     async () => ApiService,
     {
-      overrides: [
+      config: [
         { provide: API_URL, value: 'https://api.example.com' },
         { provide: CONFIG_TOKEN, value: { timeout: 5000 } }
       ]
@@ -217,7 +217,7 @@ class MyService {
 }
 ```
 
-> **Important**: If both the main provider and overrides provide the same token, a duplicate provider error will be thrown.
+> **Important**: If both the main provider and `config` provide the same token, a duplicate provider error will be thrown.
 
 ## injectEntryAsync
 
@@ -387,7 +387,7 @@ class AppService {
       return [DataService];
     },
     {
-      overrides: [
+      config: [
         { provide: DATABASE_URL, value: 'postgresql://localhost/mydb' }
       ]
     }
@@ -395,7 +395,7 @@ class AppService {
 }
 ```
 
-Note: As with `injectAsync`, providing the same token in both the main providers and overrides will result in a duplicate provider error.
+> **Note**: As with `injectAsync`, providing the same token in both the main providers and `config` will result in a duplicate provider error.
 
 ## Common patterns
 

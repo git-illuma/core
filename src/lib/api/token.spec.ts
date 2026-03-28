@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { InjectionError } from "../errors";
 import type { Token } from "../provider/types";
-import { INJECTION_SYMBOL } from "./decorator";
+import { NodeInjectable } from "./decorator";
 import { extractToken, isNodeBase, MultiNodeToken, NodeBase, NodeToken } from "./token";
 
 describe("Token", () => {
@@ -226,10 +226,9 @@ describe("Token", () => {
     });
 
     it("should extract token from decorated class", () => {
-      const token = new NodeToken("test");
+      @NodeInjectable()
       class TestClass {}
-      (TestClass as any)[INJECTION_SYMBOL] = token;
-      expect(extractToken(TestClass)).toBe(token);
+      expect(extractToken(TestClass)).toBeInstanceOf(NodeToken);
     });
 
     it("should throw if provider is invalid", () => {
@@ -238,12 +237,6 @@ describe("Token", () => {
 
     it("should throw invalid alias error if isAlias is true", () => {
       expect(() => extractToken({} as Token<unknown>, true)).toThrow(InjectionError);
-    });
-
-    it("should throw on invalid token in class", () => {
-      class TestClass {}
-      (TestClass as any)[INJECTION_SYMBOL] = "invalid";
-      expect(() => extractToken(TestClass)).toThrow(InjectionError);
     });
   });
 });

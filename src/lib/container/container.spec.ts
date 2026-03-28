@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   extractToken,
-  INJECTION_SYMBOL,
   MultiNodeToken,
   makeInjectable,
   NodeInjectable,
@@ -178,8 +177,10 @@ describe("NodeContainer", () => {
       container.bootstrap();
 
       const instance = container.get(TestClass);
+      const instance2 = container.get(AliasedClass);
       expect(instance).toBeInstanceOf(AliasedClass);
       expect(instance.value).toBe("aliased-value");
+      expect(instance).toBe(instance2);
     });
 
     it("should use token built-in factory", () => {
@@ -192,26 +193,6 @@ describe("NodeContainer", () => {
 
       container.bootstrap();
       expect(container.get(token)).toBe("built-in-value");
-    });
-
-    it("should override token declaration with decorated class", () => {
-      const container = new NodeContainer();
-      const token = new NodeToken<{ value: string }>("TOKEN");
-
-      class TestClass {
-        public readonly value = "decorated-value";
-      }
-
-      // Manually assign the token to make it "decorated"
-      (TestClass as any)[INJECTION_SYMBOL] = token;
-
-      container.provide(token);
-      container.provide(TestClass);
-
-      container.bootstrap();
-      const instance = container.get(token);
-      expect(instance).toBeInstanceOf(TestClass);
-      expect(instance.value).toBe("decorated-value");
     });
 
     it("should throw when token not found", () => {
@@ -603,8 +584,18 @@ describe("NodeContainer", () => {
       const container = new NodeContainer();
       const token = new MultiNodeToken<string>("plainToken");
 
+      @NodeInjectable()
+      class TestClass {
+        public readonly injected = nodeInject(token);
+      }
+
+      container.provide(TestClass);
+
       container.bootstrap();
       expect(container.get(token)).toEqual([]);
+
+      const instance = container.get(TestClass);
+      expect(instance.injected).toEqual([]);
     });
 
     it("should handle aliasing unregistered multi-tokens", () => {
