@@ -15,6 +15,7 @@ describe("singletons", () => {
       const parent = new NodeContainer();
       const childA = new NodeContainer({ parent });
       const childB = new NodeContainer({ parent });
+      const childC = new NodeContainer({ parent: childA });
 
       const spy = vi.fn();
 
@@ -29,13 +30,16 @@ describe("singletons", () => {
       parent.bootstrap();
       childA.bootstrap();
       childB.bootstrap();
+      childC.bootstrap();
 
       const fromA = childA.get(RootSingleton);
       const fromB = childB.get(RootSingleton);
+      const fromC = childC.get(RootSingleton);
       const fromRoot = parent.get(RootSingleton);
 
-      expect(fromA).toBe(fromB);
       expect(fromA).toBe(fromRoot);
+      expect(fromB).toBe(fromRoot);
+      expect(fromC).toBe(fromRoot);
 
       // Once for scan, once for actual instantiation
       expect(spy).toHaveBeenCalledTimes(2);

@@ -336,41 +336,41 @@ export class NodeContainer extends Illuma implements iDIContainer {
 
     while (root._parent instanceof NodeContainer) root = root._parent;
 
-    const existing = this._findNode(token);
+    const existing = root._findNode(token);
     if (existing) {
-      if (!this._rootNode) return existing;
-      return instantiate ? this._rootNode.obtain(token) : existing;
+      if (!root._rootNode) return existing;
+      return instantiate ? root._rootNode.obtain(token) : existing;
     }
 
-    let proto = this._protoNodes.get(token) as ProtoNodeSingle<T> | undefined;
+    let proto = root._protoNodes.get(token) as ProtoNodeSingle<T> | undefined;
     if (!proto) {
       proto = new ProtoNodeSingle(token, token.opts.factory);
-      this._protoNodes.set(token, proto);
+      root._protoNodes.set(token, proto);
     } else if (!proto.hasFactory() && token.opts.factory) {
       proto.setFactory(token.opts.factory);
     }
 
-    if (!this._bootstrapped || !this._rootNode) {
+    if (!root._bootstrapped || !root._rootNode) {
       return null;
     }
 
     const cache = new Map<ProtoNode, TreeNode>();
     const upstream: UpstreamGetter = (upstreamToken) => {
-      const local = this._findNode(upstreamToken);
+      const local = root._findNode(upstreamToken);
       if (local) return local;
-      return this._resolverFromParent(upstreamToken);
+      return root._resolverFromParent(upstreamToken);
     };
 
     const treeNode = resolveTreeNode(
       proto,
       cache,
-      this._protoNodes,
-      this._multiProtoNodes,
+      root._protoNodes,
+      root._multiProtoNodes,
       upstream,
     );
 
-    this._rootNode.registerDependency(treeNode);
-    return instantiate ? this._rootNode.obtain(token) : this._rootNode.find(token);
+    root._rootNode.registerDependency(treeNode);
+    return instantiate ? root._rootNode.obtain(token) : root._rootNode.find(token);
   }
 
   private _getFromParent<T>(token: Token<T>): TreeNode<T> | null {
