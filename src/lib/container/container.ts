@@ -3,7 +3,7 @@ import { nodeInject } from "../api/injection";
 import type { NodeBase } from "../api/token";
 import { extractToken, isNodeBase, MultiNodeToken, NodeToken } from "../api/token";
 import type { InjectorFn } from "../api/types";
-import { InjectionContext, type iInjectionNode } from "../context";
+import { InjectionContext } from "../context";
 import { InjectionError } from "../errors";
 import { Illuma } from "../plugins/core/plugin-container";
 import type { iMiddleware } from "../plugins/middlewares";
@@ -460,9 +460,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
       return contextFactory();
     }
 
-    const deps = new Set<iInjectionNode<any>>();
-    InjectionContext.scanInto(factory, deps);
-
+    const deps = InjectionContext.scan(factory);
     return runMiddlewares(middlewares, {
       token: new NodeToken<T>("ProducedNode"),
       deps: new Set([...deps.values()].map((d) => d.token)),

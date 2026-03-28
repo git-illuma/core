@@ -367,10 +367,9 @@ describe("nodeInject", () => {
         nodeInject(token);
       };
 
-      const injections = InjectionContext.scan(factory);
-
-      expect(injections.size).toBe(1);
-      expect(Array.from(injections)[0].token).toBe(token);
+      const deps = InjectionContext.scan(factory);
+      expect(deps.size).toBe(1);
+      expect(Array.from(deps)[0].token).toBe(token);
     });
 
     it("should work with InjectionContext.instantiate pattern", () => {

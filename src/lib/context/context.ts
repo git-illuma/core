@@ -77,6 +77,18 @@ export abstract class InjectionContext {
   }
 
   /**
+   * Scans a factory function for dependencies and returns a set of injection nodes.
+   *
+   * @param factory - The factory function to scan
+   * @returns A set of injection nodes detected during the scan
+   */
+  public static scan(factory: any): Set<iInjectionNode<any>> {
+    const deps = new Set<iInjectionNode<any>>();
+    InjectionContext.scanInto(factory, deps);
+    return deps;
+  }
+
+  /**
    * Instantiates a value using a factory function within an injection context.
    *
    * @template T - The type of the value being instantiated

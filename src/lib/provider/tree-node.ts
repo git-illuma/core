@@ -90,9 +90,13 @@ export class TreeRootNode {
 }
 
 export class TreeNodeSingle<T = any> {
-  private readonly _transparent: Set<TreeNodeTransparent> = new Set();
   private readonly _transparentMap: Map<NodeBase<any>, TreeNodeTransparent> = new Map();
+  private readonly _transparentList: TreeNodeTransparent[] = [];
+  private readonly _transparentIndex = new Map<NodeBase<any>, number>();
+
   private readonly _deps: DependencyPool = new Map();
+  private readonly _depsList: TreeNode<any>[] = [];
+  private readonly _depsIndex = new Map<NodeBase<any>, number>();
   private readonly _depsTokens = new Set<NodeBase<any>>();
 
   private _instance: T | null = null;
@@ -118,12 +122,31 @@ export class TreeNodeSingle<T = any> {
 
   public addDependency(node: TreeNode<any>): void {
     if (node instanceof TreeNodeTransparent) {
-      this._transparent.add(node);
-      this._transparentMap.set(node.proto.parent.token, node);
-      this._depsTokens.add(node.proto.parent.token);
+      const token = node.proto.parent.token;
+      this._transparentMap.set(token, node);
+
+      const existingIndex = this._transparentIndex.get(token);
+      if (existingIndex === undefined) {
+        this._transparentIndex.set(token, this._transparentList.length);
+        this._transparentList.push(node);
+      } else {
+        this._transparentList[existingIndex] = node;
+      }
+
+      this._depsTokens.add(token);
     } else {
-      this._deps.set(node.proto.token, node);
-      this._depsTokens.add(node.proto.token);
+      const token = node.proto.token;
+      this._deps.set(token, node);
+
+      const existingIndex = this._depsIndex.get(token);
+      if (existingIndex === undefined) {
+        this._depsIndex.set(token, this._depsList.length);
+        this._depsList.push(node);
+      } else {
+        this._depsList[existingIndex] = node;
+      }
+
+      this._depsTokens.add(token);
     }
 
     node.allocations++;
@@ -135,8 +158,13 @@ export class TreeNodeSingle<T = any> {
       return;
     }
 
-    for (const node of this._deps.values()) node.collectPool(pool);
-    for (const dep of this._transparent) dep.collectPool(pool);
+    for (let i = 0; i < this._depsList.length; i++) {
+      this._depsList[i].collectPool(pool);
+    }
+
+    for (let i = 0; i < this._transparentList.length; i++) {
+      this._transparentList[i].collectPool(pool);
+    }
 
     this._collected = true;
     pool.set(this.proto.token, this);
@@ -145,8 +173,13 @@ export class TreeNodeSingle<T = any> {
   public instantiate(pool?: InjectionPool, middlewares: iMiddleware[] = []): void {
     if (this._resolved) return;
 
-    for (const node of this._deps.values()) node.instantiate(pool, middlewares);
-    for (const dep of this._transparent) dep.instantiate(pool, middlewares);
+    for (let i = 0; i < this._depsList.length; i++) {
+      this._depsList[i].instantiate(pool, middlewares);
+    }
+
+    for (let i = 0; i < this._transparentList.length; i++) {
+      this._transparentList[i].instantiate(pool, middlewares);
+    }
 
     const retriever = retrieverFactory(
       this.proto.token,
@@ -178,9 +211,13 @@ export class TreeNodeSingle<T = any> {
 }
 
 export class TreeNodeTransparent<T = any> {
-  private readonly _transparent = new Set<TreeNodeTransparent>();
   private readonly _transparentMap: Map<NodeBase<any>, TreeNodeTransparent> = new Map();
+  private readonly _transparentList: TreeNodeTransparent[] = [];
+  private readonly _transparentIndex = new Map<NodeBase<any>, number>();
+
   private readonly _deps: DependencyPool = new Map();
+  private readonly _depsList: TreeNode<any>[] = [];
+  private readonly _depsIndex = new Map<NodeBase<any>, number>();
   private readonly _depsTokens = new Set<NodeBase<any>>();
 
   private _instance: T | null = null;
@@ -197,12 +234,31 @@ export class TreeNodeTransparent<T = any> {
 
   public addDependency(node: TreeNode<any>): void {
     if (node instanceof TreeNodeTransparent) {
-      this._transparent.add(node);
-      this._transparentMap.set(node.proto.parent.token, node);
-      this._depsTokens.add(node.proto.parent.token);
+      const token = node.proto.parent.token;
+      this._transparentMap.set(token, node);
+
+      const existingIndex = this._transparentIndex.get(token);
+      if (existingIndex === undefined) {
+        this._transparentIndex.set(token, this._transparentList.length);
+        this._transparentList.push(node);
+      } else {
+        this._transparentList[existingIndex] = node;
+      }
+
+      this._depsTokens.add(token);
     } else {
-      this._deps.set(node.proto.token, node);
-      this._depsTokens.add(node.proto.token);
+      const token = node.proto.token;
+      this._deps.set(token, node);
+
+      const existingIndex = this._depsIndex.get(token);
+      if (existingIndex === undefined) {
+        this._depsIndex.set(token, this._depsList.length);
+        this._depsList.push(node);
+      } else {
+        this._depsList[existingIndex] = node;
+      }
+
+      this._depsTokens.add(token);
     }
 
     node.allocations++;
@@ -211,8 +267,13 @@ export class TreeNodeTransparent<T = any> {
   public collectPool(pool: InjectionPool): void {
     if (this._collected) return;
 
-    for (const node of this._deps.values()) node.collectPool(pool);
-    for (const dep of this._transparent) dep.collectPool(pool);
+    for (let i = 0; i < this._depsList.length; i++) {
+      this._depsList[i].collectPool(pool);
+    }
+
+    for (let i = 0; i < this._transparentList.length; i++) {
+      this._transparentList[i].collectPool(pool);
+    }
 
     this._collected = true;
   }
@@ -220,8 +281,13 @@ export class TreeNodeTransparent<T = any> {
   public instantiate(pool?: InjectionPool, middlewares: iMiddleware[] = []): void {
     if (this._resolved) return;
 
-    for (const dep of this._transparent) dep.instantiate(pool, middlewares);
-    for (const node of this._deps.values()) node.instantiate(pool, middlewares);
+    for (let i = 0; i < this._transparentList.length; i++) {
+      this._transparentList[i].instantiate(pool, middlewares);
+    }
+
+    for (let i = 0; i < this._depsList.length; i++) {
+      this._depsList[i].instantiate(pool, middlewares);
+    }
 
     const retriever = retrieverFactory(
       this.proto.parent.token,
@@ -253,6 +319,7 @@ export class TreeNodeTransparent<T = any> {
 
 export class TreeNodeMulti<T = any> {
   private readonly _deps = new Set<TreeNode<any>>();
+  private readonly _depsList: TreeNode<any>[] = [];
   public readonly instance: T[] = [];
 
   private _collected = false;
@@ -267,7 +334,9 @@ export class TreeNodeMulti<T = any> {
       return;
     }
 
-    for (const dep of this._deps) dep.collectPool(pool);
+    for (let i = 0; i < this._depsList.length; i++) {
+      this._depsList[i].collectPool(pool);
+    }
 
     this._collected = true;
     pool.set(this.proto.token, this);
@@ -276,7 +345,8 @@ export class TreeNodeMulti<T = any> {
   public instantiate(pool?: InjectionPool, middlewares: iMiddleware[] = []): void {
     if (this._resolved) return;
 
-    for (const dep of this._deps) {
+    for (let i = 0; i < this._depsList.length; i++) {
+      const dep = this._depsList[i];
       dep.instantiate(pool, middlewares);
 
       if (dep instanceof TreeNodeSingle) {
@@ -293,8 +363,13 @@ export class TreeNodeMulti<T = any> {
   }
 
   public addDependency(...nodes: TreeNode[]): void {
-    for (const node of nodes) {
-      this._deps.add(node);
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      if (!this._deps.has(node)) {
+        this._deps.add(node);
+        this._depsList.push(node);
+      }
+
       node.allocations++;
     }
   }

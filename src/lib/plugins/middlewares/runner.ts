@@ -7,10 +7,11 @@ export function runMiddlewares<T>(
   const ms = middlewares as iMiddleware<T>[];
   if (ms.length === 0) return params.factory();
 
-  const next = (i: number, current: iInstantiationParams<T>): T => {
+  let i = 0;
+  const next = (current: iInstantiationParams<T>): T => {
     if (i >= ms.length) return current.factory();
-    return ms[i](current, (nextParams) => next(i + 1, nextParams));
+    return ms[i++](current, next);
   };
 
-  return next(0, params);
+  return next(params);
 }
