@@ -118,6 +118,27 @@ container.provide(DB.withAlias(PRIMARY_DB));
 // Both resolve to the same instance
 ```
 
+#### `implement(shape)`
+
+Use a single helper when you already have a provider implementation shape:
+
+```typescript
+const LOGGER = new NodeToken<Logger>('LOGGER');
+
+container.provide(
+  LOGGER.implement({ useClass: ConsoleLogger })
+);
+```
+
+This is equivalent to:
+
+```typescript
+container.provide({
+  provide: LOGGER,
+  useClass: ConsoleLogger
+});
+```
+
 ## MultiNodeToken
 
 `MultiNodeToken` allows multiple providers for the same token, collecting all values into an array.
@@ -229,6 +250,17 @@ container.provide([
   SERVICES.withClass(ServiceA),
   SERVICES.withClass(ServiceB),
   SERVICES.withFactory(() => new ServiceC('custom'))
+]);
+```
+
+Including `implement(shape)`:
+
+```typescript
+const HANDLERS = new MultiNodeToken<Handler>('HANDLERS');
+
+container.provide([
+  HANDLERS.implement({ useClass: AuditHandler }),
+  HANDLERS.implement({ factory: () => new MetricsHandler('v2') })
 ]);
 ```
 

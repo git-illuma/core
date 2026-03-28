@@ -161,6 +161,13 @@ const DB = new NodeToken<Database>('DB');
 container.provide(DB.withAlias(PRIMARY_DB));
 ```
 
+#### `implement(shape: ProviderImplementation<T>): iNodeProvider<T>`
+
+```typescript
+const LOGGER = new NodeToken<Logger>('LOGGER');
+container.provide(LOGGER.implement({ useClass: ConsoleLogger }));
+```
+
 ---
 
 ## MultiNodeToken
@@ -188,7 +195,7 @@ const plugins = container.get(PLUGINS); // Plugin[]
 
 ### Provider Helper Methods
 
-Same as `NodeToken`: `withValue()`, `withFactory()`, `withClass()`, `withAlias()`.
+Same as `NodeToken`: `withValue()`, `withFactory()`, `withClass()`, `withAlias()`, `implement()`.
 
 ---
 

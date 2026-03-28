@@ -60,6 +60,47 @@ describe("Token", () => {
           alias: aliasToken,
         });
       });
+
+      it("should implement provider with implement (value)", () => {
+        const token = new NodeToken<string>("test");
+        const provider = token.implement({ value: "test value" });
+        expect(provider).toEqual({
+          provide: token,
+          value: "test value",
+        });
+      });
+
+      it("should implement provider with implement (factory)", () => {
+        const token = new NodeToken<string>("test");
+        const factory = () => "test value";
+        const provider = token.implement({ factory });
+        expect(provider).toEqual({
+          provide: token,
+          factory,
+        });
+      });
+
+      it("should implement provider with implement (class)", () => {
+        const token = new NodeToken<TestClass>("test");
+        class TestClass {
+          value = "test";
+        }
+        const provider = token.implement({ useClass: TestClass });
+        expect(provider).toEqual({
+          provide: token,
+          useClass: TestClass,
+        });
+      });
+
+      it("should implement provider with implement (alias)", () => {
+        const token = new NodeToken<string>("test");
+        const aliasToken = new NodeToken<string>("alias");
+        const provider = token.implement({ alias: aliasToken });
+        expect(provider).toEqual({
+          provide: token,
+          alias: aliasToken,
+        });
+      });
     });
   });
 
@@ -113,6 +154,47 @@ describe("Token", () => {
         const token = new MultiNodeToken<string>("test");
         const aliasToken = new NodeToken<string>("alias");
         const provider = token.withAlias(aliasToken);
+        expect(provider).toEqual({
+          provide: token,
+          alias: aliasToken,
+        });
+      });
+
+      it("should implement provider with implement (value)", () => {
+        const token = new MultiNodeToken<string>("test");
+        const provider = token.implement({ value: "test value" });
+        expect(provider).toEqual({
+          provide: token,
+          value: "test value",
+        });
+      });
+
+      it("should implement provider with implement (factory)", () => {
+        const token = new MultiNodeToken<string>("test");
+        const factory = () => "test value";
+        const provider = token.implement({ factory });
+        expect(provider).toEqual({
+          provide: token,
+          factory,
+        });
+      });
+
+      it("should implement provider with implement (class)", () => {
+        const token = new MultiNodeToken<TestClass>("test");
+        class TestClass {
+          value = "test";
+        }
+        const provider = token.implement({ useClass: TestClass });
+        expect(provider).toEqual({
+          provide: token,
+          useClass: TestClass,
+        });
+      });
+
+      it("should implement provider with implement (alias)", () => {
+        const token = new MultiNodeToken<string>("test");
+        const aliasToken = new NodeToken<string>("alias");
+        const provider = token.implement({ alias: aliasToken });
         expect(provider).toEqual({
           provide: token,
           alias: aliasToken,

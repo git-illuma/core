@@ -93,6 +93,19 @@ container.provide(
 );
 ```
 
+Using the generic helper:
+
+```typescript
+container.provide(
+  CONFIG.implement({
+    value: {
+      apiUrl: 'https://api.example.com',
+      debug: true
+    }
+  })
+);
+```
+
 ### Factory provider
 
 Use a factory function for custom instantiation logic:
@@ -119,6 +132,19 @@ container.provide(
   DATABASE.withFactory(() => {
     const config = nodeInject(CONFIG);
     return new Database(config.databaseUrl);
+  })
+);
+```
+
+Using the generic helper:
+
+```typescript
+container.provide(
+  DATABASE.implement({
+    factory: () => {
+      const config = nodeInject(CONFIG);
+      return new Database(config.databaseUrl);
+    }
   })
 );
 ```
@@ -152,6 +178,14 @@ Using the token helper:
 
 ```typescript
 container.provide(LOGGER.withClass(ConsoleLogger));
+```
+
+Using the generic helper:
+
+```typescript
+container.provide(
+  LOGGER.implement({ useClass: ConsoleLogger })
+);
 ```
 
 ### Alias provider
@@ -188,6 +222,27 @@ Using the token helper:
 
 ```typescript
 container.provide(DB.withAlias(PRIMARY_DB));
+```
+
+Using the generic helper:
+
+```typescript
+container.provide(
+  DB.implement({ alias: PRIMARY_DB })
+);
+```
+
+### Generic helper
+
+Generic helpers like `implement` can be used for any provider type, allowing you to choose the most concise syntax for your use case, primarily when creating provider functions (e.g. `provideDatabase()`) that return multiple providers by scope or environment. For example:
+
+```typescript
+function provideDatabase(cfg: ImplementationShape<>): Provider[] {
+  return [
+    DatabaseService,
+    DATABASE_CONFIG.implement(cfg),
+  ];
+}
 ```
 
 ## Registering providers

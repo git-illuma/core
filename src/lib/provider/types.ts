@@ -87,3 +87,9 @@ export type Provider<T = unknown> =
   | iNodeProvider<T>
   | Ctor<T>
   | Provider<unknown>[];
+
+export type ImplementationShape<T = unknown> =
+  | Omit<iNodeValueProvider<T>, "provide">
+  | Omit<iNodeFactoryProvider<T>, "provide">
+  | Omit<iNodeClassProvider<T>, "provide">
+  | Omit<iNodeAliasProvider<T>, "provide">;

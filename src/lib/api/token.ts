@@ -4,8 +4,10 @@ import type {
   iNodeAliasProvider,
   iNodeClassProvider,
   iNodeFactoryProvider,
+  iNodeProvider,
   iNodeTokenBaseOptions,
   iNodeValueProvider,
+  ImplementationShape,
   Token,
 } from "../provider/types";
 import { getInjectableToken, isInjectable } from "./decorator";
@@ -51,6 +53,25 @@ export class NodeBase<T> {
     return {
       provide: this,
       alias,
+    };
+  }
+
+  /**
+   * Provides this token using a provider implementation shape
+   * @param shape - The provider implementation shape
+   * @returns The configured provider
+   *
+   * @example
+   * ```typescript
+   * const LOGGER_NODE = new NodeToken<Logger>('Logger');
+   * const provider = LOGGER_NODE.implement({ useClass: ConsoleLogger });
+   * container.provide(provider);
+   * ```
+   */
+  public implement(shape: ImplementationShape<T>): iNodeProvider<T> {
+    return {
+      provide: this,
+      ...shape,
     };
   }
 
