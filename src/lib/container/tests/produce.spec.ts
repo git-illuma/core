@@ -28,6 +28,25 @@ describe("produce", () => {
     expect(instance.dep.value).toBe("dependency-value");
   });
 
+  it("should allow producing with factories", () => {
+    const container = new NodeContainer();
+
+    @NodeInjectable()
+    class DependencyService {
+      public readonly value = "dependency-value";
+    }
+
+    container.provide(DependencyService);
+    container.bootstrap();
+
+    const result = container.produce(() => {
+      const dep = nodeInject(DependencyService);
+      return { computed: `${dep.value}-computed` };
+    });
+
+    expect(result.computed).toBe("dependency-value-computed");
+  });
+
   it("should create new instances on each call", () => {
     const container = new NodeContainer();
 
@@ -82,7 +101,14 @@ describe("produce", () => {
 
     container.bootstrap();
 
-    expect(() => container.produce(NotInjectable)).toThrow(InjectionError);
+    expect(() => container.produce(NotInjectable)).not.toThrow(InjectionError);
+  });
+
+  it.each(["", null, undefined, 123, {}])("should throw on bad input: %p", (badInput) => {
+    const container = new NodeContainer();
+    container.bootstrap();
+
+    expect(() => container.produce(badInput as any)).toThrow(InjectionError);
   });
 
   it("should work with complex dependency chains", () => {

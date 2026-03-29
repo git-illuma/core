@@ -269,13 +269,10 @@ export class NodeContainer extends Illuma implements iDIContainer {
    * @throws {InjectionError} If called before bootstrap or if the constructor is invalid
    */
   public produce<T>(fn: Ctor<T> | (() => T)): T {
+    if (typeof fn !== "function") throw InjectionError.invalidProvider(fn);
+
     if (!this._bootstrapped || !this._rootNode) {
       throw InjectionError.notBootstrapped();
-    }
-
-    if (typeof fn !== "function") throw InjectionError.invalidCtor(fn);
-    if (isConstructor(fn) && !isInjectable<T>(fn)) {
-      throw InjectionError.invalidCtor(fn);
     }
 
     let factory: () => T;
@@ -284,7 +281,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
       if (!f) factory = () => new fn();
       else factory = () => getInjectableToken<T>(fn).opts?.factory?.() as T;
     } else {
-      factory = fn as () => T;
+      factory = isConstructor(fn) ? () => new fn() : (fn as () => T);
     }
 
     const rootNode = this._rootNode;
@@ -295,6 +292,11 @@ export class NodeContainer extends Illuma implements iDIContainer {
 
       if (node) return node.instance;
       if (token instanceof MultiNodeToken) return [];
+      if (token instanceof NodeToken && token.opts?.singleton) {
+        const singleton = this._getRootSingleton(token, true);
+        if (singleton) return singleton.instance;
+      }
+
       if (!optional) throw InjectionError.notFound(token);
       return null;
     };

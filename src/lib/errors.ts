@@ -59,7 +59,7 @@ export class InjectionError extends Error {
     );
   }
 
-  public static invalidProvider(provider: string): InjectionError {
+  public static invalidProvider(provider: unknown): InjectionError {
     return new InjectionError(
       ERR_CODES.INVALID_PROVIDER,
       `Cannot use provider as it is neither a NodeToken nor MultiNodeToken nor a valid constructor.:\n${provider}`,
@@ -173,7 +173,8 @@ export function isNotFoundError(error: unknown): boolean {
 }
 
 function formatNodeName(node: unknown): string {
+  if (!node) return "Unknown";
   if (node instanceof NodeBase) return node.toString();
-  if (typeof node === "function") return node.name || "Unknown";
+  if (typeof node === "function" && "name" in node) return node.name || "Unknown";
   return String(node);
 }

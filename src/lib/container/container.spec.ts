@@ -12,13 +12,30 @@ import { NodeContainer } from "./container";
 
 describe("NodeContainer", () => {
   describe("token providers", () => {
-    it("should provide with factory", () => {
+    it("should provide with arrow factory", () => {
       const container = new NodeContainer();
       const token = new NodeToken("plainToken");
 
       container.provide({
         provide: token,
         factory: () => "value",
+      });
+
+      container.bootstrap();
+      expect(container.get(token)).toBe("value");
+    });
+
+    it("should provide with named factory", () => {
+      const container = new NodeContainer();
+      const token = new NodeToken("plainToken");
+
+      function create() {
+        return "value";
+      }
+
+      container.provide({
+        provide: token,
+        factory: create,
       });
 
       container.bootstrap();

@@ -408,5 +408,43 @@ describe("singletons", () => {
       expect(fromChild.value).toBe("singleton-value");
       expect(fromConsumer.singleton).toBe(fromRoot);
     });
+
+    it("should access singletons when producing class", () => {
+      const container = new NodeContainer({ instant: false });
+
+      @NodeInjectable({ singleton: true })
+      class RootSingleton {
+        public readonly value = "singleton value";
+      }
+
+      @NodeInjectable()
+      class Something {
+        private readonly singleton = nodeInject(RootSingleton);
+        public readonly result = `produced + ${this.singleton.value}`;
+      }
+
+      container.bootstrap();
+
+      const { result } = container.produce(Something);
+      expect(result).toBe("produced + singleton value");
+    });
+
+    it("should access singletons when producing with arrow function", () => {
+      const container = new NodeContainer({ instant: false });
+
+      @NodeInjectable({ singleton: true })
+      class RootSingleton {
+        public readonly value = "singleton value";
+      }
+
+      container.bootstrap();
+
+      const result = container.produce(() => {
+        const singleton = nodeInject(RootSingleton);
+        return `produced + ${singleton.value}`;
+      });
+
+      expect(result).toBe("produced + singleton value");
+    });
   });
 });
