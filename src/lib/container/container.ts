@@ -20,7 +20,7 @@ import type { UpstreamGetter } from "../provider/resolver";
 import type { TreeNode } from "../provider/tree-node";
 import type { Ctor, iNodeProvider, Provider, Token } from "../provider/types";
 import { Injector, InjectorImpl } from "../utils/injector";
-import { LifecycleRef, LifecycleRefImpl } from './lifecycle';
+import { LifecycleRef, LifecycleRefImpl } from "./lifecycle";
 import type { iContainerOptions, iDIContainer } from "./types";
 
 /**
