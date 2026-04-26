@@ -100,7 +100,7 @@ jobs:
         run: bun publish --verbose --access public --tag ${{ env.RELEASE_TAG }}
 
       - name: Publish to JSR
-        run: bunx jsr publish
+        run: bunx jsr publish --allow-dirty
 
       # Push repository changes
       - name: Push changes to repository

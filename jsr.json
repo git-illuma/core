@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://github.com/git-illuma/core"
   },
-  "version": "2.1.1",
+  "version": "2.1.2",
   "license": "MIT",
   "publish": {
     "include": [
