@@ -1,6 +1,7 @@
 import { getInjectableToken, isInjectable } from "../api/decorator";
 import type { NodeBase } from "../api/token";
 import { MultiNodeToken, NodeToken } from "../api/token";
+import type { iNodeInjectorOptions } from "../api/types";
 import { InjectionError } from "../errors";
 import type { ProtoNode } from "./proto";
 import {
@@ -55,28 +56,39 @@ export function resolveTreeNode<T>(
 
     const deps: (ProtoNode | TreeNode)[] = [];
 
-    function addDependency(token: Token<any>, optional = false) {
-      if (token instanceof NodeToken) {
-        const p = singleNodes.get(token);
-        if (p) {
-          deps.push(p);
-          return;
+    function addDependency(
+      token: Token<any>,
+      { optional, skipSelf, self }: iNodeInjectorOptions = {},
+    ) {
+      if (self && skipSelf) {
+        throw InjectionError.conflictingStrategies(token as NodeBase<any>);
+      }
+
+      if (!skipSelf) {
+        if (token instanceof NodeToken) {
+          const p = singleNodes.get(token);
+          if (p) {
+            deps.push(p);
+            return;
+          }
+        } else if (token instanceof MultiNodeToken) {
+          const p = multiNodes.get(token);
+          if (p) {
+            deps.push(p);
+            return;
+          }
         }
-      } else if (token instanceof MultiNodeToken) {
-        const p = multiNodes.get(token);
-        if (p) {
-          deps.push(p);
+      }
+
+      if (!self) {
+        const upstream = upstreamGetter?.(token);
+        if (upstream) {
+          deps.push(upstream);
           return;
         }
       }
 
-      const upstream = upstreamGetter?.(token);
-      if (upstream) {
-        deps.push(upstream);
-        return;
-      }
-
-      if (token instanceof NodeToken && token.opts?.singleton) {
+      if (!skipSelf && token instanceof NodeToken && token.opts?.singleton) {
         const singletonProto = new ProtoNodeSingle(token, token.opts.factory);
         singleNodes.set(token, singletonProto);
         deps.push(singletonProto);
@@ -96,7 +108,7 @@ export function resolveTreeNode<T>(
 
     if (proto instanceof ProtoNodeSingle || proto instanceof ProtoNodeTransparent) {
       for (const injection of proto.injections) {
-        addDependency(injection.token, injection.optional);
+        addDependency(injection.token, injection);
       }
     }
 

@@ -9,6 +9,18 @@ export interface iNodeInjectorOptions {
    * @default false
    */
   optional?: boolean;
+
+  /**
+   * If true, only checks the current injector for the dependency.
+   * @default false
+   */
+  self?: boolean;
+
+  /**
+   * If true, skips the current injector and checks parent injectors for the dependency.
+   * @default false
+   */
+  skipSelf?: boolean;
 }
 
 /**
@@ -24,4 +36,4 @@ export type ExtractInjectedType<Node> =
       : never;
 
 /** @internal */
-export type InjectorFn = (token: NodeBase<any>, optional?: boolean) => any;
+export type InjectorFn = (token: NodeBase<any>, options?: iNodeInjectorOptions) => any;

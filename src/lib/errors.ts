@@ -11,6 +11,7 @@ export const ERR_CODES = {
   // Alias errors
   INVALID_ALIAS: 200,
   LOOP_ALIAS: 201,
+  CONFLICTING_STRATEGIES: 202,
 
   // Bootstrap errors
   NOT_BOOTSTRAPPED: 300,
@@ -80,6 +81,13 @@ export class InjectionError extends Error {
     return new InjectionError(
       ERR_CODES.LOOP_ALIAS,
       `Token "${alias.toString()}" cannot alias itself in a loop.`,
+    );
+  }
+
+  public static conflictingStrategies(alias: NodeBase<unknown>): InjectionError {
+    return new InjectionError(
+      ERR_CODES.CONFLICTING_STRATEGIES,
+      `Token "${alias.toString()}" cannot use both 'self' and 'skipSelf' strategies.`,
     );
   }
 

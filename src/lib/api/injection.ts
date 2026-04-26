@@ -74,11 +74,19 @@ export function nodeInject<
     throw InjectionError.outsideContext(token);
   }
 
-  const injection = { token, optional: options?.optional ?? false };
-  InjectionContext.addDep(injection);
+  if (options?.self && options?.skipSelf) {
+    throw InjectionError.conflictingStrategies(token);
+  }
+
+  InjectionContext.addDep({
+    token,
+    optional: options?.optional ?? false,
+    self: options?.self ?? false,
+    skipSelf: options?.skipSelf ?? false,
+  });
 
   if (InjectionContext.injector) {
-    return InjectionContext.injector(token, options?.optional);
+    return InjectionContext.injector(token, options);
   }
 
   return SHAPE_SHIFTER;
