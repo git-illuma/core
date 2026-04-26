@@ -10,6 +10,7 @@ Complete API documentation for Illuma's core classes, functions, and decorators.
 - [nodeInject](#nodeinject)
 - [injectDefer](#injectdefer)
 - [Injector](#injector)
+- [LifecycleRef](#lifecycleref)
 - [Decorators](#decorators)
 - [Async Injection Functions](#async-injection-functions)
 - [Plugin API](#plugin-api)
@@ -24,7 +25,7 @@ The main dependency injection container.
 ### Constructor
 
 ```typescript
-new NodeContainer(options?: { 
+new NodeContainer(options?: {
   measurePerformance?: boolean;
   instant?: boolean;
   parent?: iDIContainer;
@@ -38,6 +39,11 @@ new NodeContainer(options?: {
 | `options.parent`             | `iDIContainer` | `undefined` | Optional parent container for hierarchical injection                                   |
 
 ### Methods
+
+#### `destroyed`
+
+Boolean property indicating whether the container has been completely destroyed.
+Returns `true` if `destroy()` was successfully executed on this container.
 
 #### `provide<T>(provider: Provider<T>): void`
 
@@ -112,6 +118,20 @@ container.registerMiddleware((params, next) => {
   console.log('Instantiating', params.token.name);
   return next(params);
 });
+```
+
+#### `destroy(): void`
+
+Gracefully shuts down the container, freeing its memory and executing registered `LifecycleRef` cleanup hooks. Note: When a container is destroyed, all its child containers are completely destroyed first.
+
+Calling `destroy()` twice will throw an `InjectionError`.
+
+```typescript
+const container = new NodeContainer();
+// Use the container...
+
+// Ready to clean up
+container.destroy();
 ```
 
 ---
@@ -352,6 +372,43 @@ class FactoryService {
   }
 }
 ```
+
+---
+
+## LifecycleRef
+
+Token for accessing the container lifecycle events to perform cleanup tasks.
+
+### Methods
+
+#### `destroyed` (getter)
+
+A boolean property indicating whether the container has been destroyed.
+
+#### `beforeDestroy(callback: () => void): () => void`
+
+Register a callback to run when the container is about to be destroyed. Callbacks run in reverse initialization order. Returns an unsubscribe function to remove the callback before destruction if it's no longer needed.
+
+```typescript
+@NodeInjectable()
+class DatabaseService {
+  private readonly lifecycle = nodeInject(LifecycleRef);
+  private connection: Connection;
+
+  constructor() {
+    this.connection = connect();
+
+    // Clean up connection when the container is destroyed
+    this.lifecycle.beforeDestroy(() => {
+      this.connection.close();
+    });
+  }
+}
+```
+
+#### `onChildDestroy(callback: () => void): () => void`
+
+*(Internal)* Register a callback specifically executed during the children destruction phase. Typically only used for building low-level tools that integrate with container hierarchies.
 
 ---
 
@@ -652,13 +709,13 @@ import { Illuma } from '@illuma/core/plugins';
 
 Illuma.registerGlobalMiddleware((params, next) => {
   const start = performance.now();
-  
+
   // Proceed with instantiation
   const instance = next(params);
-  
+
   const end = performance.now();
   console.log(`[${params.token.name}] instantiated in ${(end - start).toFixed(2)}ms`);
-  
+
   return instance;
 });
 ```
@@ -763,5 +820,6 @@ interface iInstantiationParams<T = unknown> {
 - [Providers Guide](./PROVIDERS.md) - Provider types in detail
 - [Tokens Guide](./TOKENS.md) - Using NodeToken and MultiNodeToken
 - [Async Injection Guide](./ASYNC_INJECTION.md) - Advanced async patterns
+- [Lifecycle Guide](./LIFECYCLE.md) - Container lifecycle hooks
 - [Testing Guide](./TESTKIT.md) - Testing with Illuma
 - [Error Reference](./TROUBLESHOOTING.md) - Troubleshooting

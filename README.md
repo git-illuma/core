@@ -15,6 +15,7 @@ Heavily inspired by Angular's DI system, but designed to work in any environment
 - **Flexible** – Classes, factories, values, and aliases
 - **Optional decorators** – Injectable classes with `@NodeInjectable()` decorator
 - **Multi-Tokens** – Built-in multi-provider support
+- **Lifecycle hooks** – Graceful container destruction and resource cleanup
 - **Plugin System** – Extensible architecture with custom middlewares, scanners, and diagnostics
 - **TestKit** – Unit testing and mocking utilities for any testing framework
 - **Universal** – Node.js, Bun, Deno, browser, and Electron
@@ -154,6 +155,7 @@ See [Testing Guide](./docs/TESTKIT.md) for examples.
 | [Providers](./docs/PROVIDERS.md)                   | Value, factory, class, and alias providers            |
 | [Tokens](./docs/TOKENS.md)                         | NodeToken and MultiNodeToken                          |
 | [Async Injection](./docs/ASYNC_INJECTION.md)       | Lazy loading and sub-containers                       |
+| [Lifecycle Hooks](./docs/LIFECYCLE.md)             | Container destruction and lifecycle hooks             |
 | [Testing](./docs/TESTKIT.md)                       | TestKit and mocking                                   |
 | [Plugins](./docs/PLUGINS.md)                       | Extending Illuma with custom scanners and diagnostics |
 | [Technical Overview](./docs/TECHNICAL_OVERVIEW.md) | Deep dive into how Illuma works                       |
