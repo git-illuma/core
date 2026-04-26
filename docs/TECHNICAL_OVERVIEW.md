@@ -455,7 +455,7 @@ The `InjectionContext` is a global singleton that manages the state during facto
 abstract class InjectionContext {
   public static contextOpen = false;
   // Internal set of calls
-  private static readonly _calls = new Set<iInjectionNode<any>>();
+  protected static readonly _calls = new Set<iInjectionNode<any>>();
   public static injector: InjectorFn | null = null;
 }
 ```

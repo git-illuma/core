@@ -51,6 +51,9 @@ export class NodeContainer extends Illuma implements iDIContainer {
   private readonly _multiProtoNodes = new Map<MultiNodeToken<any>, ProtoNodeMulti<any>>();
   protected readonly _lifecycle: LifecycleRefImpl = new LifecycleRefImpl();
 
+  /**
+   * Indicates whether the container has been destroyed.
+   */
   public get destroyed(): boolean {
     return this._lifecycle.destroyed;
   }
@@ -171,6 +174,14 @@ export class NodeContainer extends Illuma implements iDIContainer {
     throw InjectionError.invalidProvider(JSON.stringify(provider));
   }
 
+  /**
+   * Finds a resolved dependency node in the container's injection tree.
+   * Internal representation of a node is returned, which contains the instance and other metadata.
+   *
+   * @template T - The type of value the node provides.
+   * @param token - The token or class to look up in the container.
+   * @returns The corresponding tree node, or null if the container is not bootstrapped or the token is not found.
+   */
   public findNode<T>(token: Token<T>): TreeNode<T> | null {
     if (!this._rootNode) return null;
     if (!this._bootstrapped) return null;
@@ -379,6 +390,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
     this._protoNodes.clear();
   }
 
+  /** @internal */
   private _findNode<T>(token: Token<T>): TreeNode<T> | null {
     if (!this._rootNode) return null;
     if (!this._bootstrapped) return null;
@@ -392,6 +404,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
     return this._rootNode.find(token as NodeBase<T>);
   }
 
+  /** @internal */
   private _getRootSingleton<T>(
     token: NodeToken<T>,
     instantiate = false,
@@ -438,6 +451,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
     return instantiate ? root._rootNode.obtain(token) : root._rootNode.find(token);
   }
 
+  /** @internal */
   private _getFromParent<T>(token: Token<T>): TreeNode<T> | null {
     if (!this._parent) return null;
     const parentNode = this._parent as NodeContainer;
@@ -448,6 +462,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
     return this._resolveSingletonFrom(parentNode, token, true);
   }
 
+  /** @internal */
   private _resolverFromParent<T>(token: Token<T>): TreeNode<T> | null {
     if (!this._parent || !(this._parent instanceof NodeContainer)) return null;
 
@@ -457,6 +472,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
     return this._resolveSingletonFrom(this._parent, token, false);
   }
 
+  /** @internal */
   private _buildInjectionTree(): TreeRootNode {
     const middlewares = [...Illuma._middlewares, ...this.collectMiddlewares()];
     const root = new TreeRootNode(this._opts?.instant, middlewares);
@@ -490,6 +506,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
     return root;
   }
 
+  /** @internal */
   private _registerMultiDeclaration<T>(token: MultiNodeToken<T>): void {
     if (this._multiProtoNodes.has(token)) {
       throw InjectionError.duplicate(token);
@@ -498,6 +515,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
     this._multiProtoNodes.set(token, new ProtoNodeMulti<T>(token));
   }
 
+  /** @internal */
   private _registerSingleDeclaration<T>(token: NodeToken<T>): void {
     if (this._protoNodes.has(token)) {
       throw InjectionError.duplicate(token);
@@ -506,6 +524,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
     this._protoNodes.set(token, new ProtoNodeSingle<T>(token));
   }
 
+  /** @internal */
   private _assertSingleFactoryAssignable<T>(
     token: NodeToken<T>,
   ): ProtoNodeSingle<T> | undefined {
@@ -514,6 +533,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
     return existing;
   }
 
+  /** @internal */
   private _resolveSingletonFrom<T>(
     container: NodeContainer,
     token: Token<T>,
@@ -523,6 +543,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
     return container._getRootSingleton(token, instantiate);
   }
 
+  /** @internal */
   protected collectMiddlewares(): iMiddleware[] {
     return [
       ...(this._parent &&

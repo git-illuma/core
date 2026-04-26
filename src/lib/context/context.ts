@@ -11,9 +11,9 @@ import type { iInjectionNode } from "./types";
  */
 export abstract class InjectionContext {
   public static contextOpen = false;
-  public static readonly _calls: Set<iInjectionNode<any>> = new Set();
   public static injector: InjectorFn | null = null;
-  private static readonly _scanners = Illuma.contextScanners;
+  protected static readonly _calls: Set<iInjectionNode<any>> = new Set();
+  protected static readonly _scanners = Illuma.contextScanners;
 
   /**
    * Adds a dependency to the current injection context.
@@ -124,6 +124,7 @@ export abstract class InjectionContext {
     return calls;
   }
 
+  /** @internal */
   private static _flushInto(target: Set<iInjectionNode<any>>): void {
     for (const call of InjectionContext._calls) target.add(call);
   }
