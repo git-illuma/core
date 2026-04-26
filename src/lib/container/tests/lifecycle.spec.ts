@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { NodeContainer } from "../container";
 import { LifecycleRefImpl } from "../lifecycle";
 
@@ -34,9 +34,45 @@ describe("LifecycleRefImpl", () => {
       "parentProvider1",
     ]);
   });
-});
 
-describe("NodeContainer Lifecycle Integration", () => {
+  it("should not leak memory if callbacks do not unsubscribe", () => {
+    const lifecycle = new LifecycleRefImpl();
+
+    const cb1 = () => {};
+    const cb2 = () => {};
+    lifecycle.beforeDestroy(cb1);
+    lifecycle.onChildDestroy(cb2);
+
+    lifecycle.destroy();
+
+    const lcAny = lifecycle as unknown as {
+      _callbacks: Set<() => void>;
+      _childCallbacks: Set<() => void>;
+    };
+    expect(lcAny._callbacks.size).toBe(0);
+    expect(lcAny._childCallbacks.size).toBe(0);
+  });
+
+  it("should cascade destroy containers bottom-up", () => {
+    const root = new NodeContainer();
+    let prev: NodeContainer = root;
+    const spy = vi.fn();
+
+    for (let i = 0; i < 5; i++) {
+      const child = new NodeContainer({ parent: prev });
+      const original = child.destroy.bind(child);
+      child.destroy = () => {
+        original();
+        spy(i);
+      };
+
+      prev = child;
+    }
+
+    root.destroy();
+    expect(spy.mock.calls.map((call) => call[0])).toEqual([4, 3, 2, 1, 0]);
+  });
+
   it("should cascade destroy from parent to child and run in reverse initialization order", () => {
     const parent = new NodeContainer();
     const order: string[] = [];
@@ -53,7 +89,6 @@ describe("NodeContainer Lifecycle Integration", () => {
 
     parent.destroy();
 
-    // Execution follows complete child sub-trees first (reverse creation order), then parent providers (reverse)
     expect(order).toEqual([
       "child-2-provider",
       "child-1-provider",

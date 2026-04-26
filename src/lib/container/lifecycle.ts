@@ -2,8 +2,8 @@ import { NodeToken } from "../api/token";
 import { InjectionError } from "../errors";
 
 export class LifecycleRefImpl {
-  private readonly _callbacks: (() => void)[] = [];
-  private readonly _childCallbacks: (() => void)[] = [];
+  private readonly _callbacks = new Set<() => void>();
+  private readonly _childCallbacks = new Set<() => void>();
 
   private _destroyed = false;
   public get destroyed(): boolean {
@@ -11,31 +11,23 @@ export class LifecycleRefImpl {
   }
 
   public beforeDestroy(callback: () => void): () => void {
-    this._callbacks.push(callback);
-    return () => {
-      const idx = this._callbacks.indexOf(callback);
-      if (idx !== -1) this._callbacks.splice(idx, 1);
-    };
+    this._callbacks.add(callback);
+    return () => this._callbacks.delete(callback);
   }
 
   public onChildDestroy(callback: () => void): () => void {
-    this._childCallbacks.push(callback);
-    return () => {
-      const idx = this._childCallbacks.indexOf(callback);
-      if (idx !== -1) this._childCallbacks.splice(idx, 1);
-    };
+    this._childCallbacks.add(callback);
+    return () => this._childCallbacks.delete(callback);
   }
 
   public destroy(): void {
     if (this._destroyed) throw InjectionError.destroyed();
-    for (let i = this._childCallbacks.length - 1; i >= 0; i--) {
-      this._childCallbacks[i]();
-    }
 
-    for (let i = this._callbacks.length - 1; i >= 0; i--) {
-      this._callbacks[i]();
-    }
+    for (const cb of Array.from(this._childCallbacks).reverse()) cb();
+    for (const cb of Array.from(this._callbacks).reverse()) cb();
 
+    this._childCallbacks.clear();
+    this._callbacks.clear();
     this._destroyed = true;
   }
 }

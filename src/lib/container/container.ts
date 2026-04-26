@@ -41,8 +41,8 @@ export class NodeContainer extends Illuma implements iDIContainer {
     super();
     this._parent = _opts?.parent;
     if (this._parent && this._parent instanceof NodeContainer) {
-      this._unsubParentDestroy = this._parent._lifecycle.onChildDestroy(
-        this.destroy.bind(this),
+      this._unsubParentDestroy = this._parent._lifecycle.onChildDestroy(() =>
+        this.destroy(),
       );
     }
   }
