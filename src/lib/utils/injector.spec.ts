@@ -290,3 +290,39 @@ describe("Injector token", () => {
     });
   });
 });
+
+describe("InjectorImpl destruction", () => {
+  it("should reflect container destroyed state", () => {
+    const container = new NodeContainer();
+    const injector = new InjectorImpl(container);
+
+    expect(injector.destroyed).toBe(false);
+    container.destroy();
+    expect(injector.destroyed).toBe(true);
+  });
+
+  it("should throw InjectionError when methods called after destroy", () => {
+    const container = new NodeContainer();
+    const token = new NodeToken<string>("testToken");
+
+    container.provide({
+      provide: token,
+      value: "test-value",
+    });
+    container.bootstrap();
+
+    const injector = new InjectorImpl(container);
+    container.destroy(); // Destroy container first
+
+    expect(() => injector.get(token)).toThrow();
+    expect(() => injector.produce(() => "test")).toThrow();
+    expect(() => injector.destroy()).toThrow(); // Destroying an already destroyed container throws
+  });
+
+  it("should destroy the underlying container when destroyed directly", () => {
+    const container = new NodeContainer();
+    const injector = new InjectorImpl(container);
+    injector.destroy();
+    expect(container.destroyed).toBe(true);
+  });
+});

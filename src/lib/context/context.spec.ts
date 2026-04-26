@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NodeToken } from "../api";
 import { InjectionError } from "../errors";
+import type { iContextScanner } from "../plugins/context/types";
+import { Illuma } from "../plugins/core/plugin-container";
 import { InjectionContext } from "./context";
+import type { iInjectionNode } from "./types";
 
 describe("InjectionContext", () => {
   afterEach(() => {
-    // Ensure context is closed after each test
     InjectionContext.closeAndReport();
   });
 
@@ -22,7 +24,7 @@ describe("InjectionContext", () => {
       const token = new NodeToken("test");
 
       InjectionContext.open();
-      InjectionContext.addDep({ token, optional: false });
+      InjectionContext.addDep({ token, optional: false, self: false, skipSelf: false });
 
       InjectionContext.open();
       expect(InjectionContext.closeAndReport().size).toBe(0);
@@ -35,7 +37,7 @@ describe("InjectionContext", () => {
       const token = new NodeToken("test");
 
       InjectionContext.open(mockInjector);
-      InjectionContext.addDep({ token, optional: false });
+      InjectionContext.addDep({ token, optional: false, self: false, skipSelf: false });
       InjectionContext.closeAndReport();
 
       expect(InjectionContext.contextOpen).toBe(false);
@@ -48,7 +50,12 @@ describe("InjectionContext", () => {
   describe("getCalls", () => {
     it("should return copy of calls when context is open", () => {
       const token = new NodeToken("test");
-      const node = { token, optional: false };
+      const node: iInjectionNode<unknown> = {
+        token,
+        optional: false,
+        self: false,
+        skipSelf: false,
+      };
 
       InjectionContext.open();
       InjectionContext.addDep(node);
@@ -62,9 +69,15 @@ describe("InjectionContext", () => {
     });
 
     it("should throw error when context is not open", () => {
-      expect(() => {
-        InjectionContext.addDep({ token: new NodeToken("test"), optional: false });
-      }).toThrow(InjectionError.calledUtilsOutsideContext());
+      const node = {
+        token: new NodeToken("test"),
+        optional: false,
+        self: false,
+        skipSelf: false,
+      };
+      expect(() => InjectionContext.addDep(node)).toThrow(
+        InjectionError.calledUtilsOutsideContext(),
+      );
     });
   });
 
@@ -73,8 +86,8 @@ describe("InjectionContext", () => {
       const token1 = new NodeToken("token1");
       const token2 = new NodeToken("token2");
 
-      const node1 = { token: token1, optional: false };
-      const node2 = { token: token2, optional: false };
+      const node1 = { token: token1, optional: false, self: false, skipSelf: false };
+      const node2 = { token: token2, optional: false, self: false, skipSelf: false };
 
       const factory = () => {
         InjectionContext.addDep(node1);
@@ -93,8 +106,8 @@ describe("InjectionContext", () => {
       const token = new NodeToken("test");
       const token2 = new NodeToken("other");
 
-      const node = { token, optional: false };
-      const node2 = { token: token2, optional: false };
+      const node = { token, optional: false, self: false, skipSelf: false };
+      const node2 = { token: token2, optional: false, self: false, skipSelf: false };
 
       const factory = () => {
         InjectionContext.addDep(node);
@@ -110,8 +123,10 @@ describe("InjectionContext", () => {
     });
 
     it("should return empty set for non-function", () => {
-      expect(InjectionContext.scan("not a function" as any).size).toBe(0);
-      expect(InjectionContext.scan(null as any).size).toBe(0);
+      expect(InjectionContext.scan("not a function" as unknown as () => void).size).toBe(
+        0,
+      );
+      expect(InjectionContext.scan(null as unknown as () => void).size).toBe(0);
     });
   });
 
@@ -128,7 +143,7 @@ describe("InjectionContext", () => {
 
     it("should make injector available during factory execution", () => {
       const mockInjector = vi.fn();
-      let injectorDuringExecution: any = null;
+      let injectorDuringExecution: unknown = null;
 
       const factory = () => {
         injectorDuringExecution = InjectionContext.injector;
@@ -151,6 +166,41 @@ describe("InjectionContext", () => {
       }).toThrow("Factory error");
 
       expect(InjectionContext.contextOpen).toBe(false);
+    });
+  });
+
+  describe("InjectionContext scanners", () => {
+    it("should utilize context scanners if available", () => {
+      const testScanner: iContextScanner = {
+        scan: (factory: any) => {
+          if (factory.name === "testFactory") {
+            return new Set([
+              {
+                token: new NodeToken("scanned_dep"),
+                optional: false,
+                self: false,
+                skipSelf: false,
+              },
+            ]);
+          }
+
+          return new Set();
+        },
+      };
+
+      Illuma.extendContextScanner(testScanner);
+
+      function testFactory() {
+        // no-op
+      }
+
+      const target = new Set<iInjectionNode<unknown>>();
+      InjectionContext.scanInto(testFactory, target);
+
+      expect(target.size).toBe(1);
+      expect(Array.from(target)[0].token.name).toBe("scanned_dep");
+
+      (Illuma as unknown as { __resetPlugins: () => void }).__resetPlugins();
     });
   });
 });

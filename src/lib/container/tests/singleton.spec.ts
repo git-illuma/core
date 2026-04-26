@@ -313,6 +313,61 @@ describe("singletons", () => {
         { value: "direct-value" },
       ]);
     });
+
+    it("should create dynamic singleton on root from child", () => {
+      const parent = new NodeContainer();
+      parent.bootstrap();
+
+      const child = new NodeContainer({ parent });
+      child.bootstrap();
+
+      const MyGlobal = new NodeToken<string>("Global", {
+        singleton: true,
+        factory: () => "global",
+      });
+      const instance1 = child.get(MyGlobal);
+      const instance2 = child.get(MyGlobal);
+      const instance3 = parent.get(MyGlobal);
+
+      expect(instance1).toBe("global");
+      expect(instance2).toBe("global");
+      expect(instance3).toBe("global");
+    });
+
+    it("should automatically destroy child when parent destroyed", () => {
+      const parent = new NodeContainer();
+      const child = new NodeContainer({ parent });
+      parent.destroy();
+      expect(child.destroyed).toBe(true);
+    });
+
+    it("should set factory on existing proto if missing and return null before root bootstrapped", () => {
+      const parent = new NodeContainer();
+      const TheToken = new NodeToken<string>("MutantGlobal", { singleton: true });
+
+      parent.provide(TheToken);
+
+      Object.defineProperty(TheToken, "opts", {
+        value: { singleton: true, factory: () => "new-factory" },
+      });
+
+      const child = new NodeContainer({ parent });
+      const result = (
+        child as unknown as {
+          _getRootSingleton: (token: NodeToken<string>, inst: boolean) => unknown;
+        }
+      )._getRootSingleton(TheToken, true);
+
+      expect(result).toBeNull();
+
+      const proto = (
+        parent as unknown as {
+          _protoNodes: Map<NodeToken<string>, { hasFactory: () => boolean }>;
+        }
+      )._protoNodes.get(TheToken);
+
+      expect(proto?.hasFactory()).toBe(true);
+    });
   });
 
   describe("instantiation", () => {
