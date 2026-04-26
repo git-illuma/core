@@ -21,6 +21,51 @@ interface StackFrame {
   processed: boolean;
 }
 
+function resolveDependency(
+  token: Token<any>,
+  options: iNodeInjectorOptions | undefined,
+  singleNodes: Map<NodeToken<any>, ProtoNodeSingle>,
+  multiNodes: Map<MultiNodeToken<any>, ProtoNodeMulti>,
+  upstreamGetter?: UpstreamGetter,
+): ProtoNode | TreeNode | null {
+  const skipSelf = options ? options.skipSelf : false;
+  const self = options ? options.self : false;
+  const optional = options ? options.optional : false;
+
+  if (!skipSelf) {
+    if (token instanceof NodeToken) {
+      const p = singleNodes.get(token);
+      if (p) return p;
+    } else if (token instanceof MultiNodeToken) {
+      const p = multiNodes.get(token);
+      if (p) return p;
+    }
+  }
+
+  if (!self) {
+    const upstream = upstreamGetter?.(token);
+    if (upstream) return upstream;
+  }
+
+  if (!skipSelf && token instanceof NodeToken && token.opts?.singleton) {
+    const singletonProto = new ProtoNodeSingle(token, token.opts.factory);
+    singleNodes.set(token, singletonProto);
+    return singletonProto;
+  }
+
+  if (!optional) {
+    if (token instanceof MultiNodeToken) return null;
+    if (isInjectable(token)) {
+      const nodeToken = getInjectableToken(token);
+      throw InjectionError.notFound(nodeToken);
+    }
+
+    throw InjectionError.notFound(token as NodeBase<any>);
+  }
+
+  return null;
+}
+
 export function resolveTreeNode<T>(
   rootProto: ProtoNode<T>,
   cache: Map<ProtoNode, TreeNode>,
@@ -56,59 +101,17 @@ export function resolveTreeNode<T>(
 
     const deps: (ProtoNode | TreeNode)[] = [];
 
-    function addDependency(
-      token: Token<any>,
-      { optional, skipSelf, self }: iNodeInjectorOptions = {},
-    ) {
-      if (self && skipSelf) {
-        throw InjectionError.conflictingStrategies(token as NodeBase<any>);
-      }
-
-      if (!skipSelf) {
-        if (token instanceof NodeToken) {
-          const p = singleNodes.get(token);
-          if (p) {
-            deps.push(p);
-            return;
-          }
-        } else if (token instanceof MultiNodeToken) {
-          const p = multiNodes.get(token);
-          if (p) {
-            deps.push(p);
-            return;
-          }
-        }
-      }
-
-      if (!self) {
-        const upstream = upstreamGetter?.(token);
-        if (upstream) {
-          deps.push(upstream);
-          return;
-        }
-      }
-
-      if (!skipSelf && token instanceof NodeToken && token.opts?.singleton) {
-        const singletonProto = new ProtoNodeSingle(token, token.opts.factory);
-        singleNodes.set(token, singletonProto);
-        deps.push(singletonProto);
-        return;
-      }
-
-      if (!optional) {
-        if (token instanceof MultiNodeToken) return;
-        if (isInjectable(token)) {
-          const nodeToken = getInjectableToken(token);
-          throw InjectionError.notFound(nodeToken);
-        }
-
-        throw InjectionError.notFound(token as NodeBase<any>);
-      }
-    }
-
     if (proto instanceof ProtoNodeSingle || proto instanceof ProtoNodeTransparent) {
       for (const injection of proto.injections) {
-        addDependency(injection.token, injection);
+        const resolvedDep = resolveDependency(
+          injection.token,
+          injection,
+          singleNodes,
+          multiNodes,
+          upstreamGetter,
+        );
+
+        if (resolvedDep) deps.push(resolvedDep);
       }
     }
 

@@ -1,3 +1,4 @@
+import type { MockInstance } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   extractToken,
@@ -175,7 +176,7 @@ describe("allocation tracking", () => {
 });
 
 describe("Plugin: Diagnostics", () => {
-  let consoleLogSpy: import("vitest").MockInstance;
+  let consoleLogSpy: MockInstance;
 
   beforeEach(() => {
     consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});

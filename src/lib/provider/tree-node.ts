@@ -1,5 +1,6 @@
-import { MultiNodeToken, type NodeBase } from "../api/token";
-import type { InjectorFn } from "../api/types";
+import type { NodeBase } from "../api/token";
+import { MultiNodeToken } from "../api/token";
+import type { iNodeInjectorOptions } from "../api/types";
 import { InjectionContext } from "../context/context";
 import { InjectionError } from "../errors";
 import type { iMiddleware } from "../plugins/middlewares";
@@ -98,6 +99,24 @@ export class TreeNodeSingle<T = any> {
     return this._instance as T;
   }
 
+  private readonly _retriever = (
+    token: NodeBase<any>,
+    options?: iNodeInjectorOptions,
+  ): any => {
+    const optional = options ? options.optional : false;
+    const depNode = this._deps.get(token);
+
+    if (!depNode && !optional) {
+      const transparent = this._transparentMap.get(token);
+      if (transparent) return transparent.instance;
+      if (token instanceof MultiNodeToken) return [] as unknown as any;
+
+      throw InjectionError.untracked(token, this.proto.token);
+    }
+
+    return depNode ? depNode.instance : null;
+  };
+
   constructor(public readonly proto: ProtoNodeSingle<T>) {
     if (proto.token === Injector) {
       // biome-ignore lint/style/noNonNullAssertion: Instantiate Injector immediately
@@ -153,18 +172,13 @@ export class TreeNodeSingle<T = any> {
       this._transparentList[i].instantiate(pool, middlewares);
     }
 
-    const retriever = retrieverFactory(
-      this.proto.token,
-      this._deps,
-      this._transparentMap,
-    );
     const factory = this.proto.factory ?? this.proto.token.opts?.factory;
     if (!factory) throw InjectionError.notFound(this.proto.token);
 
     if (!middlewares.length) {
-      this._instance = InjectionContext.instantiate(factory, retriever);
+      this._instance = InjectionContext.instantiate(factory, this._retriever);
     } else {
-      const contextFactory = () => InjectionContext.instantiate(factory, retriever);
+      const contextFactory = () => InjectionContext.instantiate(factory, this._retriever);
       this._instance = runMiddlewares(middlewares, {
         token: this.proto.token,
         factory: contextFactory,
@@ -201,6 +215,24 @@ export class TreeNodeTransparent<T = any> {
     if (!this._resolved) throw InjectionError.accessFailed();
     return this._instance as T;
   }
+
+  private readonly _retriever = (
+    token: NodeBase<any>,
+    options?: iNodeInjectorOptions,
+  ): any => {
+    const optional = options ? options.optional : false;
+    const depNode = this._deps.get(token);
+
+    if (!depNode && !optional) {
+      const transparent = this._transparentMap.get(token);
+      if (transparent) return transparent.instance;
+      if (token instanceof MultiNodeToken) return [] as unknown as any;
+
+      throw InjectionError.untracked(token, this.proto.parent.token);
+    }
+
+    return depNode ? depNode.instance : null;
+  };
 
   constructor(public readonly proto: ProtoNodeTransparent<T>) {}
 
@@ -247,17 +279,11 @@ export class TreeNodeTransparent<T = any> {
       this._depsList[i].instantiate(pool, middlewares);
     }
 
-    const retriever = retrieverFactory(
-      this.proto.parent.token,
-      this._deps,
-      this._transparentMap,
-    );
-
     if (!middlewares.length) {
-      this._instance = InjectionContext.instantiate(this.proto.factory, retriever);
+      this._instance = InjectionContext.instantiate(this.proto.factory, this._retriever);
     } else {
       const refFactory = () => {
-        return InjectionContext.instantiate(this.proto.factory, retriever);
+        return InjectionContext.instantiate(this.proto.factory, this._retriever);
       };
 
       this._instance = runMiddlewares(middlewares, {
@@ -341,34 +367,6 @@ export type TreeNode<T = any> =
   | TreeNodeSingle<T>
   | TreeNodeMulti<T>
   | TreeNodeTransparent<T>;
-
-function retrieverFactory<T>(
-  node: NodeBase<T>,
-  deps: InjectionPool,
-  transparentDeps: Map<NodeBase<any>, TreeNodeTransparent>,
-): InjectorFn {
-  return (
-    token: NodeBase<T>,
-    options?: import("../api/types").iNodeInjectorOptions,
-  ): T | null => {
-    const { optional, self, skipSelf } = options || {};
-
-    if (self && skipSelf) {
-      throw InjectionError.conflictingStrategies(token as NodeBase<any>);
-    }
-
-    const depNode = deps.get(token);
-    if (!depNode && !optional) {
-      const transparent = transparentDeps.get(token);
-      if (transparent) return transparent.instance;
-      if (token instanceof MultiNodeToken) return [] as unknown as T;
-
-      throw InjectionError.untracked(token, node);
-    }
-
-    return depNode ? depNode.instance : null;
-  };
-}
 
 function upsertIndexedDependency<TNode>(
   token: NodeBase<any>,
