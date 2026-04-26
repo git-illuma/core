@@ -1,3 +1,11 @@
+/**
+ * Main entrypoint for `@illuma/core`.
+ *
+ * Provides the main dependency injection container, API decorators, tokens,
+ * context types, error definitions, and core utility functions.
+ *
+ * @module
+ */
 export * from "./lib/api";
 export * from "./lib/container";
 export * from "./lib/context";
