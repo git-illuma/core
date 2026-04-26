@@ -1,0 +1,17 @@
+{
+  "name": "@illuma/core",
+  "description": "A lightweight, type-safe dependency injection container for anything, inspired by Angular's DI system",
+  "author": "bebrasmell",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/git-illuma/core"
+  },
+  "version": "2.1.0",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testkit": "./src/testkit.ts",
+    "./plugins": "./src/plugins.ts"
+  }
+}

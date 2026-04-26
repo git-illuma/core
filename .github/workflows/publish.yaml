@@ -19,10 +19,14 @@ jobs:
   release:
     runs-on: ubuntu-latest
     environment: Packages
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
     steps:
       # Checkout project repository
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       # Setup Bun
       - name: Setup Bun
@@ -82,11 +86,12 @@ jobs:
       - name: Build
         run: bun run build
 
-      # Publish version to public repository
-      - name: Publish
+      # Publish version to NPM
+      - name: Publish to NPM
         run: bun publish --verbose --access public --tag ${{ env.RELEASE_TAG }}
-        env:
-          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to JSR
+        run: bunx jsr publish --verbose --access public --tag ${{ env.RELEASE_TAG }}
 
       # Push repository changes
       - name: Push changes to repository
