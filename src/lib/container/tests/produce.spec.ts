@@ -6,6 +6,7 @@ import { NodeContainer } from "../container";
 describe("produce", () => {
   it("should instantiate a class with dependencies at runtime", () => {
     const container = new NodeContainer();
+    const multi = new MultiNodeToken<string>("MultiValue");
 
     @NodeInjectable()
     class DependencyService {
@@ -15,10 +16,16 @@ describe("produce", () => {
     @NodeInjectable()
     class RuntimeClass {
       public readonly dep = nodeInject(DependencyService);
+      private readonly _multi = nodeInject(multi);
       public readonly id = Math.random();
+      public getMulti() {
+        return this._multi.join(" ");
+      }
     }
 
     container.provide(DependencyService);
+    container.provide(multi.withValue("multi-1"));
+    container.provide(multi.withValue("multi-2"));
     container.bootstrap();
 
     const instance = container.produce(RuntimeClass);
@@ -26,25 +33,34 @@ describe("produce", () => {
     expect(instance).toBeInstanceOf(RuntimeClass);
     expect(instance.dep).toBeInstanceOf(DependencyService);
     expect(instance.dep.value).toBe("dependency-value");
+    expect(instance.getMulti()).toBe("multi-1 multi-2");
   });
 
-  it("should allow producing with factories", () => {
+  it("should instantiate using factories at runtime", () => {
     const container = new NodeContainer();
+    const node = new NodeToken<string>("NodeValue");
+    const multi = new MultiNodeToken<string>("MultiValue");
 
     @NodeInjectable()
     class DependencyService {
-      public readonly value = "dependency-value";
+      private readonly _injected = nodeInject(node);
+      public readonly value = `${this._injected}-value`;
     }
 
+    container.provide(node.withValue("injected"));
+    container.provide(multi.withValue("multi-1"));
+    container.provide(multi.withValue("multi-2"));
     container.provide(DependencyService);
     container.bootstrap();
 
     const result = container.produce(() => {
       const dep = nodeInject(DependencyService);
-      return { computed: `${dep.value}-computed` };
+      const multiValues = nodeInject(multi);
+      return { computed: `${dep.value}-computed`, multi: multiValues.join(" ") };
     });
 
-    expect(result.computed).toBe("dependency-value-computed");
+    expect(result.computed).toBe("injected-value-computed");
+    expect(result.multi).toBe("multi-1 multi-2");
   });
 
   it("should create new instances on each call", () => {

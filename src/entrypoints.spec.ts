@@ -19,7 +19,7 @@ describe("Package Entrypoints", () => {
       expect(mainExports.extractToken).toBeDefined();
       expect(mainExports.registerClassAsInjectable).toBeDefined();
       expect(mainExports.Injector).toBeDefined();
-      expect(mainExports.InjectorImpl).toBeDefined();
+      expect(mainExports.LifecycleRef).toBeDefined();
       expect(mainExports.NodeContainer).toBeDefined();
       expect(mainExports.InjectionContext).toBeDefined();
       expect(mainExports.InjectionError).toBeDefined();

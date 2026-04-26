@@ -36,6 +36,8 @@ export interface iContainerOptions {
  * Defines the core methods that all DI containers must implement.
  */
 export interface iDIContainer {
+  readonly destroyed: boolean;
+
   /**
    * Registers a provider in the container.
    * @template T - The type of value being provided
@@ -61,5 +63,21 @@ export interface iDIContainer {
   get<T>(token: NodeToken<T>): T;
   get<T>(token: Ctor<T>): T;
 
+  /**
+   * Instantiates a class outside injection context. Primarily used to create instances via Injector.
+   * Class does not get registered in the container and cannot be retrieved via {@link get} or {@link nodeInject}.
+   * Must be called after {@link bootstrap}.
+   *
+   * @template T - The type of the class being instantiated
+   * @param fn - Factory function or class constructor to instantiate
+   * @returns A new instance of the class with dependencies injected
+   * @throws {InjectionError} If called before bootstrap or if the constructor is invalid
+   */
   produce<T>(fn: Ctor<T> | (() => T)): T;
+
+  /**
+   * Destroys the container and releases any resources it holds.
+   * Runs all registered beforeDestroyed hooks bottom-up and clears all providers and instances.
+   */
+  destroy(): void;
 }

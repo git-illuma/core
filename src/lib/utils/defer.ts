@@ -3,7 +3,8 @@ import { SHAPE_SHIFTER } from "../api/proxy";
 import type { MultiNodeToken, NodeToken } from "../api/token";
 import { extractToken } from "../api/token";
 import type { ExtractInjectedType, iNodeInjectorOptions } from "../api/types";
-import { isNotFoundError } from "../errors";
+import { LifecycleRef } from "../container/lifecycle";
+import { InjectionError, isNotFoundError } from "../errors";
 import type { Token } from "../provider/types";
 import { Injector } from "./injector";
 
@@ -44,15 +45,22 @@ export function injectDefer<
       ) => unknown) = NodeToken<unknown>,
 >(provider: N, options?: iNodeInjectorOptions) {
   const injector = nodeInject(Injector);
+  const lifecycle = nodeInject(LifecycleRef);
 
   const token = extractToken(provider as Token<unknown>);
 
   let resolved = false;
   let instance: ExtractInjectedType<N> | typeof SHAPE_SHIFTER | null = SHAPE_SHIFTER;
 
-  return () => {
-    if (resolved) return instance;
+  lifecycle.beforeDestroy(() => {
+    resolved = false;
+    instance = null;
+  });
 
+  return () => {
+    if (lifecycle.destroyed) throw InjectionError.destroyed();
+
+    if (resolved) return instance;
     if (options?.optional) {
       try {
         instance = injector.get(token as any) as ExtractInjectedType<N>;

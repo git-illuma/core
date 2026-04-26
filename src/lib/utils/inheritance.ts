@@ -2,6 +2,8 @@ import { nodeInject } from "../api/injection";
 import type { MultiNodeToken, NodeToken } from "../api/token";
 import { extractToken } from "../api/token";
 import { NodeContainer } from "../container";
+import { LifecycleRef } from "../container/lifecycle";
+import { InjectionError } from "../errors";
 import type { Ctor, Provider, Token } from "../provider/types";
 import type { iInjector } from "./injector";
 import { Injector } from "./injector";
@@ -133,18 +135,34 @@ function createSubContainerCache<T>(
   opts: iInjectionOptions | undefined,
   factoryFn: (subContainer: NodeContainer) => Promise<T>,
 ): () => Promise<T> {
-  const { container: parent } = opts?.injector ?? nodeInject(Injector);
+  const injector = opts?.injector ?? nodeInject(Injector);
+  const { container: parent } = injector;
+  const lifecycle = opts?.injector
+    ? opts.injector.get(LifecycleRef)
+    : nodeInject(LifecycleRef);
+  const withCache = opts?.withCache ?? true;
+
   const factory = () => {
     const subContainer = new NodeContainer({ parent });
     if (opts?.config) subContainer.provide(opts.config);
     return factoryFn(subContainer);
   };
 
-  const withCache = opts?.withCache ?? true;
-  if (!withCache) return factory;
+  if (!withCache) {
+    return () => {
+      if (lifecycle.destroyed) throw InjectionError.destroyed();
+      return factory();
+    };
+  }
 
   let cache: Promise<T> | null = null;
+
+  lifecycle.beforeDestroy(() => {
+    cache = null;
+  });
+
   return () => {
+    if (lifecycle.destroyed) throw InjectionError.destroyed();
     cache ??= factory();
     return cache;
   };
