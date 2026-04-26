@@ -12,12 +12,15 @@ export interface iNodeInjectorOptions {
 
   /**
    * If true, only checks the current injector for the dependency.
+   * It prevents falling back to the parent container when dealing with hierarchical injection.
+   * Mutually exclusive with `skipSelf`.
    * @default false
    */
   self?: boolean;
 
   /**
    * If true, skips the current injector and checks parent injectors for the dependency.
+   * Mutually exclusive with `self`. When both are true, it throws a ConflictingStrategies error.
    * @default false
    */
   skipSelf?: boolean;

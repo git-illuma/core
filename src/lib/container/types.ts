@@ -1,4 +1,5 @@
 import type { MultiNodeToken, NodeToken } from "../api/token";
+import type { iNodeInjectorOptions } from "../api/types";
 import type { TreeNode } from "../provider/tree-node";
 import type { Ctor, Provider, Token } from "../provider/types";
 
@@ -57,11 +58,17 @@ export interface iDIContainer {
    * Retrieves an instance for the given token.
    * @template T - The type of value being retrieved
    * @param token - The token or constructor to retrieve
+   * @param options - Optional configuration for injection modifiers
    * @returns The resolved instance
    */
-  get<T>(token: MultiNodeToken<T>): T[];
-  get<T>(token: NodeToken<T>): T;
-  get<T>(token: Ctor<T>): T;
+  get<T>(token: MultiNodeToken<T>, options?: iNodeInjectorOptions): T[];
+  get<T>(
+    token: NodeToken<T>,
+    options: iNodeInjectorOptions & { optional: true },
+  ): T | null;
+  get<T>(token: NodeToken<T>, options?: iNodeInjectorOptions): T;
+  get<T>(token: Ctor<T>, options: iNodeInjectorOptions & { optional: true }): T | null;
+  get<T>(token: Ctor<T>, options?: iNodeInjectorOptions): T;
 
   /**
    * Instantiates a class outside injection context. Primarily used to create instances via Injector.

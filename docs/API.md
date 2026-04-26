@@ -76,11 +76,12 @@ container.provide([UserService, DatabaseService]);
 container.bootstrap();
 ```
 
-#### `get<T>(token: MultiNodeToken<T>): T[]`
+#### `get<T>(token: MultiNodeToken<T>, options?: iNodeInjectorOptions): T[]`
 
-#### `get<T>(token: NodeToken<T> | Ctor<T>): T`
+#### `get<T>(token: NodeToken<T> | Ctor<T>, options?: iNodeInjectorOptions): T`
 
 Retrieve an instance from the container. Container must be bootstrapped first.
+Supports optional modifiers `self`, `skipSelf`, and `optional`. See [Resolution Modifiers](./RESOLUTION_MODIFIERS.md) for more details.
 
 ```typescript
 const userService = container.get(UserService);
@@ -237,17 +238,17 @@ Inject a dependency into a class field or factory function.
 ```typescript
 function nodeInject<T>(
   token: MultiNodeToken<T>,
-  options?: { optional?: boolean }
+  options?: iNodeInjectorOptions
 ): T[]
 
 function nodeInject<T>(
   token: NodeToken<T> | Ctor<T>,
-  options?: { optional?: false }
+  options?: iNodeInjectorOptions
 ): T
 
 function nodeInject<T>(
   token: NodeToken<T> | Ctor<T>,
-  options: { optional: true }
+  options: iNodeInjectorOptions & { optional: true }
 ): T | null
 ```
 
@@ -255,6 +256,10 @@ function nodeInject<T>(
 | ------------------ | ---------- | ---------------------------------------- |
 | `token`            | `Token<T>` | The token or class to inject             |
 | `options.optional` | `boolean`  | If `true`, returns `null` when not found |
+| `options.self`     | `boolean`  | Limit check to only the current container |
+| `options.skipSelf` | `boolean`  | Skip current container and check parent  |
+
+See [Resolution Modifiers](./RESOLUTION_MODIFIERS.md) for more details.
 
 ### Usage
 
@@ -331,9 +336,9 @@ Token for accessing the DI container from within services.
 
 ### Methods
 
-#### `get<T>(token: MultiNodeToken<T>): T[]`
+#### `get<T>(token: MultiNodeToken<T>, options?: iNodeInjectorOptions): T[]`
 
-#### `get<T>(token: NodeToken<T> | Ctor<T>): T`
+#### `get<T>(token: NodeToken<T> | Ctor<T>, options?: iNodeInjectorOptions): T`
 
 Retrieve a registered instance from the container.
 
@@ -820,6 +825,7 @@ interface iInstantiationParams<T = unknown> {
 - [Providers Guide](./PROVIDERS.md) - Provider types in detail
 - [Tokens Guide](./TOKENS.md) - Using NodeToken and MultiNodeToken
 - [Async Injection Guide](./ASYNC_INJECTION.md) - Advanced async patterns
+- [Resolution Modifiers](./RESOLUTION_MODIFIERS.md) - Modifiers like `self` and `skipSelf` for hierarchical containers
 - [Lifecycle Guide](./LIFECYCLE.md) - Container lifecycle hooks
 - [Testing Guide](./TESTKIT.md) - Testing with Illuma
 - [Error Reference](./TROUBLESHOOTING.md) - Troubleshooting

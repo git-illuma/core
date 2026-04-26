@@ -1,5 +1,6 @@
 import type { MultiNodeToken } from "../api/token";
 import { NodeToken } from "../api/token";
+import type { iNodeInjectorOptions } from "../api/types";
 import type { iDIContainer } from "../container/types";
 import { InjectionError } from "../errors";
 import type { Ctor, Token } from "../provider/types";
@@ -15,11 +16,17 @@ export interface iInjector {
    * Retrieves an instance for the given token.
    * @template T - The type of value being retrieved
    * @param token - The token or constructor to retrieve
+   * @param options - Optional configuration for injection modifiers
    * @returns The resolved instance
    */
-  get<T>(token: MultiNodeToken<T>): T[];
-  get<T>(token: NodeToken<T>): T;
-  get<T>(token: Ctor<T>): T;
+  get<T>(token: MultiNodeToken<T>, options?: iNodeInjectorOptions): T[];
+  get<T>(
+    token: NodeToken<T>,
+    options: iNodeInjectorOptions & { optional: true },
+  ): T | null;
+  get<T>(token: NodeToken<T>, options?: iNodeInjectorOptions): T;
+  get<T>(token: Ctor<T>, options: iNodeInjectorOptions & { optional: true }): T | null;
+  get<T>(token: Ctor<T>, options?: iNodeInjectorOptions): T;
 
   /**
    * Instantiates a class with injections in runtime using current context.
@@ -51,12 +58,20 @@ export class InjectorImpl implements iInjector {
     return this.container.destroyed;
   }
 
-  public get<T>(token: MultiNodeToken<T>): T[];
-  public get<T>(token: NodeToken<T>): T;
-  public get<T>(token: Ctor<T>): T;
-  public get<T>(token: Token<T>): T | T[] {
+  public get<T>(token: MultiNodeToken<T>, options?: iNodeInjectorOptions): T[];
+  public get<T>(
+    token: NodeToken<T>,
+    options: iNodeInjectorOptions & { optional: true },
+  ): T | null;
+  public get<T>(token: NodeToken<T>, options?: iNodeInjectorOptions): T;
+  public get<T>(
+    token: Ctor<T>,
+    options: iNodeInjectorOptions & { optional: true },
+  ): T | null;
+  public get<T>(token: Ctor<T>, options?: iNodeInjectorOptions): T;
+  public get<T>(token: Token<T>, options?: iNodeInjectorOptions): T | T[] | null {
     if (this.container.destroyed) throw InjectionError.destroyed();
-    return this.container.get<T>(token as any);
+    return this.container.get<T>(token as any, options);
   }
 
   public produce<T>(fn: Ctor<T> | (() => T)): T {

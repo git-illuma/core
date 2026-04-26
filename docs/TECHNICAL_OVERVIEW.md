@@ -839,7 +839,7 @@ container.registerMiddleware(proxyMiddleware);
 
 ## Child Containers
 
-Child containers enable hierarchical dependency injection, where a child container can access dependencies from its parent but not vice versa.
+Child containers enable hierarchical dependency injection, where a child container can access dependencies from its parent but not vice versa. You can explicitly adjust how resolution traverses this hierarchy using [Resolution Modifiers](./RESOLUTION_MODIFIERS.md) such as `self` or `skipSelf`.
 
 ### Creating a Child Container
 

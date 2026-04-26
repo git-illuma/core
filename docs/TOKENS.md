@@ -370,5 +370,6 @@ const ANALYTICS = new NodeToken<Analytics>('ANALYTICS', {
 ## Related documentation
 
 - [Providers Guide](./PROVIDERS.md) - How to register providers
+- [Resolution Modifiers](./RESOLUTION_MODIFIERS.md) - Modifying dependency resolution
 - [API Reference](./API.md) - Complete API documentation
 - [Troubleshooting](./TROUBLESHOOTING.md) - Common errors and solutions

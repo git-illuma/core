@@ -243,29 +243,46 @@ export class NodeContainer extends Illuma implements iDIContainer {
    * const plugins = container.get(PluginToken); // Returns array
    * ```
    */
-  public get<T>(token: MultiNodeToken<T>): T[];
-  public get<T>(token: NodeToken<T>): T;
-  public get<T>(token: Ctor<T>): T;
-  public get<T>(provider: Token<T>): T | T[] {
+  public get<T>(token: MultiNodeToken<T>, options?: iNodeInjectorOptions): T[];
+  public get<T>(
+    token: NodeToken<T>,
+    options: iNodeInjectorOptions & { optional: true },
+  ): T | null;
+  public get<T>(token: NodeToken<T>, options?: iNodeInjectorOptions): T;
+  public get<T>(
+    token: Ctor<T>,
+    options: iNodeInjectorOptions & { optional: true },
+  ): T | null;
+  public get<T>(token: Ctor<T>, options?: iNodeInjectorOptions): T;
+  public get<T>(provider: Token<T>, options?: iNodeInjectorOptions): T | T[] | null {
     if (!this._bootstrapped || !this._rootNode) {
       throw InjectionError.notBootstrapped();
     }
 
     const token = extractToken(provider);
+    const { optional, self, skipSelf } = options ?? {};
 
-    const treeNode = this._rootNode.obtain(token);
-    if (!treeNode) {
+    if (self && skipSelf) {
+      throw InjectionError.conflictingStrategies(token as any);
+    }
+
+    if (!skipSelf) {
+      const treeNode = this._rootNode.obtain(token);
+      if (treeNode) return treeNode.instance;
+    }
+
+    if (!self) {
       const upstream = this._getFromParent(token);
       if (upstream) return upstream.instance;
 
       const rootSingleton = this._resolveSingletonFrom(this, token, true);
       if (rootSingleton) return rootSingleton.instance;
-
-      if (token instanceof MultiNodeToken) return [];
-      throw InjectionError.notFound(token);
     }
 
-    return treeNode.instance;
+    if (optional) return null;
+    if (!skipSelf && token instanceof MultiNodeToken) return [];
+
+    throw InjectionError.notFound(token);
   }
 
   public produce<T>(fn: Ctor<T> | (() => T)): T {
