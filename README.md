@@ -1,9 +1,10 @@
 # **Illuma** – Dependency Injection for TypeScript
 
-![NPM Version](https://img.shields.io/npm/v/%40illuma%2Fcore)
-![NPM Downloads](https://img.shields.io/npm/dw/%40illuma%2Fcore)
-![npm bundle size](https://img.shields.io/bundlephobia/min/%40illuma%2Fcore)
-![Test coverage](./badges/coverage.svg)
+![NPM Version](https://img.shields.io/npm/v/%40illuma%2Fcore?labelColor=gray&color=gray)
+![JSR Version](https://img.shields.io/jsr/v/%40illuma/core?labelColor=gray&color=gray)
+![NPM Downloads](https://img.shields.io/npm/dw/%40illuma%2Fcore?labelColor=gray&color=gray)
+![npm bundle size](https://img.shields.io/bundlephobia/min/%40illuma%2Fcore?labelColor=gray&color=gray)
+![Test coverage](https://raw.githubusercontent.com/git-illuma/core/refs/heads/main/badges/coverage.svg)
 
 A universal, lightweight and type-safe dependency injection container for TypeScript.
 Heavily inspired by Angular's DI system, but designed to work in any environment (Node.js, Bun, Deno, browsers, and more).
