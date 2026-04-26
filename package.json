@@ -29,6 +29,7 @@
       "require": "./dist/plugins.cjs"
     }
   },
+  "sideEffects": false,
   "private": false,
   "license": "MIT",
   "files": [
