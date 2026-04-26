@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { InjectionError } from "../errors";
 import type { Token } from "../provider/types";
 import { NodeInjectable } from "./decorator";
-import { extractToken, isNodeBase, MultiNodeToken, NodeToken } from "./token";
+import { extractToken, isNodeBase, MultiNodeToken, NodeBase, NodeToken } from "./token";
 
 describe("Token", () => {
   describe("provider helpers", () => {
@@ -223,6 +223,26 @@ describe("Token", () => {
 
     it("should throw invalid alias error if isAlias is true", () => {
       expect(() => extractToken({} as Token<unknown>, true)).toThrow(InjectionError);
+    });
+  });
+
+  describe("toString", () => {
+    it("should return correct token string", () => {
+      const t = new NodeToken("myToooooken");
+      expect(t.toString()).toBe("NodeToken[myToooooken]");
+    });
+
+    it("should return correct multi token string", () => {
+      const t = new MultiNodeToken("myMultiToken");
+      expect(t.toString()).toBe("MultiNodeToken[myMultiToken]");
+    });
+
+    it("should return base token string", () => {
+      class CustomToken extends NodeBase<unknown> {
+        public multi = false as const;
+      }
+      const t = new CustomToken("custom");
+      expect(t.toString()).toBe("Token[custom]");
     });
   });
 });

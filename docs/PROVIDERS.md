@@ -374,5 +374,6 @@ container.provide({
 ## Related documentation
 
 - [Tokens Guide](./TOKENS.md) - Learn about NodeToken and MultiNodeToken
+- [Resolution Modifiers](./RESOLUTION_MODIFIERS.md) - Modifying dependency resolution
 - [API Reference](./API.md) - Complete API documentation
 - [Troubleshooting](./TROUBLESHOOTING.md) - Common errors and solutions

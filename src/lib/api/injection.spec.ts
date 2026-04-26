@@ -160,7 +160,7 @@ describe("nodeInject", () => {
 
       const result = nodeInject(token, { optional: true });
 
-      expect(mockInjector).toHaveBeenCalledWith(token, true);
+      expect(mockInjector).toHaveBeenCalledWith(token, { optional: true });
       expect(result).toBe(null);
     });
 

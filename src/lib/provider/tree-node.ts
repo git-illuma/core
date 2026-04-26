@@ -347,7 +347,16 @@ function retrieverFactory<T>(
   deps: InjectionPool,
   transparentDeps: Map<NodeBase<any>, TreeNodeTransparent>,
 ): InjectorFn {
-  return (token: NodeBase<T>, optional: boolean | undefined): T | null => {
+  return (
+    token: NodeBase<T>,
+    options?: import("../api/types").iNodeInjectorOptions,
+  ): T | null => {
+    const { optional, self, skipSelf } = options || {};
+
+    if (self && skipSelf) {
+      throw InjectionError.conflictingStrategies(token as NodeBase<any>);
+    }
+
     const depNode = deps.get(token);
     if (!depNode && !optional) {
       const transparent = transparentDeps.get(token);

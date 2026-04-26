@@ -12,7 +12,7 @@ import type { ExtractInjectedType, iNodeInjectorOptions } from "./types";
  *
  * @template N - The token or constructor type
  * @param token - The token or class to inject
- * @param options - Optional configuration for the injection
+ * @param options - Optional configuration for the injection including optional, self, and skipSelf modifiers.
  * @returns The injected instance(s). For MultiNodeToken returns an array, for NodeToken returns a single instance.
  *          When optional is true, may return null if the dependency is not found, type-safely.
  * @throws {InjectionError} If called outside an injection context or if a required dependency is not found
@@ -74,11 +74,19 @@ export function nodeInject<
     throw InjectionError.outsideContext(token);
   }
 
-  const injection = { token, optional: options?.optional ?? false };
-  InjectionContext.addDep(injection);
+  if (options?.self && options?.skipSelf) {
+    throw InjectionError.conflictingStrategies(token);
+  }
+
+  InjectionContext.addDep({
+    token,
+    optional: options?.optional ?? false,
+    self: options?.self ?? false,
+    skipSelf: options?.skipSelf ?? false,
+  });
 
   if (InjectionContext.injector) {
-    return InjectionContext.injector(token, options?.optional);
+    return InjectionContext.injector(token, options);
   }
 
   return SHAPE_SHIFTER;

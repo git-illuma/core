@@ -10,4 +10,6 @@ import type { MultiNodeToken, NodeToken } from "../api/token";
 export interface iInjectionNode<T> {
   readonly token: NodeToken<T> | MultiNodeToken<T>;
   readonly optional: boolean;
+  readonly self: boolean;
+  readonly skipSelf: boolean;
 }

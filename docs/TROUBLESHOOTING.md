@@ -1,4 +1,4 @@
-# ⚠️ Error Reference
+# Error Reference
 
 This document provides detailed information about all error codes in Illuma and how to resolve them.
 
@@ -22,9 +22,11 @@ This document provides detailed information about all error codes in Illuma and 
 | i103 | Invalid Provider       | Use valid provider syntax                |
 | i200 | Invalid Alias          | Use token or decorated class             |
 | i201 | Loop Alias             | Point alias to different token           |
+| i202 | Conflicting Strategies | Don't use `self` and `skipSelf` together |
 | i300 | Not Bootstrapped       | Call `bootstrap()` first                 |
 | i301 | Container Bootstrapped | Provide before `bootstrap()`             |
 | i302 | Double Bootstrap       | Only bootstrap once                      |
+| i303 | Container destroyed    | Container has been destroyed             |
 | i400 | Provider Not Found     | Provide the token or use `optional`      |
 | i401 | Circular Dependency    | Refactor to break cycle                  |
 | i500 | Untracked Injection    | Use in class field initializers only     |
@@ -503,6 +505,31 @@ function createContainer() {
 const container1 = createContainer();
 const container2 = createContainer(); // ✅ New instance
 ```
+
+### [i303] Container destroyed
+
+**Error Message:**
+```
+Container has been already destroyed
+```
+
+**Cause:**
+You attempted to use an injector or the container it represents after it has been destroyed. Once a container is destroyed, it cannot be used to resolve dependencies, produce new instances, create child containers or be destroyed again.
+
+
+**Example:**
+```typescript
+const container = new NodeContainer();
+
+const SomeToken = new NodeToken('SomeToken');
+container.provide(SomeToken.withValue('test'));
+container.destroy();
+
+container.get(SomeToken); // ❌ This will throw [i303]
+```
+
+**Solution:**
+Make sure to only call `destroy()` when you are completely done with the container and its dependencies. Avoid using the container or any of its injectors after calling `destroy()`.
 
 ---
 
