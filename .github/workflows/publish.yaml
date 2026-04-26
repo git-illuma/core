@@ -88,6 +88,8 @@ jobs:
 
       # Publish version to NPM
       - name: Publish to NPM
+        env:
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: bun publish --verbose --access public --tag ${{ env.RELEASE_TAG }}
 
       - name: Publish to JSR
