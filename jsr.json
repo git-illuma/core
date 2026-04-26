@@ -9,25 +9,30 @@
   },
   "version": "2.1.0",
   "license": "MIT",
-  "files": [
-    "src/**/*",
-    "README.md",
-    "!docs/**/*",
-    "!.vscode/**/*",
-    "!.github/**/*",
-    "!artifacts/**/*",
-    "!node_modules/**/*",
-    "!dist/**/*",
-    "!.editorconfig",
-    "!.gitignore",
-    "!.swcrc",
-    "!tsconfig.json",
-    "!biome.json",
-    "!CHANGELOG.md",
-    "!CONTRIBUTING.md",
-    "!vitest.config.ts",
-    "!**/*.(test|spec).ts"
-  ],
+  "publish": {
+    "include": [
+      "src/**/*",
+      "README.md"
+    ],
+    "exclude": [
+      "docs/**/*",
+      ".vscode/**/*",
+      ".github/**/*",
+      "artifacts/**/*",
+      "node_modules/**/*",
+      "dist/**/*",
+      ".editorconfig",
+      ".gitignore",
+      ".swcrc",
+      "tsconfig.json",
+      "biome.json",
+      "CHANGELOG.md",
+      "CONTRIBUTING.md",
+      "vitest.config.ts",
+      "**/*.test.ts",
+      "**/*.spec.ts"
+    ]
+  },
   "exports": {
     ".": "./src/index.ts",
     "./testkit": "./src/testkit.ts",
