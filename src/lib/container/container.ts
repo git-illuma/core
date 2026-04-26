@@ -23,6 +23,24 @@ import { Injector, InjectorImpl } from "../utils/injector";
 import { LifecycleRef, LifecycleRefImpl } from "./lifecycle";
 import type { iContainerOptions, iDIContainer } from "./types";
 
+/**
+ * The main Dependency Injection Container class that holds registered providers
+ * and resolves instances of those dependencies.
+ *
+ * The container supports hierarchical scoping, allowing child containers to inherit
+ * providers from parent containers while maintaining their own registrations. It also supports lifecycle management, ensuring proper cleanup of resources when containers are destroyed.
+ *
+ * @param options - Optional configuration for the container
+ *
+ * @example
+ * ```typescript
+ * const container = new NodeContainer();
+ * container.provide({ provide: CONFIG_TOKEN, useValue: { apiKey: '123' } });
+ * container.bootstrap();
+ *
+ * const config = container.get(CONFIG_TOKEN);
+ * ```
+ */
 export class NodeContainer extends Illuma implements iDIContainer {
   private _bootstrapped = false;
   private _rootNode?: TreeRootNode;

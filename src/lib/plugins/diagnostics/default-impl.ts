@@ -1,5 +1,6 @@
 import type { iDiagnosticsModule, iDiagnosticsReport } from "./types";
 
+/** @internal */
 export class DiagnosticsDefaultReporter implements iDiagnosticsModule {
   public onReport(report: iDiagnosticsReport): void {
     console.log("[Illuma] 🧹 Diagnostics:");

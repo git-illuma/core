@@ -24,6 +24,7 @@ Modifiers can be used when calling `nodeInject()` inside factories/constructors,
 By default, when you request a dependency, Illuma searches for the provider in the **current container**. If the provider is not found locally, it will traverse **up the container hierarchy** inspecting the parent containers until it finds a provider or reaches the root container.
 
 Sometimes you need to explicitly constrain this traversal to either:
+
 1. Guarantee the instance comes **only from the local container** without checking parents (`self`).
 2. Force the resolution to **skip the local container** and strictly look upstream (`skipSelf`).
 

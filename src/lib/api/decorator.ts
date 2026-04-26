@@ -8,6 +8,7 @@ import { NodeToken } from "./token";
  */
 const tokenRegistry = new WeakMap<object, NodeToken<any>>();
 
+/** Options for marking a class as injectable. */
 export interface iNodeInjectableOptions {
   /**
    * Marks injectable as root-scoped singleton in hierarchical containers.

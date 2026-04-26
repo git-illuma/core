@@ -17,6 +17,7 @@ container.destroy();
 ```
 
 When `destroy()` is called, the following execution rules apply:
+
 1. **Hierarchical destruction**: All child containers are automatically destroyed *before* their parent containers.
 2. **Reverse initialization order**: Teardown hooks within a container execute bottom-up in the exact reverse order they were registered.
 3. **Immutability**: Once a container is destroyed, calling `destroy()` again or attempting to resolve any dependencies from it will throw an `InjectionError` (see [Injection Error 303](./TROUBLESHOOTING.md)).

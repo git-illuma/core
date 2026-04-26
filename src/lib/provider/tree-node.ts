@@ -14,6 +14,7 @@ export type InjectionPool =
   | WeakMap<NodeBase<any>, TreeNode<any>>;
 
 // Tree Nodes
+/** @internal */
 export class TreeRootNode {
   private readonly _deps: Set<TreeNode<any>> = new Set();
   private readonly _treePool: InjectionPool = new Map();
@@ -76,6 +77,7 @@ export class TreeRootNode {
   }
 }
 
+/** @internal */
 export class TreeNodeSingle<T = any> {
   private readonly _transparentMap: Map<NodeBase<any>, TreeNodeTransparent> = new Map();
   private readonly _transparentList: TreeNodeTransparent[] = [];
@@ -196,6 +198,7 @@ export class TreeNodeSingle<T = any> {
   }
 }
 
+/** @internal */
 export class TreeNodeTransparent<T = any> {
   private readonly _transparentMap: Map<NodeBase<any>, TreeNodeTransparent> = new Map();
   private readonly _transparentList: TreeNodeTransparent[] = [];
@@ -301,6 +304,7 @@ export class TreeNodeTransparent<T = any> {
   }
 }
 
+/** @internal */
 export class TreeNodeMulti<T = any> {
   private readonly _deps = new Set<TreeNode<any>>();
   private readonly _depsList: TreeNode<any>[] = [];

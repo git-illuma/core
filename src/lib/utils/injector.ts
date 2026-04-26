@@ -5,6 +5,7 @@ import type { iDIContainer } from "../container/types";
 import { InjectionError } from "../errors";
 import type { Ctor, Token } from "../provider/types";
 
+/** @internal */
 export interface iInjector {
   /** The DI container associated with this injector */
   readonly container: iDIContainer;

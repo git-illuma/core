@@ -50,6 +50,7 @@ Illuma provides three utilities for advanced async dependency injection:
 **Note:** For synchronous deferred injection (e.g. to solve circular dependencies without async/await), use [`injectDefer`](./API.md#injectDefer) instead.
 
 All utilities support:
+
 - ✅ Async factory functions
 - ✅ Dynamic imports for code splitting
 - ✅ Optional caching
@@ -266,9 +267,10 @@ class AppService {
 ### When to use
 
 Use `injectEntryAsync` when you want to:
-1.  Create a sub-container with multiple providers
-2.  Immediately resolve a specific service from that sub-container
-3.  Avoid manually getting the injector and calling `get()`
+
+1. Create a sub-container with multiple providers
+2. Immediately resolve a specific service from that sub-container
+3. Avoid manually getting the injector and calling `get()`
 
 ```typescript
 // With injectGroupAsync
@@ -486,6 +488,7 @@ class RequestHandler {
 ### ✅ Do's
 
 1. **Use for Code Splitting**
+
    ```typescript
    private readonly getReportEngine = injectAsync(async () => {
      const { ReportEngine } = await import('./heavy-report-engine');
@@ -494,8 +497,9 @@ class RequestHandler {
    ```
 
 2. **Cache by Default** - Prevents multiple instantiations
-   
+
 3. **Use Sub-Containers for Isolation**
+
    ```typescript
    private readonly getPluginContext = injectGroupAsync(
      async () => [/* plugin providers */]
@@ -507,6 +511,7 @@ class RequestHandler {
 ### ❌ Don'ts
 
 1. **Don't Overuse** - Use regular `nodeInject` for simple dependencies
+
    ```typescript
    // ❌ Unnecessary
    private readonly getLogger = injectAsync(async () => Logger);
@@ -516,6 +521,7 @@ class RequestHandler {
    ```
 
 2. **Don't Create Circular Dependencies**
+
    ```typescript
    // ❌ Circular via async injection
    class ServiceA {
@@ -527,6 +533,7 @@ class RequestHandler {
    ```
 
 3. **Don't Disable Caching Unnecessarily**
+
    ```typescript
    // ❌ Creates new instance every time (unless intentional)
    private readonly getService = injectAsync(

@@ -4,6 +4,7 @@ import { InjectionContext } from "../context/context";
 import type { iInjectionNode } from "../context/types";
 import { InjectionError } from "../errors";
 
+/** @internal */
 export class ProtoNodeSingle<T = any> {
   // Metadata
   public readonly token: NodeToken<T>;
@@ -37,6 +38,7 @@ export class ProtoNodeSingle<T = any> {
   }
 }
 
+/** @internal */
 export class ProtoNodeTransparent<T = any> {
   public readonly factory: () => T;
   public readonly injections = new Set<iInjectionNode<any>>();
@@ -54,6 +56,7 @@ export class ProtoNodeTransparent<T = any> {
   }
 }
 
+/** @internal */
 export class ProtoNodeMulti<T = any> {
   public readonly token: MultiNodeToken<T>;
   public readonly singleNodes = new Set<NodeToken<T>>();
@@ -85,6 +88,7 @@ export type ProtoNode<T = any> =
   | ProtoNodeMulti<T>
   | ProtoNodeTransparent<T>;
 
+/** @internal */
 export function isNotTransparentProto(
   proto: ProtoNode,
 ): proto is ProtoNodeSingle | ProtoNodeMulti {

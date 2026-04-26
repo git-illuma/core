@@ -31,6 +31,9 @@ export const ERR_CODES = {
   ACCESS_FAILED: 504,
 } as const;
 
+/**
+ * Represents an error thrown during dependency injection resolution.
+ */
 export class InjectionError extends Error {
   constructor(
     public readonly code: number,
@@ -184,6 +187,11 @@ export class InjectionError extends Error {
   }
 }
 
+/**
+ * Checks if the provided error is a "not found" injection error.
+ * @param error - The error to check
+ * @returns true if the error is a ElementNotFound error
+ */
 export function isNotFoundError(error: unknown): boolean {
   return error instanceof InjectionError && error.code === ERR_CODES.NOT_FOUND;
 }

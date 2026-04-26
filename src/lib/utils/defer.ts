@@ -8,6 +8,14 @@ import { InjectionError, isNotFoundError } from "../errors";
 import type { Token } from "../provider/types";
 import { Injector } from "./injector";
 
+/**
+ * Injects a dependency wrapped in a getter function, deferring its resolution
+ * until the getter is called.
+ * @template N - The token or constructor type
+ * @param token - The token or class to inject
+ * @param options - Configuration options
+ * @returns A getter function returning the injected dependency
+ */
 export function injectDefer<N>(
   token: N,
   options: iNodeInjectorOptions & { optional: true },

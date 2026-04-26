@@ -1,6 +1,7 @@
 import { NodeToken } from "../api/token";
 import { InjectionError } from "../errors";
 
+/** @internal */
 export class LifecycleRefImpl {
   private readonly _callbacks = new Set<() => void>();
   private readonly _childCallbacks = new Set<() => void>();

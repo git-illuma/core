@@ -60,6 +60,7 @@ Illuma.registerGlobalMiddleware(myMiddleware);
 ```
 
 **Key characteristics:**
+
 - Plugins are registered **globally** and affect all container instances
 - Context scanners run during **detection** phase (before building dependency graph)
 - Middlewares run during **instantiation** phase (when creating instances)
@@ -101,12 +102,15 @@ interface iContextScanner {
 ```
 
 **Parameters:**
+
 - `factory`: The factory function being analyzed (could be a class constructor or factory function)
 
 **Returns:**
+
 - A `Set<iInjectionNode<any>>` containing all detected injection points
 
 **Important notes:**
+
 - Register scanners **before** providing services
 - Scanners run in registration order
 - Multiple scanners can be registered
@@ -143,6 +147,7 @@ interface iDiagnosticsModule {
 ```
 
 **Report fields:**
+
 - `totalNodes`: Total number of dependency nodes registered
 - `unusedNodes`: Array of nodes that were never resolved during bootstrap
 - `bootstrapDuration`: Time taken to bootstrap the container (in ms)
@@ -265,6 +270,7 @@ container.bootstrap();
 ```
 
 **Important notes:**
+
 - Call `enableIllumaDiagnostics()` before bootstrapping to enable diagnostics
 - Register custom modules before calling `bootstrap()`
 - Multiple modules can be registered
@@ -309,10 +315,12 @@ type iMiddleware<T = unknown> = (
 ```
 
 **Parameters:**
+
 - `params`: Context about what is being instantiated
 - `next`: Function that calls the next middleware or the actual factory
 
 **Returns:**
+
 - The resulting instance `T` (or a modified/proxied version of it)
 
 ### Developing a Middleware
@@ -398,6 +406,7 @@ container.bootstrap();
 5. **Test thoroughly**: Test scanners with various factory function types
 
 **Scanner performance tips:**
+
 ```typescript
 export class OptimizedScanner implements iContextScanner {
   public scan(factory: any): Set<iInjectionNode<any>> {
@@ -545,6 +554,7 @@ container.bootstrap();
 ```
 
 **Timeline:**
+
 1. **Enable Diagnostics**: Call `enableIllumaDiagnostics()` to activate the system
 2. **Plugin Registration**: Plugins added to global registry
 3. **Provider Registration**: Context scanners run for each provider
@@ -556,6 +566,7 @@ container.bootstrap();
 ## Existing Plugins
 
 ### @illuma/reflect - Injections via constructor metadata and property decorators
+
 - GitHub: [git-illuma/reflect](https://github.com/git-illuma/reflect)
 - NPM: [@illuma/reflect](https://www.npmjs.com/package/@illuma/reflect)
 

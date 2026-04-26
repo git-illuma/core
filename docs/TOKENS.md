@@ -266,21 +266,21 @@ container.provide([
 
 ## When to use tokens
 
-### Use NodeToken when:
+### Use NodeToken when
 
 - Injecting configuration values
 - Injecting primitive types (string, number, boolean)
 - Injecting interface types (when you want to swap implementations)
 - The dependency is a single value
 
-### Use MultiNodeToken when:
+### Use MultiNodeToken when
 
 - You need multiple implementations of the same interface
 - Building plugin systems
 - Collecting middleware, validators, or handlers
 - The dependency is naturally a collection
 
-### Use classes directly when:
+### Use classes directly when
 
 - The dependency is a concrete class
 - You don't need to swap implementations

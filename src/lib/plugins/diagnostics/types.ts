@@ -1,5 +1,6 @@
 import type { TreeNode } from "../../provider/tree-node";
 
+/** @internal */
 export interface iDiagnosticsReport {
   readonly totalNodes: number;
   readonly unusedNodes: TreeNode<unknown>[];

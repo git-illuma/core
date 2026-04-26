@@ -42,6 +42,7 @@ This document provides detailed information about all error codes in Illuma and 
 ### [i100] Duplicate Provider
 
 **Error Message:**
+
 ```
 Duplicate provider for token "TokenName" detected.
 ```
@@ -50,6 +51,7 @@ Duplicate provider for token "TokenName" detected.
 You attempted to register the same token multiple times with different providers (excluding `MultiNodeToken`, which is designed for multiple providers).
 
 **Example:**
+
 ```typescript
 const CONFIG = new NodeToken<Config>('CONFIG');
 
@@ -66,6 +68,7 @@ container.provide({
 ```
 
 **Solution:**
+
 - Remove the duplicate provider registration
 - If you need multiple values, use `MultiNodeToken` instead:
 
@@ -89,16 +92,19 @@ container.provide({
 ### [i101] Duplicate Factory
 
 **Error Message:**
+
 ```
 Tried to re-provide factory for token "TokenName" detected.
 ```
 
 **Cause:**
 You attempted to provide a factory for a token that already has a factory defined. This can happen when:
+
 - You provide the same decorated class multiple times with different factories
 - You override a token's built-in factory
 
 **Example:**
+
 ```typescript
 @NodeInjectable()
 class MyService {
@@ -151,6 +157,7 @@ testContainer.provide({
 ### [i102] Invalid Constructor
 
 **Error Message:**
+
 ```
 Cannot use constructor for token "ClassName". Please make sure to use @NodeInjectable() decorator
 ```
@@ -159,6 +166,7 @@ Cannot use constructor for token "ClassName". Please make sure to use @NodeInjec
 You tried to provide a class directly to the container without marking it as injectable with the `@NodeInjectable()` decorator.
 
 **Example:**
+
 ```typescript
 class MyService {
   public doSomething() { }
@@ -198,17 +206,20 @@ container.provide({
 ### [i103] Invalid Provider
 
 **Error Message:**
+
 ```
 Cannot use provider as it is neither a NodeToken nor MultiNodeToken nor a valid constructor.
 ```
 
 **Cause:**
 You passed an invalid value to `container.provide()`. The provider must be one of:
+
 - A `NodeToken` or `MultiNodeToken`
 - A class decorated with `@NodeInjectable()`
 - A valid provider object with a `provide` property
 
 **Example:**
+
 ```typescript
 // ❌ All of these will throw [i103]
 container.provide("some string");
@@ -244,22 +255,26 @@ container.provide({
 ### [i200] Invalid Alias
 
 **Error Message:**
+
 ```
 Invalid alias target "<value>". Alias must be a NodeToken, MultiNodeToken, or a class decorated with @NodeInjectable().
 ```
 
 **Cause:**
 You tried to create an alias using an invalid target. The `alias` property must be one of:
+
 - A `NodeToken`
 - A `MultiNodeToken`
 - A class decorated with `@NodeInjectable()`
 
 Common mistakes:
+
 - Using a plain string, number, or object as the alias
 - Using an undecorated class
 - Using a raw value instead of a token
 
 **Example:**
+
 ```typescript
 const SERVICE_A = new NodeToken('SERVICE_A');
 
@@ -329,6 +344,7 @@ container.provide({
 ### [i201] Loop Alias
 
 **Error Message:**
+
 ```
 Token "TokenName" cannot alias itself in a loop.
 ```
@@ -337,6 +353,7 @@ Token "TokenName" cannot alias itself in a loop.
 You tried to create a self-referential alias where a token points to itself.
 
 **Example:**
+
 ```typescript
 const TOKEN = new NodeToken('TOKEN');
 
@@ -373,6 +390,7 @@ container.provide({
 ### [i300] Not Bootstrapped
 
 **Error Message:**
+
 ```
 Cannot retrieve providers before the container has been bootstrapped.
 ```
@@ -381,6 +399,7 @@ Cannot retrieve providers before the container has been bootstrapped.
 You attempted to call `container.get()` before calling `container.bootstrap()`.
 
 **Example:**
+
 ```typescript
 const container = new NodeContainer();
 const TOKEN = new NodeToken('TOKEN');
@@ -418,6 +437,7 @@ const value = container.get(TOKEN);
 ### [i301] Container Bootstrapped
 
 **Error Message:**
+
 ```
 Cannot modify providers after the container has been bootstrapped.
 ```
@@ -426,6 +446,7 @@ Cannot modify providers after the container has been bootstrapped.
 You tried to register providers after calling `container.bootstrap()`.
 
 **Example:**
+
 ```typescript
 const container = new NodeContainer();
 container.bootstrap();
@@ -461,6 +482,7 @@ container.bootstrap();
 ### [i302] Double Bootstrap
 
 **Error Message:**
+
 ```
 Container has already been bootstrapped and cannot be bootstrapped again.
 ```
@@ -469,6 +491,7 @@ Container has already been bootstrapped and cannot be bootstrapped again.
 You called `container.bootstrap()` more than once on the same container instance.
 
 **Example:**
+
 ```typescript
 const container = new NodeContainer();
 container.bootstrap();
@@ -509,6 +532,7 @@ const container2 = createContainer(); // ✅ New instance
 ### [i303] Container destroyed
 
 **Error Message:**
+
 ```
 Container has been already destroyed
 ```
@@ -516,8 +540,8 @@ Container has been already destroyed
 **Cause:**
 You attempted to use an injector or the container it represents after it has been destroyed. Once a container is destroyed, it cannot be used to resolve dependencies, produce new instances, create child containers or be destroyed again.
 
-
 **Example:**
+
 ```typescript
 const container = new NodeContainer();
 
@@ -538,6 +562,7 @@ Make sure to only call `destroy()` when you are completely done with the contain
 ### [i400] Provider Not Found
 
 **Error Message:**
+
 ```
 No provider found for "TokenName".
 ```
@@ -546,6 +571,7 @@ No provider found for "TokenName".
 You tried to retrieve a token that hasn't been registered in the container.
 
 **Example:**
+
 ```typescript
 const container = new NodeContainer();
 const TOKEN = new NodeToken('TOKEN');
@@ -594,6 +620,7 @@ class MyService {
 ### [i401] Circular Dependency
 
 **Error Message:**
+
 ```
 Circular dependency detected while resolving "ProviderName":
 ServiceA -> ServiceB -> ServiceA
@@ -603,6 +630,7 @@ ServiceA -> ServiceB -> ServiceA
 Two or more services depend on each other in a circular way.
 
 **Example:**
+
 ```typescript
 @NodeInjectable()
 class ServiceA {
@@ -623,6 +651,7 @@ container.bootstrap(); // ❌ This will throw [i401]
 Refactor to break the circular dependency:
 
 **Option 1: Extract shared logic**
+
 ```typescript
 @NodeInjectable()
 class SharedService {
@@ -642,6 +671,7 @@ class ServiceB {
 ```
 
 **Option 2: Use events/callbacks**
+
 ```typescript
 @NodeInjectable()
 class ServiceA {
@@ -696,6 +726,7 @@ class ServiceB {
 ### [i500] Untracked Injection
 
 **Error Message:**
+
 ```
 Cannot instantiate ParentName because it depends on untracked injection TokenName. 
 Please make sure all injections are properly tracked.
@@ -705,6 +736,7 @@ Please make sure all injections are properly tracked.
 You used `nodeInject()` outside of an injection context, or the dependency wasn't properly registered in the container's dependency tree.
 
 **Example:**
+
 ```typescript
 @NodeInjectable()
 class MyService {
@@ -758,16 +790,19 @@ container.bootstrap();
 ### [i501] Outside Context
 
 **Error Message:**
+
 ```
 Cannot inject "TokenName" outside of an injection context.
 ```
 
 **Cause:**
 You tried to use `nodeInject()` outside of a valid injection context. `nodeInject()` can only be called:
+
 - During class field initialization in injectable classes
 - Inside factory functions provided to the container
 
 **Example:**
+
 ```typescript
 // ❌ This will throw [i501] - top-level call
 const logger = nodeInject(Logger);
@@ -817,6 +852,7 @@ container.provide({
 ### [i502] Called Utils Outside Context
 
 **Error Message:**
+
 ```
 Cannot call injection utilities outside of an injection context.
 ```
@@ -826,6 +862,7 @@ You attempted to call injection utility functions outside of a valid injection c
 
 **Solution:**
 Ensure utility functions are only called within:
+
 - Factory functions
 - Class field initializers in injectable classes
 
@@ -845,6 +882,7 @@ container.provide({
 ### [i503] Instance Access Failed
 
 **Error Message:**
+
 ```
 Failed to access instance for token "TokenName". It was not properly instantiated.
 ```
@@ -853,6 +891,7 @@ Failed to access instance for token "TokenName". It was not properly instantiate
 The container tried to retrieve an instance that wasn't properly instantiated. This typically indicates an internal error in the dependency resolution system.
 
 **Common causes:**
+
 - The dependency tree wasn't built correctly
 - An instantiation callback failed silently
 - The instance was garbage collected prematurely
@@ -861,6 +900,7 @@ The container tried to retrieve an instance that wasn't properly instantiated. T
 This error usually indicates a bug in Illuma or a very unusual edge case. Try:
 
 1. **Simplify your setup:**
+
 ```typescript
 // Create a minimal reproduction
 const container = new NodeContainer();
@@ -868,7 +908,8 @@ container.provide(OnlyTheFailingToken);
 container.bootstrap();
 ```
 
-2. **Check for async issues:**
+1. **Check for async issues:**
+
 ```typescript
 // Ensure factories are synchronous
 container.provide({
@@ -883,7 +924,7 @@ container.provide({
 });
 ```
 
-3. **Report the issue:**
+1. **Report the issue:**
 If the problem persists, please [report it on GitHub](https://github.com/git-illuma/core/issues) with a minimal reproduction.
 
 ---
@@ -891,6 +932,7 @@ If the problem persists, please [report it on GitHub](https://github.com/git-ill
 ### [i504] Access Failed
 
 **Error Message:**
+
 ```
 Failed to access the requested instance due to an unknown error.
 ```
@@ -899,6 +941,7 @@ Failed to access the requested instance due to an unknown error.
 A general instance access failure occurred that doesn't fit into other error categories. This is a catch-all error for unexpected situations.
 
 **Solution:**
+
 1. Check your provider configuration for syntax errors
 2. Ensure all factories return valid values
 3. Verify that class constructors don't throw errors

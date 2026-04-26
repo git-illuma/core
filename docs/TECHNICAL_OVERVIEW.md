@@ -79,11 +79,13 @@ const service = container.get(UserService);
 **What happens internally:**
 
 When you apply `@NodeInjectable()` to a class, the decorator:
+
 1. Creates a `NodeToken<T>` with the name `_ClassName`
 2. Registers the class and token in an internal `WeakMap` registry
 3. Associates a factory function `() => new ClassName()` with the token
 
 This allows the container to:
+
 - Recognize the class as injectable via `isInjectable()`
 - Extract the associated token via `getInjectableToken()`
 - Use the class constructor as the provider
@@ -135,25 +137,30 @@ const AppConfigService = makeInjectable(_AppConfigService, { singleton: true });
 #### Lifecycle integration
 
 1. **Registration phase**:
-  - Explicit `provide()` still creates proto nodes as usual.
-  - Decorated singleton classes can also be auto-materialized from token metadata when first resolved.
-2. **Bootstrap phase**:
-  - Each container builds its local tree from known proto nodes.
-  - Root singleton nodes discovered later can still be added to root runtime tree state.
-3. **Retrieval phase (`get`/`nodeInject`)**:
-  - Local tree lookup is attempted first.
-  - Parent chain is checked next.
-  - If token is singleton and unresolved, the token is forwarded to root and attached there.
+
+- Explicit `provide()` still creates proto nodes as usual.
+- Decorated singleton classes can also be auto-materialized from token metadata when first resolved.
+1. **Bootstrap phase**:
+
+- Each container builds its local tree from known proto nodes.
+- Root singleton nodes discovered later can still be added to root runtime tree state.
+1. **Retrieval phase (`get`/`nodeInject`)**:
+
+- Local tree lookup is attempted first.
+- Parent chain is checked next.
+- If token is singleton and unresolved, the token is forwarded to root and attached there.
 
 #### Instantiation timing and `instant`
 
 Root singleton instantiation follows the root container strategy:
 
 1. `instant: true` on root:
-  - Singleton is instantiated as soon as it is attached to root.
-2. `instant: false` on root:
-  - Singleton is attached to root pool first.
-  - Instantiation happens on first actual access.
+
+- Singleton is instantiated as soon as it is attached to root.
+1. `instant: false` on root:
+
+- Singleton is attached to root pool first.
+- Instantiation happens on first actual access.
 
 This keeps singleton semantics consistent with all other nodes.
 
@@ -215,6 +222,7 @@ The `NodeContainer` is the central orchestrator of the dependency injection syst
 #### 1. Registration Phase (`provide`)
 
 During registration, the container:
+
 - Accepts various provider formats (classes, tokens, factory functions)
 - Creates proto nodes that store metadata about how to create instances
 - Validates that no duplicates are registered
@@ -229,6 +237,7 @@ container.provide({ provide: PluginToken, multi: true, useClass: AuthPlugin });
 #### 2. Bootstrap Phase (`bootstrap`)
 
 During bootstrap, the container:
+
 - Converts proto nodes into tree nodes with complete dependency graphs
 - Detects circular dependencies
 - Instantiates all dependencies in the correct order
@@ -242,6 +251,7 @@ container.bootstrap();
 #### 3. Retrieval Phase (`get`)
 
 After bootstrap, instances can be retrieved:
+
 - Looks up tree nodes by token
 - Returns the cached instance
 - Falls back to parent container if not found (if provided)
@@ -271,6 +281,7 @@ class ProtoNodeSingle<T> {
 - **`injections`**: Discovered dependencies by scanning the factory function
 
 **Example:**
+
 ```typescript
 // When you register:
 container.provide({
@@ -304,6 +315,7 @@ class ProtoNodeMulti<T> {
 - **`transparentNodes`**: Direct factory functions without tokens
 
 **Example:**
+
 ```typescript
 const PluginToken = new MultiNodeToken<Plugin>('Plugin');
 
@@ -382,6 +394,7 @@ class TreeNodeSingle<T> {
 - **`allocations`**: Count of how many times this dependency is used (for diagnostics)
 
 **Instantiation process:**
+
 1. Check if already resolved (avoid duplicate instantiation)
 2. Recursively instantiate all dependencies first
 3. Create a retriever function that looks up dependencies from the `_deps` map
@@ -423,6 +436,7 @@ class TreeNodeMulti<T> {
 - **`instance`**: The array of instances (public, not cached behind a getter)
 
 **Instantiation process:**
+
 1. Check if already resolved
 2. Instantiate all dependencies
 3. Collect instances from each dependency:
@@ -470,6 +484,7 @@ const dependencies = InjectionContext.scan(factory);
 ```
 
 During scanning:
+
 - Context is open but `injector` is null
 - `nodeInject()` records the call and returns a placeholder `iInjectionNode`
 - Factory execution may throw errors (which are caught and ignored)
@@ -489,6 +504,7 @@ InjectionContext.instantiate(factory, (token, optional) => {
 ```
 
 During instantiation:
+
 - Context is open and `injector` is set to a retriever function
 - `nodeInject()` calls the injector to get actual instances
 - Factory executes successfully and returns the created instance
@@ -569,6 +585,29 @@ container.provide({
 });
 ```
 
+### Resolution Modifiers (`self` and `skipSelf`)
+
+Modifiers can be supplied as the second argument to `nodeInject()` or `container.get()` to control how the container resolves dependencies in a hierarchical setup (when using child containers).
+
+- **`self`**: The container stops traversal and **only looks for the provider in the current (local) container**. If not found, it throws an error (unless `optional: true` is set).
+- **`skipSelf`**: The container **ignores providers in the current container** and immediately delegates resolution to the parent container.
+
+```typescript
+@NodeInjectable()
+class ConfigLogger {
+  // Looks exclusively in the local container context
+  private readonly localConfig = nodeInject(MyToken, { self: true });
+}
+
+@NodeInjectable()
+class UpstreamLogger {
+  // Skips the local container completely and looks in the parent
+  private readonly globalConfig = nodeInject(MyToken, { skipSelf: true });
+}
+```
+
+*Note: You cannot enforce both `self: true` and `skipSelf: true` at the same time, as they are mutually exclusive and will throw a `CONFLICTING_STRATEGIES` error.*
+
 ## Dependency Resolution
 
 The dependency resolution process transforms proto nodes into tree nodes with complete dependency graphs. This happens during the bootstrap phase.
@@ -588,6 +627,7 @@ function resolveTreeNode<T>(
 ```
 
 **Parameters:**
+
 - **`rootProto`**: The proto node to resolve
 - **`cache`**: Map of already resolved proto nodes (avoids duplicate work)
 - **`singleNodes`**: Container's single proto nodes registry
@@ -601,12 +641,14 @@ function resolveTreeNode<T>(
 2. **Create Tree Node**: Create a tree node corresponding to the proto node type
 
 3. **Iterative DFS**: Use a stack-based approach to resolve all dependencies:
+
    ```typescript
    const stack: StackFrame[] = [{ proto: rootProto, node: rootNode, processed: false }];
    const visiting = new Set<ProtoNode>();
    ```
 
 4. **Cycle Detection**: Track visiting nodes to detect circular dependencies:
+
    ```typescript
    if (visiting.has(proto)) {
      // Extract cycle path and throw InjectionError.circularDependency
@@ -618,6 +660,7 @@ function resolveTreeNode<T>(
    - For `ProtoNodeMulti`: Collect all single nodes, multi nodes, and transparent nodes
 
 6. **Upstream Resolution**: If a dependency isn't found locally, try the parent container:
+
    ```typescript
    const upstream = upstreamGetter?.(token);
    if (upstream) {
@@ -626,6 +669,7 @@ function resolveTreeNode<T>(
    ```
 
 7. **Link Dependencies**: Add each dependency to the tree node:
+
    ```typescript
    node.addDependency(dependencyTreeNode);
    ```
@@ -785,7 +829,8 @@ interface iInstantiationParams<T = unknown> {
 
 Middlewares can be registered at two scopes:
 
-1.  **Container Scope**: Applies only to providers instantiated by a specific container.
+1. **Container Scope**: Applies only to providers instantiated by a specific container.
+
     ```typescript
     container.registerMiddleware((params, next) => {
       console.log(`Instantiating ${params.token.name} with ${params.deps.size} dependencies`);
@@ -793,7 +838,8 @@ Middlewares can be registered at two scopes:
     });
     ```
 
-2.  **Global Scope**: Applies to all providers in all containers.
+2. **Global Scope**: Applies to all providers in all containers.
+
     ```typescript
     import { Illuma } from 'illuma';
     
@@ -812,7 +858,7 @@ In the current implementation, all middlewares (global and local) are collected 
 
 ```
 global -> grand-parent container -> parent container -> local container
-``` 
+```
 
 ### Example: Proxy Middleware
 
@@ -915,6 +961,7 @@ public get<T>(token: Token<T>): T | T[] {
 - **Lifecycle**: Parent must be bootstrapped before child, but they're independent after that
 
 **Example use case:**
+
 ```typescript
 // Parent provides shared services
 const parent = new NodeContainer();
@@ -934,6 +981,39 @@ dev.bootstrap();
 
 // Both children share Database and Config, but have different loggers
 ```
+
+## Container Destruction and Lifecycles
+
+When a container is no longer needed, you should call `container.destroy()` to clean up resources, stateful services, and all of its child containers.
+
+When `destroy()` is called, the following execution rules apply:
+1. **Hierarchical destruction**: All child containers are automatically destroyed *before* their parent containers.
+2. **Reverse initialization order**: Teardown hooks within a container execute bottom-up in the exact reverse order they were registered.
+3. **Immutability**: After a container is destroyed, calling `destroy()` again or attempting to resolve dependencies from it will throw an `InjectionError`.
+
+### Using `LifecycleRef`
+
+You can use the built-in `LifecycleRef` token to register destruction hooks from inside a provider or service without directly holding a reference to the container.
+
+```typescript
+import { nodeInject, LifecycleRef } from "@illuma/core";
+
+export class DatabaseService {
+  private readonly _connection;
+  private readonly _lifecycle = nodeInject(LifecycleRef);
+
+  constructor() {
+    this._connection = connectToDb();
+    
+    // Register a hook that executes during container destruction
+    this._lifecycle.beforeDestroy(() => {
+      this._connection.close();
+    });
+  }
+}
+```
+
+The `beforeDestroy` method returns an unsubscribe function that can be manually called to unregister the hook, which is ideal if your service cleans up its resources early. You can also inspect `this._lifecycle.destroyed` to check if you are operating on an already-destroyed container from within asynchronous tasks.
 
 ## Complete Lifecycle Example
 

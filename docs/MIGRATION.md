@@ -17,6 +17,7 @@
 #### `iInjectionOptions` property rename
 
 If you're using helper utilities like `injectEntryAsync`, `injectGroupAsync`, or `injectAsync`, the `overrides` property in the options object has been renamed to `config`.
+
 - **Before:** `injectEntryAsync(..., { overrides: [...] })`
 - **After:** `injectEntryAsync(..., { config: [...] })`
 

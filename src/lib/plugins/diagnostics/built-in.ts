@@ -4,6 +4,7 @@ import { DiagnosticsDefaultReporter } from "./default-impl";
 
 const state = { enabled: false };
 
+/** @internal */
 export function enableIllumaDiagnostics() {
   if (state.enabled) return;
   state.enabled = true;

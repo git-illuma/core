@@ -3,6 +3,7 @@ import { extractToken } from "../api/token";
 import { InjectionError } from "../errors";
 import type { iNodeProvider } from "./types";
 
+/** @internal */
 export function extractProvider<T>(provider: iNodeProvider<T>): NodeBase<T> | (() => T) {
   if ("value" in provider) return () => provider.value;
   if ("factory" in provider) return provider.factory;

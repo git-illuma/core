@@ -1,5 +1,6 @@
 import type { iInstantiationParams, iMiddleware } from "./types";
 
+/** @internal */
 export function runMiddlewares<T>(
   middlewares: iMiddleware[],
   params: iInstantiationParams<T>,

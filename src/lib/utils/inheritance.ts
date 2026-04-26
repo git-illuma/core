@@ -90,6 +90,9 @@ export function injectAsync<T>(
   });
 }
 
+/**
+ * Configuration options for injectEntryAsync.
+ */
 export interface iEntrypointConfig<T extends Token<any>> {
   readonly entrypoint: T;
   readonly providers: Provider[];

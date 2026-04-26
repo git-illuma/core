@@ -66,6 +66,7 @@ function resolveDependency(
   return null;
 }
 
+/** @internal */
 export function resolveTreeNode<T>(
   rootProto: ProtoNode<T>,
   cache: Map<ProtoNode, TreeNode>,
