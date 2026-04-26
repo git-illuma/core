@@ -20,7 +20,7 @@ import type { UpstreamGetter } from "../provider/resolver";
 import type { TreeNode } from "../provider/tree-node";
 import type { Ctor, iNodeProvider, Provider, Token } from "../provider/types";
 import { Injector, InjectorImpl } from "../utils/injector";
-import { LifecycleRef, LifecycleRefImpl } from "./lifecycle";
+import { LifecycleRef, LifecycleRefImpl } from './lifecycle';
 import type { iContainerOptions, iDIContainer } from "./types";
 
 /**
@@ -49,7 +49,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
   private readonly _parent?: iDIContainer;
   private readonly _protoNodes = new Map<NodeToken<any>, ProtoNodeSingle<any>>();
   private readonly _multiProtoNodes = new Map<MultiNodeToken<any>, ProtoNodeMulti<any>>();
-  protected readonly _lifecycle = new LifecycleRefImpl();
+  protected readonly _lifecycle: LifecycleRefImpl = new LifecycleRefImpl();
 
   public get destroyed(): boolean {
     return this._lifecycle.destroyed;

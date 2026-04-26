@@ -11,7 +11,7 @@ import type { iInjectionNode } from "./types";
  */
 export abstract class InjectionContext {
   public static contextOpen = false;
-  public static readonly _calls = new Set<iInjectionNode<any>>();
+  public static readonly _calls: Set<iInjectionNode<any>> = new Set();
   public static injector: InjectorFn | null = null;
   private static readonly _scanners = Illuma.contextScanners;
 

@@ -21,7 +21,6 @@ export interface iNodeInjectableOptions {
  * Decorator that marks a class as injectable in the dependency injection system.
  * Automatically creates and associates a NodeToken with the class.
  *
- * @template T - The type of the class being decorated
  * @returns A class decorator function
  *
  * @example
@@ -38,9 +37,9 @@ export interface iNodeInjectableOptions {
  * const service = container.get(UserService);
  * ```
  */
-export function NodeInjectable<T>(opts?: iNodeInjectableOptions) {
-  return (ctor: Ctor<T>): Ctor<T> => {
-    const nodeToken = new NodeToken<T>(`_${ctor.name}`, {
+export function NodeInjectable(opts?: iNodeInjectableOptions): ClassDecorator {
+  return (ctor: any) => {
+    const nodeToken = new NodeToken<unknown>(`_${ctor.name}`, {
       factory: () => new ctor(),
       singleton: opts?.singleton,
     });

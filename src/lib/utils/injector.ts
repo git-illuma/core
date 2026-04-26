@@ -102,4 +102,4 @@ export class InjectorImpl implements iInjector {
  * }
  * ```
  */
-export const Injector = new NodeToken<iInjector>("Injector");
+export const Injector: NodeToken<iInjector> = new NodeToken<iInjector>("Injector");

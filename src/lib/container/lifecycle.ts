@@ -58,4 +58,6 @@ export class LifecycleRefImpl {
   }
 }
 
-export const LifecycleRef = new NodeToken<LifecycleRefImpl>("LifecycleRef");
+export const LifecycleRef: NodeToken<LifecycleRefImpl> = new NodeToken<LifecycleRefImpl>(
+  "LifecycleRef",
+);

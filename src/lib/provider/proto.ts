@@ -7,15 +7,15 @@ import { InjectionError } from "../errors";
 /** @internal */
 export class ProtoNodeSingle<T = any> {
   // Metadata
-  public readonly token: NodeToken<T>;
-  public readonly injections = new Set<iInjectionNode<any>>();
+  public readonly injections: Set<iInjectionNode<unknown>> = new Set();
 
   // Instantiation
   public factory: (() => T) | null = null;
 
-  constructor(token: NodeToken<T>, factory?: () => T) {
-    this.token = token;
-
+  constructor(
+    public readonly token: NodeToken<T>,
+    factory?: () => T,
+  ) {
     if (factory) {
       this.factory = factory;
       InjectionContext.scanInto(factory, this.injections);
@@ -41,7 +41,7 @@ export class ProtoNodeSingle<T = any> {
 /** @internal */
 export class ProtoNodeTransparent<T = any> {
   public readonly factory: () => T;
-  public readonly injections = new Set<iInjectionNode<any>>();
+  public readonly injections: Set<iInjectionNode<unknown>> = new Set();
 
   constructor(
     public readonly parent: ProtoNodeSingle<T> | ProtoNodeMulti<T>,
@@ -58,14 +58,11 @@ export class ProtoNodeTransparent<T = any> {
 
 /** @internal */
 export class ProtoNodeMulti<T = any> {
-  public readonly token: MultiNodeToken<T>;
-  public readonly singleNodes = new Set<NodeToken<T>>();
-  public readonly multiNodes = new Set<MultiNodeToken<T>>();
-  public readonly transparentNodes = new Set<ProtoNodeTransparent<T>>();
+  public readonly singleNodes: Set<NodeToken<T>> = new Set();
+  public readonly multiNodes: Set<MultiNodeToken<T>> = new Set();
+  public readonly transparentNodes: Set<ProtoNodeTransparent<T>> = new Set();
 
-  constructor(token: MultiNodeToken<T>) {
-    this.token = token;
-  }
+  constructor(public readonly token: MultiNodeToken<T>) {}
 
   public addProvider(retriever: NodeBase<T> | (() => T)): void {
     if (retriever instanceof NodeToken) {
