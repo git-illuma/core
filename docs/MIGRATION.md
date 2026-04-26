@@ -1,5 +1,38 @@
 # Migration guide
 
+## To version 2.1
+
+### Breaking changes
+
+#### `InjectorImpl` is no longer exported
+
+The `InjectorImpl` class has been removed from the public API. You should re-provide any custom implementations of `Injector` using the `Injector` token instead. For example:
+
+```typescript
+import { nodeInject, type iInjector } from "@illuma/core";
+
+class CustomInjector implements iInjector {
+  private readonly _original = nodeInject(Injector);
+  // ... your implementation
+}
+
+// In your container setup
+container.provide({
+  token: NewInjector, // New token for your custom injector
+  useClass: CustomInjector,
+});
+```
+
+### New features
+
+#### `LifecycleRef` for managing container lifecycle
+
+The `LifecycleRef` is introduced as a new utility for managing container lifecycle events. It provides methods to register callbacks that will be called before the container is destroyed and when child containers are destroyed. This allows for better resource management and cleanup in complex applications. See [Lifecycle docs](./LIFECYCLE.md).
+
+### `nodeInject` now supports `{ self: true }` and `{ skipSelf: true }` options
+
+For better compatibility with Angular's DI patterns, the `nodeInject` function now supports `{ self: true }` and `{ skipSelf: true }` options. This allows you to control the scope of your injections more precisely, enabling scenarios where you want to inject dependencies from the current container only (`self`) or from parent containers only (`skipSelf`). See [Resolution Modifiers](./RESOLUTION_MODIFIERS.md) for more details.
+
 ## To version 2.0
 
 ### Breaking changes
