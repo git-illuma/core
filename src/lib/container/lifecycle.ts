@@ -18,7 +18,7 @@ export class LifecycleRefImpl {
   /**
    * Registers a cleanup callback that will be executed when the container is being destroyed.
    * Execution happens bottom-up, in reverse order of registration.
-   * 
+   *
    * @param callback The function to execute before the container is destroyed
    * @returns An unsubscribe function. Calling it unregisters the callback.
    */
@@ -31,7 +31,7 @@ export class LifecycleRefImpl {
    * @internal
    * Registers a hook specifically intended for the phase when child containers are destroyed.
    * Runs before the standard beforeDestroy hooks.
-   * 
+   *
    * @param callback The function to execute during the child-destruction phase
    * @returns An unsubscribe function
    */
