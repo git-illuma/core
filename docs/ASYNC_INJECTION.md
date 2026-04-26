@@ -1,10 +1,10 @@
-# 🔗 Async Injection & Sub-Containers
+# Async Injection & Sub-Containers
 
 This guide covers advanced dependency injection patterns using `injectAsync`, `injectGroupAsync`, and `injectEntryAsync` for lazy-loading dependencies and managing sub-containers.
 
 ## Table of contents
 
-- [🔗 Async Injection \& Sub-Containers](#-async-injection--sub-containers)
+- [Async Injection \& Sub-Containers](#async-injection--sub-containers)
   - [Table of contents](#table-of-contents)
   - [Overview](#overview)
     - [Explicit Injector Context](#explicit-injector-context)

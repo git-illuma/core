@@ -1,10 +1,10 @@
-# 🚀 Getting Started
+# Getting Started
 
 This guide will walk you through setting up Illuma and creating your first dependency injection container.
 
 ## Table of contents
 
-- [🚀 Getting Started](#-getting-started)
+- [Getting Started](#getting-started)
   - [Table of contents](#table-of-contents)
   - [Installation](#installation)
   - [TypeScript configuration (for decorators if using)](#typescript-configuration-for-decorators-if-using)

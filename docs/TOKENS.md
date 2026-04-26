@@ -1,4 +1,4 @@
-# 🏷️ Tokens
+# Tokens
 
 This guide covers how to use tokens to identify and inject non-class dependencies in Illuma.
 

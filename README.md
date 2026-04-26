@@ -22,7 +22,7 @@ Heavily inspired by Angular's DI system, but designed to work in any environment
 
 ## V2 is out now!
 
-Please check out the [migration guide](./docs/MIGRATION.md) for details on what's new and how to upgrade from v1. 
+Please check out the [migration guide](https://github.com/git-illuma/core/blob/main/docs/MIGRATION.md) for details on what's new and how to upgrade from v1. 
 
 ## Installation
 
@@ -67,7 +67,7 @@ const userService = container.get(UserService);
 
 > **Note:** 
 > Example above requires `experimentalDecorators` and `emitDecoratorMetadata` in tsconfig. 
-> See [Getting Started](./docs/GETTING_STARTED.md) for decorator-free alternatives.
+> See [Getting Started](https://github.com/git-illuma/core/blob/main/docs/GETTING_STARTED.md) for decorator-free alternatives.
 
 ## Using Tokens
 
@@ -102,7 +102,7 @@ const config = container.get(CONFIG);    // { apiUrl: string }
 const plugins = container.get(PLUGINS);  // Plugin[]: [AnalyticsPlugin, LoggingPlugin]
 ```
 
-See [Tokens Guide](./docs/TOKENS.md) for more details.
+See [Tokens Guide](https://github.com/git-illuma/core/blob/main/docs/TOKENS.md) for more details.
 
 ## Provider types
 
@@ -127,7 +127,7 @@ container.provide({ provide: DATABASE, useClass: DatabaseImplementation });
 container.provide({ provide: Database, alias: ExistingDatabase });
 ```
 
-See [Providers Guide](./docs/PROVIDERS.md) for details.
+See [Providers Guide](https://github.com/git-illuma/core/blob/main/docs/PROVIDERS.md) for details.
 
 ## Testing
 
@@ -145,22 +145,22 @@ it('should fetch user', () => {
 });
 ```
 
-See [Testing Guide](./docs/TESTKIT.md) for examples.
+See [Testing Guide](https://github.com/git-illuma/core/blob/main/docs/TESTKIT.md) for examples.
 
 ## Documentation
 
 | Guide                                              | Description                                           |
 | :--                                                | :--                                                   |
-| [Getting Started](./docs/GETTING_STARTED.md)       | Installation, setup, and basic usage                  |
-| [Providers](./docs/PROVIDERS.md)                   | Value, factory, class, and alias providers            |
-| [Tokens](./docs/TOKENS.md)                         | NodeToken and MultiNodeToken                          |
-| [Async Injection](./docs/ASYNC_INJECTION.md)       | Lazy loading and sub-containers                       |
-| [Lifecycle Hooks](./docs/LIFECYCLE.md)             | Container destruction and lifecycle hooks             |
-| [Testing](./docs/TESTKIT.md)                       | TestKit and mocking                                   |
-| [Plugins](./docs/PLUGINS.md)                       | Extending Illuma with custom scanners and diagnostics |
-| [Technical Overview](./docs/TECHNICAL_OVERVIEW.md) | Deep dive into how Illuma works                       |
-| [API Reference](./docs/API.md)                     | Complete API documentation                            |
-| [Troubleshooting](./docs/TROUBLESHOOTING.md)       | Error codes and solutions                             |
+| [Getting Started](https://github.com/git-illuma/core/blob/main/docs/GETTING_STARTED.md)       | Installation, setup, and basic usage                  |
+| [Providers](https://github.com/git-illuma/core/blob/main/docs/PROVIDERS.md)                   | Value, factory, class, and alias providers            |
+| [Tokens](https://github.com/git-illuma/core/blob/main/docs/TOKENS.md)                         | NodeToken and MultiNodeToken                          |
+| [Async Injection](https://github.com/git-illuma/core/blob/main/docs/ASYNC_INJECTION.md)       | Lazy loading and sub-containers                       |
+| [Lifecycle Hooks](https://github.com/git-illuma/core/blob/main/docs/LIFECYCLE.md)             | Container destruction and lifecycle hooks             |
+| [Testing](https://github.com/git-illuma/core/blob/main/docs/TESTKIT.md)                       | TestKit and mocking                                   |
+| [Plugins](https://github.com/git-illuma/core/blob/main/docs/PLUGINS.md)                       | Extending Illuma with custom scanners and diagnostics |
+| [Technical Overview](https://github.com/git-illuma/core/blob/main/docs/TECHNICAL_OVERVIEW.md) | Deep dive into how Illuma works                       |
+| [API Reference](https://github.com/git-illuma/core/blob/main/docs/API.md)                     | Complete API documentation                            |
+| [Troubleshooting](https://github.com/git-illuma/core/blob/main/docs/TROUBLESHOOTING.md)       | Error codes and solutions                             |
 
 ## Plugins
 
@@ -168,13 +168,13 @@ Illuma supports plugins! Check these out:
 
 - **[@illuma/reflect](https://github.com/git-illuma/reflect)** – Constructor metadata and property decorator injection support
 
-See [Plugins Guide](./docs/PLUGINS.md) for creating your own plugins.
+See [Plugins Guide](https://github.com/git-illuma/core/blob/main/docs/PLUGINS.md) for creating your own plugins.
 
 ## Contributing
 
 Thank you for considering contributing to Illuma! I deeply appreciate your interest in making this project better.
 
-Anyways, to get you started, please take a look at the [Contributing Guide](./CONTRIBUTING.md) for guidelines on how to setup development environment, run tests, and submit pull requests.
+Anyways, to get you started, please take a look at the [Contributing Guide](https://github.com/git-illuma/core/blob/main/CONTRIBUTING.md) for guidelines on how to setup development environment, run tests, and submit pull requests.
 
 ## License
 

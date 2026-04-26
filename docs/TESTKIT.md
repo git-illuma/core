@@ -1,10 +1,10 @@
-# 🧪 Testing Guide
+# Testing Guide
 
 The Illuma testkit provides framework-agnostic utilities for testing components that use dependency injection.
 
 ## Table of contents
 
-- [🧪 Testing Guide](#-testing-guide)
+- [Testing Guide](#testing-guide)
   - [Table of contents](#table-of-contents)
   - [Installation](#installation)
   - [Quick start](#quick-start)

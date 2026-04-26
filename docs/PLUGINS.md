@@ -1,4 +1,4 @@
-# 🔌 Plugin System
+# Plugin System
 
 Illuma provides a plugin system that allows you to extend its core functionality. The plugin system supports three types of plugins:
 
@@ -8,7 +8,7 @@ Illuma provides a plugin system that allows you to extend its core functionality
 
 ## Table of Contents
 
-- [🔌 Plugin System](#-plugin-system)
+- [Plugin System](#plugin-system)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
   - [Context Scanners](#context-scanners)

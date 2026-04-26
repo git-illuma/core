@@ -1,4 +1,4 @@
-# 📚 API Reference
+# API Reference
 
 Complete API documentation for Illuma's core classes, functions, and decorators.
 

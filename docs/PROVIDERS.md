@@ -1,10 +1,10 @@
-# 🎨 Providers
+# Providers
 
 This guide covers the different ways to register dependencies in your Illuma container.
 
 ## Table of contents
 
-- [🎨 Providers](#-providers)
+- [Providers](#providers)
   - [Table of contents](#table-of-contents)
   - [Overview](#overview)
   - [Provider types](#provider-types)
@@ -13,6 +13,7 @@ This guide covers the different ways to register dependencies in your Illuma con
     - [Factory provider](#factory-provider)
     - [Class reference provider](#class-reference-provider)
     - [Alias provider](#alias-provider)
+    - [Generic helper](#generic-helper)
   - [Registering providers](#registering-providers)
     - [Single provider](#single-provider)
     - [Array providers](#array-providers)
