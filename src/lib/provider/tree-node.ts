@@ -68,6 +68,11 @@ export class TreeRootNode {
   public toString(): string {
     return "TreeRootNode";
   }
+
+  public destroy(): void {
+    this._deps.clear();
+    (this._treePool as Map<NodeBase<any>, TreeNode<any>>).clear();
+  }
 }
 
 export class TreeNodeSingle<T = any> {

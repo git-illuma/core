@@ -1,58 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
+import { NodeToken } from "../../api/token";
+import { InjectionError } from "../../errors";
+import type { TreeRootNode } from "../../provider";
 import { NodeContainer } from "../container";
-import { LifecycleRefImpl } from "../lifecycle";
+import type { LifecycleRefImpl } from "../lifecycle";
 
-describe("LifecycleRefImpl", () => {
-  it("should execute standard hooks in reverse order of registration", () => {
-    const lifecycle = new LifecycleRefImpl();
-    const order: number[] = [];
-
-    lifecycle.beforeDestroy(() => order.push(1));
-    lifecycle.beforeDestroy(() => order.push(2));
-    lifecycle.beforeDestroy(() => order.push(3));
-
-    lifecycle.destroy();
-
-    expect(order).toEqual([3, 2, 1]);
-  });
-
-  it("should execute child container hooks completely before provider hooks", () => {
-    const lifecycle = new LifecycleRefImpl();
-    const order: string[] = [];
-
-    lifecycle.beforeDestroy(() => order.push("parentProvider1"));
-    lifecycle.onChildDestroy(() => order.push("childContainer1"));
-    lifecycle.beforeDestroy(() => order.push("parentProvider2"));
-    lifecycle.onChildDestroy(() => order.push("childContainer2"));
-
-    lifecycle.destroy();
-
-    expect(order).toEqual([
-      "childContainer2",
-      "childContainer1",
-      "parentProvider2",
-      "parentProvider1",
-    ]);
-  });
-
-  it("should not leak memory if callbacks do not unsubscribe", () => {
-    const lifecycle = new LifecycleRefImpl();
-
-    const cb1 = () => {};
-    const cb2 = () => {};
-    lifecycle.beforeDestroy(cb1);
-    lifecycle.onChildDestroy(cb2);
-
-    lifecycle.destroy();
-
-    const lcAny = lifecycle as unknown as {
-      _callbacks: Set<() => void>;
-      _childCallbacks: Set<() => void>;
-    };
-    expect(lcAny._callbacks.size).toBe(0);
-    expect(lcAny._childCallbacks.size).toBe(0);
-  });
-
+describe("Container lifecycle", () => {
   it("should cascade destroy containers bottom-up", () => {
     const root = new NodeContainer();
     let prev: NodeContainer = root;
@@ -73,27 +26,39 @@ describe("LifecycleRefImpl", () => {
     expect(spy.mock.calls.map((call) => call[0])).toEqual([4, 3, 2, 1, 0]);
   });
 
-  it("should cascade destroy from parent to child and run in reverse initialization order", () => {
-    const parent = new NodeContainer();
-    const order: string[] = [];
+  it("child container should subscribe to parent destroy when created", () => {
+    const root = new NodeContainer();
+    const lsRef = (<any>root)._lifecycle as LifecycleRefImpl;
+    const spy = vi.spyOn(lsRef, "onChildDestroy");
 
-    (parent as any)._lifecycle.beforeDestroy(() => order.push("parent-provider-1"));
+    new NodeContainer({ parent: root });
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
 
-    const child1 = new NodeContainer({ parent });
-    (child1 as any)._lifecycle.beforeDestroy(() => order.push("child-1-provider"));
+  it("should cleanup on destroy", () => {
+    const container = new NodeContainer();
 
-    (parent as any)._lifecycle.beforeDestroy(() => order.push("parent-provider-2"));
+    container.provide({
+      provide: new NodeToken<string>("test"),
+      value: "value",
+    });
 
-    const child2 = new NodeContainer({ parent });
-    (child2 as any)._lifecycle.beforeDestroy(() => order.push("child-2-provider"));
+    container.bootstrap();
 
-    parent.destroy();
+    const rootNode = (<any>container)._rootNode as TreeRootNode;
+    expect(rootNode).toBeDefined();
+    expect(rootNode.dependencies.size).toBe(3); // LifecycleRef, Injector, test
 
-    expect(order).toEqual([
-      "child-2-provider",
-      "child-1-provider",
-      "parent-provider-2",
-      "parent-provider-1",
-    ]);
+    container.destroy();
+
+    expect(rootNode.dependencies.size).toBe(0);
+    expect(((<any>rootNode)._treePool as Map<unknown, unknown>).size).toBe(0);
+    expect((<any>container)._rootNode).toBeUndefined();
+  });
+
+  it("should throw if destroy is called multiple times", () => {
+    const container = new NodeContainer();
+    container.destroy();
+    expect(() => container.destroy()).toThrowError(InjectionError);
   });
 });

@@ -231,6 +231,26 @@ describe("TreeRootNode", () => {
       expect(foundNode2?.instance).toBe("red");
     });
   });
+
+  describe("Lifecycle", () => {
+    it("should cleanup dependencies when destroyed", () => {
+      const root = new TreeRootNode();
+      const token = new NodeToken<string>("test");
+
+      const proto = new ProtoNodeSingle(token, () => "value");
+      const node = new TreeNodeSingle(proto);
+
+      root.addDependency(node);
+
+      expect(root.dependencies.size).toBe(1);
+      expect((root as any)._treePool.size).toBe(0);
+
+      root.destroy();
+
+      expect(root.dependencies.size).toBe(0);
+      expect((root as any)._treePool.size).toBe(0);
+    });
+  });
 });
 
 describe("TreeNodeSingle", () => {

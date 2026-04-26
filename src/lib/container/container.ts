@@ -320,7 +320,11 @@ export class NodeContainer extends Illuma implements iDIContainer {
     if (this._lifecycle.destroyed) throw InjectionError.destroyed();
     this._lifecycle.destroy();
 
-    if (this._rootNode) this._rootNode = undefined;
+    if (this._rootNode) {
+      this._rootNode.destroy();
+      this._rootNode = undefined;
+    }
+
     this._unsubParentDestroy?.();
     this._bootstrapped = false;
     this._protoNodes.clear();
