@@ -19,20 +19,32 @@ import type { ProtoNode } from "../provider/proto";
 import type { UpstreamGetter } from "../provider/resolver";
 import type { TreeNode } from "../provider/tree-node";
 import type { Ctor, iNodeProvider, Provider, Token } from "../provider/types";
-import { Injector, InjectorImpl } from "../utils";
+import { Injector, InjectorImpl } from "../utils/injector";
+import { LifecycleRef, LifecycleRefImpl } from "./lifecycle";
 import type { iContainerOptions, iDIContainer } from "./types";
 
 export class NodeContainer extends Illuma implements iDIContainer {
   private _bootstrapped = false;
   private _rootNode?: TreeRootNode;
+  private readonly _unsubParentDestroy?: () => void;
 
   private readonly _parent?: iDIContainer;
   private readonly _protoNodes = new Map<NodeToken<any>, ProtoNodeSingle<any>>();
   private readonly _multiProtoNodes = new Map<MultiNodeToken<any>, ProtoNodeMulti<any>>();
+  protected readonly _lifecycle = new LifecycleRefImpl();
+
+  public get destroyed(): boolean {
+    return this._lifecycle.destroyed;
+  }
 
   constructor(protected readonly _opts?: iContainerOptions) {
     super();
     this._parent = _opts?.parent;
+    if (this._parent && this._parent instanceof NodeContainer) {
+      this._unsubParentDestroy = this._parent._lifecycle.onChildDestroy(() =>
+        this.destroy(),
+      );
+    }
   }
 
   /**
@@ -179,10 +191,8 @@ export class NodeContainer extends Illuma implements iDIContainer {
 
     const start = performance.now();
 
-    this.provide({
-      provide: Injector,
-      value: new InjectorImpl(this),
-    });
+    this.provide(Injector.withValue(new InjectorImpl(this)));
+    this.provide(LifecycleRef.withValue(this._lifecycle));
 
     this._rootNode = this._buildInjectionTree();
     this._rootNode.build();
@@ -258,16 +268,6 @@ export class NodeContainer extends Illuma implements iDIContainer {
     return treeNode.instance;
   }
 
-  /**
-   * Instantiates a class outside injection context. Primarily used to create instances via Injector.
-   * Class does not get registered in the container and cannot be retrieved via {@link get} or {@link nodeInject}.
-   * Must be called after {@link bootstrap}.
-   *
-   * @template T - The type of the class being instantiated
-   * @param fn - Factory function or class constructor to instantiate
-   * @returns A new instance of the class with dependencies injected
-   * @throws {InjectionError} If called before bootstrap or if the constructor is invalid
-   */
   public produce<T>(fn: Ctor<T> | (() => T)): T {
     if (typeof fn !== "function") throw InjectionError.invalidProvider(fn);
 
@@ -314,6 +314,20 @@ export class NodeContainer extends Illuma implements iDIContainer {
       deps: new Set([...deps.values()].map((d) => d.token)),
       factory: contextFactory,
     });
+  }
+
+  public destroy(): void {
+    if (this._lifecycle.destroyed) throw InjectionError.destroyed();
+    this._lifecycle.destroy();
+
+    if (this._rootNode) {
+      this._rootNode.destroy();
+      this._rootNode = undefined;
+    }
+
+    this._unsubParentDestroy?.();
+    this._bootstrapped = false;
+    this._protoNodes.clear();
   }
 
   private _findNode<T>(token: Token<T>): TreeNode<T> | null {

@@ -1,11 +1,15 @@
 import type { MultiNodeToken } from "../api/token";
 import { NodeToken } from "../api/token";
 import type { iDIContainer } from "../container/types";
+import { InjectionError } from "../errors";
 import type { Ctor, Token } from "../provider/types";
 
 export interface iInjector {
   /** The DI container associated with this injector */
   readonly container: iDIContainer;
+
+  /** Indicates whether the injector or its associated container has been destroyed */
+  readonly destroyed: boolean;
 
   /**
    * Retrieves an instance for the given token.
@@ -29,6 +33,12 @@ export interface iInjector {
    * Must be called after {@link bootstrap}.
    */
   produce<T>(fn: Ctor<T> | (() => T)): T;
+
+  /**
+   * Destroys the injector's associated container and releases any resources it holds.
+   * After calling this method, the injector and the container should not be used to retrieve instances or produce new ones.
+   */
+  destroy(): void;
 }
 
 /**
@@ -37,15 +47,26 @@ export interface iInjector {
 export class InjectorImpl implements iInjector {
   constructor(public readonly container: iDIContainer) {}
 
+  public get destroyed(): boolean {
+    return this.container.destroyed;
+  }
+
   public get<T>(token: MultiNodeToken<T>): T[];
   public get<T>(token: NodeToken<T>): T;
   public get<T>(token: Ctor<T>): T;
   public get<T>(token: Token<T>): T | T[] {
+    if (this.container.destroyed) throw InjectionError.destroyed();
     return this.container.get<T>(token as any);
   }
 
   public produce<T>(fn: Ctor<T> | (() => T)): T {
+    if (this.container.destroyed) throw InjectionError.destroyed();
     return this.container.produce<T>(fn);
+  }
+
+  public destroy(): void {
+    if (this.container.destroyed) throw InjectionError.destroyed();
+    this.container.destroy();
   }
 }
 

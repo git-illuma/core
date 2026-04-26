@@ -237,6 +237,7 @@ Now that you understand the basics, explore these topics:
 - **[Providers Guide](./PROVIDERS.md)** - Learn about different provider types (value, factory, class, alias)
 - **[Tokens Guide](./TOKENS.md)** - Deep dive into NodeToken and MultiNodeToken
 - **[Async Injection Guide](./ASYNC_INJECTION.md)** - Lazy loading and sub-containers
+- **[Lifecycle Guide](./LIFECYCLE.md)** - Container hooks and destruction
 - **[Testing Guide](./TESTKIT.md)** - Testing with the Illuma testkit
 - **[API Reference](./API.md)** - Complete API documentation
 - **[Error Reference](./TROUBLESHOOTING.md)** - Troubleshooting common issues

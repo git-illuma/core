@@ -96,6 +96,40 @@ describe("injectAsync", () => {
     expect(service1).not.toBe(service2);
   });
 
+  it("should throw InjectionError.destroyed if called after container destruction", async () => {
+    const parent = new NodeContainer();
+
+    @NodeInjectable()
+    class TestService {}
+
+    parent.provide(TestService);
+
+    @NodeInjectable()
+    class ParentService {
+      public readonly getService = injectAsync(() => TestService);
+      public readonly getServiceNoCache = injectAsync(() => TestService, {
+        withCache: false,
+      });
+    }
+
+    parent.provide(ParentService);
+    parent.bootstrap();
+
+    const parentService = parent.get(ParentService);
+
+    // Evaluate cached subcontainer creation
+    await parentService.getService();
+
+    parent.destroy();
+
+    expect(() => parentService.getService()).toThrowError(
+      "Container has been already destroyed",
+    );
+    expect(() => parentService.getServiceNoCache()).toThrowError(
+      "Container has been already destroyed",
+    );
+  });
+
   it("should apply config to temp container", async () => {
     const parent = new NodeContainer();
     const configToken = new NodeToken<string>("config");

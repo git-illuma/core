@@ -76,16 +76,16 @@ describe("Plugin: Middlewares", () => {
     const sequence: string[] = [];
 
     const m1: iMiddleware = (_p, next) => {
-      sequence.push("m1 start");
+      if (_p.token === Token) sequence.push("m1 start");
       const res = next(_p);
-      sequence.push("m1 end");
+      if (_p.token === Token) sequence.push("m1 end");
       return res;
     };
 
     const m2: iMiddleware = (_p, next) => {
-      sequence.push("m2 start");
+      if (_p.token === Token) sequence.push("m2 start");
       const res = next(_p);
-      sequence.push("m2 end");
+      if (_p.token === Token) sequence.push("m2 end");
       return res;
     };
 
@@ -105,7 +105,9 @@ describe("Plugin: Middlewares", () => {
     let capturedFactory: (() => any) | undefined;
 
     const captureMiddleware: iMiddleware = (params, next) => {
-      capturedFactory = params.factory;
+      if (params.token === Token) {
+        capturedFactory = params.factory;
+      }
       return next(params);
     };
 
@@ -126,17 +128,17 @@ describe("Plugin: Middlewares", () => {
     const logs: string[] = [];
 
     const globalMiddleware: iMiddleware = (p, n) => {
-      logs.push("global");
+      if (p.token === Token) logs.push("global");
       return n(p);
     };
 
     const parentMiddleware: iMiddleware = (p, n) => {
-      logs.push("parent");
+      if (p.token === Token) logs.push("parent");
       return n(p);
     };
 
     const childMiddleware: iMiddleware = (p, n) => {
-      logs.push("child");
+      if (p.token === Token) logs.push("child");
       return n(p);
     };
 

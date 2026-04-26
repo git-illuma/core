@@ -16,6 +16,7 @@ export const ERR_CODES = {
   NOT_BOOTSTRAPPED: 300,
   BOOTSTRAPPED: 301,
   DOUBLE_BOOTSTRAP: 302,
+  DESTROYED: 303,
 
   // Retrieval errors
   NOT_FOUND: 400,
@@ -101,6 +102,13 @@ export class InjectionError extends Error {
     return new InjectionError(
       ERR_CODES.DOUBLE_BOOTSTRAP,
       "Container has already been bootstrapped and cannot be bootstrapped again.",
+    );
+  }
+
+  public static destroyed(): InjectionError {
+    return new InjectionError(
+      ERR_CODES.DESTROYED,
+      "Container has been already destroyed.",
     );
   }
 
