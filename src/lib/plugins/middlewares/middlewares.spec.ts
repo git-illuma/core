@@ -147,7 +147,7 @@ describe("Plugin: Middlewares", () => {
     childContainer.registerMiddleware(childMiddleware);
 
     childContainer.provide({ provide: Token, value: "val" });
-    childContainer.bootstrap();
+    parentContainer.bootstrap();
 
     expect(childContainer.get(Token)).toBe("val");
     expect(logs).toEqual(["global", "parent", "child"]);

@@ -18,6 +18,8 @@ export const ERR_CODES = {
   BOOTSTRAPPED: 301,
   DOUBLE_BOOTSTRAP: 302,
   DESTROYED: 303,
+  PARENT_DESTROYED: 304,
+  PARENT_NOT_BOOTSTRAPPED: 305,
 
   // Retrieval errors
   NOT_FOUND: 400,
@@ -120,6 +122,20 @@ export class InjectionError extends Error {
     return new InjectionError(
       ERR_CODES.DESTROYED,
       "Container has been already destroyed.",
+    );
+  }
+
+  public static parentDestroyed(): InjectionError {
+    return new InjectionError(
+      ERR_CODES.PARENT_DESTROYED,
+      "Parent container has been destroyed.",
+    );
+  }
+
+  public static parentNotBootstrapped(): InjectionError {
+    return new InjectionError(
+      ERR_CODES.PARENT_NOT_BOOTSTRAPPED,
+      "Parent container has not been bootstrapped.",
     );
   }
 

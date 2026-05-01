@@ -38,6 +38,7 @@ export interface iContainerOptions {
  */
 export interface iDIContainer {
   readonly destroyed: boolean;
+  readonly bootstrapped: boolean;
 
   /**
    * Registers a provider in the container.
@@ -71,6 +72,28 @@ export interface iDIContainer {
   get<T>(token: Ctor<T>, options?: iNodeInjectorOptions): T;
 
   /**
+   * Bootstraps the container by resolving the dependency trees and instantiating all providers.
+   * This must be called after all providers are registered and before calling {@link get}.
+   *
+   * The bootstrap process:
+   * 1. Validates all provider registrations
+   * 2. Builds dependency injection trees
+   * 3. Detects circular dependencies in each tree
+   * 4. Instantiates all dependencies in the correct order
+   *
+   * @throws {InjectionError} If the container is already bootstrapped or if circular dependencies are detected
+   *
+   * @example
+   * ```typescript
+   * const container = new NodeContainer();
+   * container.provide(UserService);
+   * container.provide(LoggerService);
+   * container.bootstrap(); // Resolves and instantiates all dependencies
+   * ```
+   */
+  bootstrap(): void;
+
+  /**
    * Instantiates a class outside injection context. Primarily used to create instances via Injector.
    * Class does not get registered in the container and cannot be retrieved via {@link get} or {@link nodeInject}.
    * Must be called after {@link bootstrap}.
@@ -81,6 +104,14 @@ export interface iDIContainer {
    * @throws {InjectionError} If called before bootstrap or if the constructor is invalid
    */
   produce<T>(fn: Ctor<T> | (() => T)): T;
+
+  /**
+   * Creates a new child DI container that inherits from the current container.
+   * The child container can be used to provide additional providers that are only available within the child context.
+   * @returns A new child DI container
+   * @throws {InjectionError} If called before bootstrap or if the container has been destroyed
+   */
+  child(): iDIContainer;
 
   /**
    * Destroys the container and releases any resources it holds.

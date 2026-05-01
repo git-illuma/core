@@ -43,6 +43,14 @@ export interface iInjector {
   produce<T>(fn: Ctor<T> | (() => T)): T;
 
   /**
+   * Creates a new child DI container that inherits from the current injector's container.
+   * The child container can be used to provide additional providers that are only available within the child context.
+   * @returns A new child DI container
+   * @throws {InjectionError} If called before bootstrap or if the injector has been destroyed
+   */
+  spawnChild(): iDIContainer;
+
+  /**
    * Destroys the injector's associated container and releases any resources it holds.
    * After calling this method, the injector and the container should not be used to retrieve instances or produce new ones.
    */
@@ -80,6 +88,11 @@ export class InjectorImpl implements iInjector {
     return this.container.produce<T>(fn);
   }
 
+  public spawnChild(): iDIContainer {
+    if (this.container.destroyed) throw InjectionError.destroyed();
+    return this.container.child();
+  }
+
   public destroy(): void {
     if (this.container.destroyed) throw InjectionError.destroyed();
     this.container.destroy();
@@ -91,6 +104,7 @@ export class InjectorImpl implements iInjector {
  * @example
  * ```typescript
  * import { Injector, nodeInject, NodeInjectable, NodeContainer } from "@illuma/core";
+import { NodeContainer } from '../container/container';
  *
  * @NodeInjectable()
  * class MyService {

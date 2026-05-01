@@ -47,11 +47,15 @@ describe("LifecycleRefImpl", () => {
     lifecycle.destroy();
 
     const lcAny = lifecycle as unknown as {
-      _callbacks: Set<() => void>;
-      _childCallbacks: Set<() => void>;
+      _bootstrapCallbacks: Set<() => void>;
+      _bootstrapChildCallbacks: Set<() => void>;
+      _destroyCallbacks: Set<() => void>;
+      _destroyChildCallbacks: Set<() => void>;
     };
-    expect(lcAny._callbacks.size).toBe(0);
-    expect(lcAny._childCallbacks.size).toBe(0);
+    expect(lcAny._bootstrapCallbacks.size).toBe(0);
+    expect(lcAny._bootstrapChildCallbacks.size).toBe(0);
+    expect(lcAny._destroyCallbacks.size).toBe(0);
+    expect(lcAny._destroyChildCallbacks.size).toBe(0);
   });
 
   it("should cascade destroy from parent to child and run in reverse initialization order", () => {

@@ -44,12 +44,15 @@ import type { iContainerOptions, iDIContainer } from "./types";
 export class NodeContainer extends Illuma implements iDIContainer {
   private _bootstrapped = false;
   private _rootNode?: TreeRootNode;
+
+  private readonly _unsubParentBootstrap?: () => void;
   private readonly _unsubParentDestroy?: () => void;
 
   private readonly _parent?: iDIContainer;
   private readonly _protoNodes = new Map<NodeToken<any>, ProtoNodeSingle<any>>();
   private readonly _multiProtoNodes = new Map<MultiNodeToken<any>, ProtoNodeMulti<any>>();
   protected readonly _lifecycle: LifecycleRefImpl = new LifecycleRefImpl();
+  protected readonly _injector: InjectorImpl = new InjectorImpl(this);
 
   /**
    * Indicates whether the container has been destroyed.
@@ -58,13 +61,33 @@ export class NodeContainer extends Illuma implements iDIContainer {
     return this._lifecycle.destroyed;
   }
 
+  /**
+   * Indicates whether the container has been bootstrapped.
+   */
+  public get bootstrapped(): boolean {
+    return this._bootstrapped;
+  }
+
   constructor(protected readonly _opts?: iContainerOptions) {
     super();
     this._parent = _opts?.parent;
-    if (this._parent && this._parent instanceof NodeContainer) {
-      this._unsubParentDestroy = this._parent._lifecycle.onChildDestroy(() =>
-        this.destroy(),
-      );
+
+    if (this._parent) {
+      if (this._parent.destroyed) {
+        throw InjectionError.parentDestroyed();
+      }
+
+      if (this._parent instanceof NodeContainer) {
+        if (!this._parent.bootstrapped) {
+          this._unsubParentBootstrap = this._parent._lifecycle.onChildBootstrap(() =>
+            this.bootstrap(),
+          );
+        }
+
+        this._unsubParentDestroy = this._parent._lifecycle.onChildDestroy(() =>
+          this.destroy(),
+        );
+      }
     }
   }
 
@@ -195,32 +218,16 @@ export class NodeContainer extends Illuma implements iDIContainer {
     return treeNode;
   }
 
-  /**
-   * Bootstraps the container by resolving the dependency trees and instantiating all providers.
-   * This must be called after all providers are registered and before calling {@link get}.
-   *
-   * The bootstrap process:
-   * 1. Validates all provider registrations
-   * 2. Builds dependency injection trees
-   * 3. Detects circular dependencies in each tree
-   * 4. Instantiates all dependencies in the correct order
-   *
-   * @throws {InjectionError} If the container is already bootstrapped or if circular dependencies are detected
-   *
-   * @example
-   * ```typescript
-   * const container = new NodeContainer();
-   * container.provide(UserService);
-   * container.provide(LoggerService);
-   * container.bootstrap(); // Resolves and instantiates all dependencies
-   * ```
-   */
   public bootstrap(): void {
     if (this._bootstrapped) throw InjectionError.doubleBootstrap();
+    if (this._parent) {
+      if (this._parent.destroyed) throw InjectionError.parentDestroyed();
+      if (!this._parent.bootstrapped) throw InjectionError.parentNotBootstrapped();
+    }
 
     const start = performance.now();
 
-    this.provide(Injector.withValue(new InjectorImpl(this)));
+    this.provide(Injector.withValue(this._injector));
     this.provide(LifecycleRef.withValue(this._lifecycle));
 
     this._rootNode = this._buildInjectionTree();
@@ -232,6 +239,8 @@ export class NodeContainer extends Illuma implements iDIContainer {
     if (this._opts?.measurePerformance) {
       console.log(`[Illuma] 🚀 Bootstrapped in ${duration.toFixed(2)} ms`);
     }
+
+    this._lifecycle.runBootstrapHooks();
 
     // Run diagnostics if enabled or diagnostics modules are registered
     if (Illuma.hasDiagnostics()) {
@@ -385,9 +394,15 @@ export class NodeContainer extends Illuma implements iDIContainer {
       this._rootNode = undefined;
     }
 
+    this._unsubParentBootstrap?.();
     this._unsubParentDestroy?.();
     this._bootstrapped = false;
     this._protoNodes.clear();
+  }
+
+  public child(): iDIContainer {
+    if (this.destroyed) throw InjectionError.destroyed();
+    return new NodeContainer({ parent: this });
   }
 
   /** @internal */
