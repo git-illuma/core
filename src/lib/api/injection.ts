@@ -3,7 +3,7 @@ import { InjectionError } from "../errors";
 import type { Token } from "../provider/types";
 import { SHAPE_SHIFTER } from "./proxy";
 import type { MultiNodeToken, NodeToken } from "./token";
-import { extractToken } from "./token";
+import { extractToken } from "./token-utils";
 import type { ExtractInjectedType, iNodeInjectorOptions } from "./types";
 
 /**

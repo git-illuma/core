@@ -5,6 +5,14 @@ import type { iDIContainer } from "../container/types";
 import { InjectionError } from "../errors";
 import type { Ctor, Token } from "../provider/types";
 
+const INJECTOR_TOKEN_KEY = Symbol.for("@illuma/core/InjectorToken");
+
+type iInjectorGlobalThis = typeof globalThis & {
+  [INJECTOR_TOKEN_KEY]?: NodeToken<iInjector>;
+};
+
+const injectorGlobal = globalThis as iInjectorGlobalThis;
+
 /** @internal */
 export interface iInjector {
   /** The DI container associated with this injector */
@@ -41,6 +49,14 @@ export interface iInjector {
    * Must be called after {@link bootstrap}.
    */
   produce<T>(fn: Ctor<T> | (() => T)): T;
+
+  /**
+   * Creates a new child DI container that inherits from the current injector's container.
+   * The child container can be used to provide additional providers that are only available within the child context.
+   * @returns A new child DI container
+   * @throws {InjectionError} If called before bootstrap or if the injector has been destroyed
+   */
+  spawnChild(): iDIContainer;
 
   /**
    * Destroys the injector's associated container and releases any resources it holds.
@@ -80,10 +96,19 @@ export class InjectorImpl implements iInjector {
     return this.container.produce<T>(fn);
   }
 
+  public spawnChild(): iDIContainer {
+    if (this.container.destroyed) throw InjectionError.destroyed();
+    return this.container.child();
+  }
+
   public destroy(): void {
     if (this.container.destroyed) throw InjectionError.destroyed();
     this.container.destroy();
   }
+}
+
+if (!injectorGlobal[INJECTOR_TOKEN_KEY]) {
+  injectorGlobal[INJECTOR_TOKEN_KEY] = new NodeToken<iInjector>("Injector");
 }
 
 /**
@@ -91,6 +116,7 @@ export class InjectorImpl implements iInjector {
  * @example
  * ```typescript
  * import { Injector, nodeInject, NodeInjectable, NodeContainer } from "@illuma/core";
+import { NodeContainer } from '../container/container';
  *
  * @NodeInjectable()
  * class MyService {
@@ -102,4 +128,4 @@ export class InjectorImpl implements iInjector {
  * }
  * ```
  */
-export const Injector: NodeToken<iInjector> = new NodeToken<iInjector>("Injector");
+export const Injector: NodeToken<iInjector> = injectorGlobal[INJECTOR_TOKEN_KEY];

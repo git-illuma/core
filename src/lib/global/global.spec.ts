@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { iInjectionNode } from "../../context";
-import type { iContextScanner } from "../context/types";
-import type { iDiagnosticsModule, iDiagnosticsReport } from "../diagnostics/types";
-import { Illuma } from "./plugin-container";
+import type { iInjectionNode } from "../context";
+import type { iContextScanner } from "../plugins/context/types";
+import type {
+  iDiagnosticsModule,
+  iDiagnosticsReport,
+} from "../plugins/diagnostics/types";
+import { Illuma } from "./global";
 
 vi.spyOn(console, "log").mockImplementation(() => {});
 
@@ -13,8 +16,7 @@ class TestPluginContainer extends Illuma {
   }
 
   public static resetPlugins(): void {
-    (Illuma as any)._diagnostics.length = 0;
-    (Illuma as any)._scanners.length = 0;
+    (Illuma as unknown as { __resetPlugins: () => void }).__resetPlugins();
   }
 }
 

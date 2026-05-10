@@ -1,4 +1,4 @@
-import { Illuma } from "../core";
+import { Illuma } from "../../global";
 import { performanceDiagnostics } from "../middlewares/diagnostics.middleware";
 import { DiagnosticsDefaultReporter } from "./default-impl";
 

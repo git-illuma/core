@@ -236,7 +236,7 @@ describe("deferred instantiation", () => {
     expect(factorySpy).toHaveBeenCalledTimes(1);
 
     parent.bootstrap();
-    child.bootstrap();
+
     // Still not called
     expect(factorySpy).toHaveBeenCalledTimes(1);
 

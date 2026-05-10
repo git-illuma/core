@@ -9,9 +9,7 @@ describe("provider inheritance", () => {
     const token = new NodeToken<string>("TOKEN");
 
     parent.provide({ provide: token, value: "parent-value" });
-
     parent.bootstrap();
-    child.bootstrap();
 
     expect(child.get(token)).toBe("parent-value");
   });
@@ -28,7 +26,6 @@ describe("provider inheritance", () => {
     parent.provide({ provide: token, useClass: TestClass });
 
     parent.bootstrap();
-    child.bootstrap();
 
     const instance = child.get(token);
     expect(instance).toBeInstanceOf(TestClass);
@@ -44,7 +41,6 @@ describe("provider inheritance", () => {
     child.provide({ provide: token, value: "child-value" });
 
     parent.bootstrap();
-    child.bootstrap();
 
     expect(child.get(token)).toBe("child-value");
   });
@@ -61,7 +57,6 @@ describe("provider inheritance", () => {
     parent.provide(TestClass);
 
     parent.bootstrap();
-    child.bootstrap();
 
     const instance = child.get(TestClass);
     expect(instance).toBeInstanceOf(TestClass);
@@ -77,7 +72,6 @@ describe("provider inheritance", () => {
     parent.provide({ provide: token, value: "parent-value-2" });
 
     parent.bootstrap();
-    child.bootstrap();
 
     expect(child.get(token)).toEqual(["parent-value-1", "parent-value-2"]);
   });
@@ -92,7 +86,6 @@ describe("provider inheritance", () => {
     parent.provide({ provide: tokenB, alias: tokenA });
 
     parent.bootstrap();
-    child.bootstrap();
 
     expect(child.get(tokenB)).toBe("aliased-value");
   });
@@ -109,7 +102,6 @@ describe("provider inheritance", () => {
     child.provide({ provide: token, value: "child-value-2" });
 
     parent.bootstrap();
-    child.bootstrap();
 
     expect(child.get(token)).toEqual([
       "parent-value-1",
@@ -128,7 +120,6 @@ describe("provider inheritance", () => {
     child.provide({ provide: token, value: "child-value" });
 
     parent.bootstrap();
-    child.bootstrap();
 
     expect(child.get(token)).toBe("child-value");
   });

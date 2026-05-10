@@ -629,6 +629,8 @@ Static methods available on the `Illuma` class for hooking into the DI system.
 
 Register a custom scanner to detect injection points. Illuma's default scanner detects `nodeInject` calls by executing the factory in a proxy context. You can add scanners to support other forms of injection detection.
 
+Scanners are stored in insertion order and run immediately when providers are registered, so register them before calling `provide()` for providers that should be scanned.
+
 ```typescript
 import { Illuma, type iContextScanner } from '@illuma/core/plugins';
 
@@ -648,6 +650,8 @@ Illuma.extendContextScanner(myScanner);
 #### `enableIllumaDiagnostics(): void`
 
 Enable the built-in diagnostics system, which includes a default reporter and performance tracking middleware. This function must be called before bootstrapping any container that should have diagnostics enabled.
+
+During `bootstrap()`, diagnostics reporting happens after dependency graph build/instantiation and after lifecycle bootstrap hooks have run.
 
 ```typescript
 import { enableIllumaDiagnostics } from '@illuma/core/plugins';
@@ -670,6 +674,8 @@ Register a custom diagnostics module. These modules receive a report after a con
 
 You must call `enableIllumaDiagnostics()` before bootstrapping to enable the diagnostics system.
 
+Diagnostics modules are invoked in registration order.
+
 ```typescript
 import { Illuma, enableIllumaDiagnostics, type iDiagnosticsModule } from '@illuma/core/plugins';
 
@@ -691,6 +697,8 @@ Illuma.extendDiagnostics(reporter);
 Register a middleware function that will run for **all** containers and providers. This allows you to intercept the instantiation of every provider in your application, which is useful for cross-cutting concerns like logging, performance profiling, mocking, or instance transformation.
 
 Each middleware receives an `iInstantiationParams` object and a `next` function. You must call `next(params)` to proceed with the instantiation (or return a custom value to bypass it).
+
+Global middlewares run before container-local middlewares, and each scope preserves registration order.
 
 #### Interface
 

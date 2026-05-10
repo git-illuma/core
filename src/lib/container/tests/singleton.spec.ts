@@ -28,9 +28,6 @@ describe("singletons", () => {
       }
 
       parent.bootstrap();
-      childA.bootstrap();
-      childB.bootstrap();
-      childC.bootstrap();
 
       const fromA = childA.get(RootSingleton);
       const fromB = childB.get(RootSingleton);
@@ -67,7 +64,6 @@ describe("singletons", () => {
       ]);
 
       parent.bootstrap();
-      child.bootstrap();
 
       const fromChild = child.get(node);
       expect(fromChild).toBe("node-value + singleton-value");
@@ -93,8 +89,6 @@ describe("singletons", () => {
       });
 
       parent.bootstrap();
-      child.bootstrap();
-      sibling.bootstrap();
 
       const childInstance = child.get(SharedService);
       const rootInstance = parent.get(SharedService);
@@ -130,7 +124,6 @@ describe("singletons", () => {
       }
 
       root.bootstrap();
-      child.bootstrap();
 
       const fromRoot = root.get(RootSingleton);
       const fromChild = child.get(RootSingleton);
@@ -158,7 +151,6 @@ describe("singletons", () => {
       }
 
       root.bootstrap();
-      child.bootstrap();
 
       const fromRoot = root.get(SingletonB);
       const fromChild = child.get(SingletonB);
@@ -181,7 +173,6 @@ describe("singletons", () => {
       }
 
       root.bootstrap();
-      child.bootstrap();
 
       expect(() => root.get(RootSingleton)).toThrow(InjectionError.notFound(node));
     });
@@ -215,7 +206,6 @@ describe("singletons", () => {
 
       root.provide(singletonToken);
       root.bootstrap();
-      child.bootstrap();
 
       const fromRoot = root.get(singletonToken);
       const fromChild = child.get(singletonToken);
@@ -257,8 +247,6 @@ describe("singletons", () => {
       const SharedService = makeInjectable(_SharedService, { singleton: true });
 
       parent.bootstrap();
-      child.bootstrap();
-      sibling.bootstrap();
 
       const fromChild = child.get(SharedService);
       const fromSibling = sibling.get(SharedService);
@@ -281,7 +269,6 @@ describe("singletons", () => {
       const SingletonClass = makeInjectable(_SingletonClass, { singleton: true });
 
       root.bootstrap();
-      child.bootstrap();
 
       const instanceFromRoot = root.get(SingletonClass);
       const instanceFromChild = child.get(SingletonClass);
@@ -294,7 +281,7 @@ describe("singletons", () => {
   describe("injections", () => {
     it("should allow accessing singletons when aliased to multi tokens", () => {
       const root = new NodeContainer();
-      const container = new NodeContainer({ parent: root });
+      const child = new NodeContainer({ parent: root });
       const multiToken = new MultiNodeToken<{ value: string }>("MULTI");
 
       @NodeInjectable({ singleton: true })
@@ -302,13 +289,13 @@ describe("singletons", () => {
         public readonly value = "single-value";
       }
 
-      container.provide([
+      child.provide([
         multiToken.withAlias(Single),
         multiToken.withValue({ value: "direct-value" }),
       ]);
 
-      container.bootstrap();
-      expect(container.get(multiToken)).toEqual([
+      root.bootstrap();
+      expect(child.get(multiToken)).toEqual([
         { value: "single-value" },
         { value: "direct-value" },
       ]);
@@ -391,7 +378,6 @@ describe("singletons", () => {
       child.provide(ChildConsumer);
 
       parent.bootstrap();
-      child.bootstrap();
 
       // Dry run
       expect(ctorSpy).toHaveBeenCalledTimes(1);
@@ -421,7 +407,6 @@ describe("singletons", () => {
       child.provide(ChildConsumer);
 
       parent.bootstrap();
-      child.bootstrap();
 
       // One dry run + one eager instantiation at registration time.
       expect(ctorSpy).toHaveBeenCalledTimes(2);
@@ -435,12 +420,12 @@ describe("singletons", () => {
     it("should allow instantiating singletons when parent is already bootstrapped", () => {
       const node = new NodeToken<string>("NODE");
 
-      const root = new NodeContainer();
+      const parent = new NodeContainer();
 
-      root.provide({ provide: node, value: "singleton-value" });
-      root.bootstrap();
+      parent.provide({ provide: node, value: "singleton-value" });
+      parent.bootstrap();
 
-      const child = new NodeContainer({ parent: root, instant: false });
+      const child = new NodeContainer({ parent, instant: false });
 
       @NodeInjectable({ singleton: true })
       class RootSingleton {
@@ -455,7 +440,7 @@ describe("singletons", () => {
       child.provide(ChildConsumer);
       child.bootstrap();
 
-      const fromRoot = root.get(RootSingleton);
+      const fromRoot = parent.get(RootSingleton);
       const fromChild = child.get(RootSingleton);
       const fromConsumer = child.get(ChildConsumer);
 

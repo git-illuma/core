@@ -1,6 +1,6 @@
 import { nodeInject } from "../api/injection";
 import type { MultiNodeToken, NodeToken } from "../api/token";
-import { extractToken } from "../api/token";
+import { extractToken } from "../api/token-utils";
 import { NodeContainer } from "../container";
 import { LifecycleRef } from "../container/lifecycle";
 import { InjectionError } from "../errors";

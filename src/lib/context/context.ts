@@ -1,7 +1,34 @@
 import type { InjectorFn } from "../api/types";
 import { InjectionError } from "../errors";
-import { Illuma } from "../plugins/core/plugin-container";
+import { Illuma } from "../global/global";
+import type { iContextScanner } from "../plugins/context/types";
 import type { iInjectionNode } from "./types";
+
+interface iInjectionContextState {
+  contextOpen: boolean;
+  injector: InjectorFn | null;
+  calls: Set<iInjectionNode<any>>;
+}
+
+const INJECTION_CONTEXT_KEY = Symbol.for("@illuma/core/InjectionContext");
+const INJECTION_CONTEXT_STATE_KEY = Symbol.for("@illuma/core/InjectionContextState");
+
+type iInjectionContextGlobalThis = typeof globalThis & {
+  [INJECTION_CONTEXT_KEY]?: typeof InjectionContextBase;
+  [INJECTION_CONTEXT_STATE_KEY]?: iInjectionContextState;
+};
+
+const contextGlobal = globalThis as iInjectionContextGlobalThis;
+
+if (!contextGlobal[INJECTION_CONTEXT_STATE_KEY]) {
+  contextGlobal[INJECTION_CONTEXT_STATE_KEY] = {
+    contextOpen: false,
+    injector: null,
+    calls: new Set<iInjectionNode<any>>(),
+  };
+}
+
+const injectionContextState = contextGlobal[INJECTION_CONTEXT_STATE_KEY];
 
 /**
  * Internal context manager for tracking dependency injections during factory execution.
@@ -9,11 +36,30 @@ import type { iInjectionNode } from "./types";
  *
  * @internal
  */
-export abstract class InjectionContext {
-  public static contextOpen = false;
-  public static injector: InjectorFn | null = null;
-  protected static readonly _calls: Set<iInjectionNode<any>> = new Set();
-  protected static readonly _scanners = Illuma.contextScanners;
+abstract class InjectionContextBase {
+  public static get contextOpen(): boolean {
+    return injectionContextState.contextOpen;
+  }
+
+  private static set contextOpen(value: boolean) {
+    injectionContextState.contextOpen = value;
+  }
+
+  public static get injector(): InjectorFn | null {
+    return injectionContextState.injector;
+  }
+
+  private static set injector(value: InjectorFn | null) {
+    injectionContextState.injector = value;
+  }
+
+  protected static get _calls(): Set<iInjectionNode<any>> {
+    return injectionContextState.calls;
+  }
+
+  protected static get _scanners(): readonly iContextScanner[] {
+    return Illuma.contextScanners;
+  }
 
   /**
    * Adds a dependency to the current injection context.
@@ -23,11 +69,11 @@ export abstract class InjectionContext {
    * @throws {InjectionError} If called outside of an active injection context
    */
   public static addDep(node: iInjectionNode<any>): void {
-    if (!InjectionContext.contextOpen) {
+    if (!InjectionContextBase.contextOpen) {
       throw InjectionError.calledUtilsOutsideContext();
     }
 
-    InjectionContext._calls.add(node);
+    InjectionContextBase._calls.add(node);
   }
 
   /**
@@ -37,9 +83,9 @@ export abstract class InjectionContext {
    * @param injector - Optional injector function to use for resolving dependencies
    */
   public static open(injector?: InjectorFn): void {
-    InjectionContext._calls.clear();
-    InjectionContext.contextOpen = true;
-    InjectionContext.injector = injector || null;
+    InjectionContextBase._calls.clear();
+    InjectionContextBase.contextOpen = true;
+    InjectionContextBase.injector = injector || null;
   }
 
   /**
@@ -52,7 +98,7 @@ export abstract class InjectionContext {
    */
   public static scanInto(factory: any, target: Set<iInjectionNode<any>>): void {
     if (typeof factory !== "function") return;
-    InjectionContext.open();
+    InjectionContextBase.open();
 
     try {
       factory();
@@ -60,20 +106,20 @@ export abstract class InjectionContext {
       // No-op
     }
 
-    const scanners = InjectionContext._scanners;
+    const scanners = InjectionContextBase._scanners;
     if (!scanners.length) {
-      InjectionContext._flushInto(target);
-      InjectionContext.close();
+      InjectionContextBase._flushInto(target);
+      InjectionContextBase.close();
       return;
     }
 
     for (const scanner of scanners) {
       const scanned = scanner.scan(factory);
-      for (const node of scanned) InjectionContext._calls.add(node);
+      for (const node of scanned) InjectionContextBase._calls.add(node);
     }
 
-    InjectionContext._flushInto(target);
-    InjectionContext.close();
+    InjectionContextBase._flushInto(target);
+    InjectionContextBase.close();
   }
 
   /**
@@ -84,7 +130,7 @@ export abstract class InjectionContext {
    */
   public static scan(factory: any): Set<iInjectionNode<any>> {
     const deps = new Set<iInjectionNode<any>>();
-    InjectionContext.scanInto(factory, deps);
+    InjectionContextBase.scanInto(factory, deps);
     return deps;
   }
 
@@ -97,20 +143,20 @@ export abstract class InjectionContext {
    * @returns The instantiated value
    */
   public static instantiate<T>(factory: () => T, injector: InjectorFn): T {
-    InjectionContext.open(injector);
+    InjectionContextBase.open(injector);
 
     try {
       return factory();
     } finally {
-      InjectionContext.close();
+      InjectionContextBase.close();
     }
   }
 
   /** Closes the current injection context. */
   public static close(): void {
-    InjectionContext.contextOpen = false;
-    InjectionContext._calls.clear();
-    InjectionContext.injector = null;
+    InjectionContextBase.contextOpen = false;
+    InjectionContextBase._calls.clear();
+    InjectionContextBase.injector = null;
   }
 
   /**
@@ -119,13 +165,38 @@ export abstract class InjectionContext {
    * @returns A set of injection nodes that were called during the context
    */
   public static closeAndReport(): Set<iInjectionNode<any>> {
-    const calls = new Set(InjectionContext._calls);
-    InjectionContext.close();
+    const calls = new Set(InjectionContextBase._calls);
+    InjectionContextBase.close();
     return calls;
   }
 
   /** @internal */
   private static _flushInto(target: Set<iInjectionNode<any>>): void {
-    for (const call of InjectionContext._calls) target.add(call);
+    for (const call of InjectionContextBase._calls) target.add(call);
   }
 }
+
+if (!contextGlobal[INJECTION_CONTEXT_KEY]) {
+  contextGlobal[INJECTION_CONTEXT_KEY] = class InjectionContext extends (
+    InjectionContextBase
+  ) {};
+}
+
+/**
+ * Global context manager for tracking dependency injections during factory execution.
+ * This class manages the injection context lifecycle and tracks all injection calls.
+ *
+ * @example
+ * ```typescript
+ * // Scanning a factory for dependencies
+ * const deps = InjectionContext.scan(() => {
+ *   const logger = nodeInject(LoggerToken);
+ *   const config = nodeInject(ConfigToken);
+ * });
+ *
+ * // Instantiating a value with an injector
+ * const instance = InjectionContext.instantiate(() => new MyClass(nodeInject(Dep1), nodeInject(Dep2)), myInjector);
+ * ```
+ */
+export const InjectionContext: typeof InjectionContextBase =
+  contextGlobal[INJECTION_CONTEXT_KEY];

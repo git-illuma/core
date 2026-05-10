@@ -238,11 +238,21 @@ container.provide({ provide: PluginToken, multi: true, useClass: AuthPlugin });
 
 During bootstrap, the container:
 
+- Registers the internal `Injector` and `LifecycleRef` value providers for the current container
 - Converts proto nodes into tree nodes with complete dependency graphs
 - Detects circular dependencies
 - Instantiates all dependencies in the correct order
 - Creates an index of tokens and their corresponding tree nodes (with instances)
 - Clears proto node maps to free memory
+- Runs `LifecycleRef.afterBootstrap()` callbacks in registration order
+- Emits diagnostics reports only after tree build/instantiation and bootstrap hooks are complete
+
+Observable bootstrap order is strict:
+
+1. Internal bootstrap-only providers are registered
+2. The dependency tree is built and instances are instantiated or pooled
+3. Lifecycle bootstrap hooks run
+4. Diagnostics modules receive their reports
 
 ```typescript
 container.bootstrap();
@@ -851,7 +861,8 @@ Middlewares can be registered at two scopes:
 
 ### Execution Order
 
-Middlewares are executed in the order they were registered. Global middlewares run before container-scoped middlewares if implemented that way (need to verify, but typically global applies first or alongside).
+Middlewares are executed in the order they were registered within each scope.
+Global middlewares run before container-scoped middlewares.
 If the container has a parent, the parent's middlewares are executed before the child's.
 
 In the current implementation, all middlewares (global and local) are collected and executed in sequence:

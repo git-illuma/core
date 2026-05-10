@@ -1,5 +1,5 @@
 import type { NodeBase } from "../api/token";
-import { extractToken } from "../api/token";
+import { extractToken } from "../api/token-utils";
 import { InjectionError } from "../errors";
 import type { iNodeProvider } from "./types";
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 describe("Package Entrypoints", () => {
   describe("Main entrypoint (@illuma/core)", () => {
@@ -45,6 +45,59 @@ describe("Package Entrypoints", () => {
 
       expect(testkitExports.createTestFactory).toBeDefined();
       expect(typeof testkitExports.createTestFactory).toBe("function");
+    });
+
+    it("should share runtime singletons across separately evaluated entrypoints", async () => {
+      vi.resetModules();
+      const coreExports = await import("./index");
+
+      vi.resetModules();
+      const testkitExports = await import("./testkit");
+
+      const token = new coreExports.NodeToken("TOKEN");
+
+      class DecoratedClass {
+        public readonly value = coreExports.nodeInject(token);
+
+        public getValue(): string {
+          return this.value;
+        }
+      }
+
+      coreExports.NodeInjectable()(DecoratedClass);
+
+      class ManualClass {
+        public readonly value = coreExports.nodeInject(token);
+
+        public getValue(): string {
+          return this.value;
+        }
+      }
+
+      coreExports.makeInjectable(ManualClass);
+
+      for (const target of [DecoratedClass, ManualClass]) {
+        const create = testkitExports.createTestFactory({
+          target,
+          provide: [token.withValue("ok")],
+        });
+
+        expect(create().instance.getValue()).toBe("ok");
+      }
+
+      class NeedsBuiltins {
+        public readonly injector = coreExports.nodeInject(coreExports.Injector);
+        public readonly lifecycle = coreExports.nodeInject(coreExports.LifecycleRef);
+
+        public isReady(): boolean {
+          return !!this.injector && !!this.lifecycle;
+        }
+      }
+
+      coreExports.NodeInjectable()(NeedsBuiltins);
+
+      const create = testkitExports.createTestFactory({ target: NeedsBuiltins });
+      expect(create().instance.isReady()).toBe(true);
     });
   });
 

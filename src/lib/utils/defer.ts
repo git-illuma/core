@@ -1,7 +1,7 @@
 import { nodeInject } from "../api/injection";
 import { SHAPE_SHIFTER } from "../api/proxy";
 import type { MultiNodeToken, NodeToken } from "../api/token";
-import { extractToken } from "../api/token";
+import { extractToken } from "../api/token-utils";
 import type { ExtractInjectedType, iNodeInjectorOptions } from "../api/types";
 import { LifecycleRef } from "../container/lifecycle";
 import { InjectionError, isNotFoundError } from "../errors";
