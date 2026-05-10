@@ -67,7 +67,7 @@ Illuma.registerGlobalMiddleware(myMiddleware);
 - Diagnostics modules run after each container bootstrap completes
 - Multiple plugins can be registered and execute in registration order
 
-> **Note:** Plugins must be registered **before** creating any container instances to ensure they are applied correctly. Execution order is not guaranteed due to potential imports of external packages via NPM.
+> **Note:** Plugin registration and execution order is strict within a runtime. Illuma preserves insertion order for scanners, diagnostics modules, and middlewares, and `bootstrap()` always runs its phases in this order: provider scanning, dependency tree build/instantiation, lifecycle bootstrap hooks, then diagnostics reporting. What is still determined by your application is **when** each package registers its plugins, so import plugin packages before creating and bootstrapping containers that should observe them.
 
 > **Runtime scope:** Global registrations are shared per JavaScript global object. This means separate Illuma entrypoints loaded in the same runtime (for example `@illuma/core`, `@illuma/core/testkit`, and `@illuma/core/plugins`) share the same plugin and injectable runtime state, while separate processes, workers, or isolated VM contexts do not.
 
@@ -117,6 +117,7 @@ interface iContextScanner {
 - Scanners run in registration order
 - Multiple scanners can be registered
 - Scanners are global and affect all containers
+- A provider is scanned when it is registered, so scanners added later do not retroactively rescan existing providers
 
 ---
 
@@ -277,6 +278,7 @@ container.bootstrap();
 - Register custom modules before calling `bootstrap()`
 - Multiple modules can be registered
 - Modules execute in registration order
+- Diagnostics run only after dependency graph build/instantiation and lifecycle bootstrap hooks finish
 - Set `measurePerformance: true` in container options to get accurate timing
 
 > **Note**: The `diagnostics: true` option in `NodeContainer` constructor is no longer supported since version `2.0.0`. Use `enableIllumaDiagnostics()` instead.
@@ -396,6 +398,12 @@ container.registerMiddleware(proxyMiddleware); // Local middleware
 container.provide([UserService]);
 container.bootstrap();
 ```
+
+**Ordering rules:**
+
+- Global middlewares run before container-local middlewares
+- Parent container middlewares run before child container middlewares
+- Within each scope, middlewares run in registration order around the factory call
 
 ---
 
@@ -559,9 +567,10 @@ container.bootstrap();
 
 1. **Enable Diagnostics**: Call `enableIllumaDiagnostics()` to activate the system
 2. **Plugin Registration**: Plugins added to global registry
-3. **Provider Registration**: Context scanners run for each provider
-4. **Bootstrap**: Container resolves dependencies
-5. **Post-Bootstrap**: Diagnostics modules receive report
+3. **Provider Registration**: Context scanners run immediately for each provider in registration order
+4. **Bootstrap Build**: Container validates providers, builds the dependency tree, and instantiates dependencies
+5. **Bootstrap Hooks**: `LifecycleRef.afterBootstrap()` callbacks run in registration order
+6. **Post-Bootstrap Diagnostics**: Diagnostics modules receive the report in registration order
 
 ---
 

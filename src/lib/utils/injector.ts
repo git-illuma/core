@@ -107,6 +107,10 @@ export class InjectorImpl implements iInjector {
   }
 }
 
+if (!injectorGlobal[INJECTOR_TOKEN_KEY]) {
+  injectorGlobal[INJECTOR_TOKEN_KEY] = new NodeToken<iInjector>("Injector");
+}
+
 /**
  * Injector node that is used to access provider outside of injection context.
  * @example
@@ -124,6 +128,4 @@ import { NodeContainer } from '../container/container';
  * }
  * ```
  */
-export const Injector: NodeToken<iInjector> =
-  injectorGlobal[INJECTOR_TOKEN_KEY] ??
-  (injectorGlobal[INJECTOR_TOKEN_KEY] = new NodeToken<iInjector>("Injector"));
+export const Injector: NodeToken<iInjector> = injectorGlobal[INJECTOR_TOKEN_KEY];
