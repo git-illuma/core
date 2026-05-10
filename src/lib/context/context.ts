@@ -1,6 +1,7 @@
 import type { InjectorFn } from "../api/types";
 import { InjectionError } from "../errors";
 import { Illuma } from "../global/global";
+import type { iContextScanner } from "../plugins/context/types";
 import type { iInjectionNode } from "./types";
 
 interface iInjectionContextState {
@@ -56,7 +57,7 @@ abstract class InjectionContextBase {
     return injectionContextState.calls;
   }
 
-  protected static get _scanners() {
+  protected static get _scanners(): readonly iContextScanner[] {
     return Illuma.contextScanners;
   }
 
