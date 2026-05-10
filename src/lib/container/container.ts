@@ -1,11 +1,12 @@
 import { getInjectableToken, isConstructor, isInjectable } from "../api/decorator";
 import { nodeInject } from "../api/injection";
 import type { NodeBase } from "../api/token";
-import { extractToken, isNodeBase, MultiNodeToken, NodeToken } from "../api/token";
+import { MultiNodeToken, NodeToken } from "../api/token";
+import { extractToken, isNodeBase } from "../api/token-utils";
 import type { InjectorFn, iNodeInjectorOptions } from "../api/types";
 import { InjectionContext } from "../context";
 import { InjectionError } from "../errors";
-import { Illuma } from "../plugins/core/plugin-container";
+import { Illuma } from "../global/global";
 import type { iMiddleware } from "../plugins/middlewares";
 import { runMiddlewares } from "../plugins/middlewares/runner";
 import {

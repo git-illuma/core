@@ -1,6 +1,14 @@
 import { NodeToken } from "../api/token";
 import { InjectionError } from "../errors";
 
+const LIFECYCLE_REF_TOKEN_KEY = Symbol.for("@illuma/core/LifecycleRefToken");
+
+type iLifecycleGlobalThis = typeof globalThis & {
+  [LIFECYCLE_REF_TOKEN_KEY]?: NodeToken<LifecycleRefImpl>;
+};
+
+const lcrGlobal = globalThis as iLifecycleGlobalThis;
+
 /** @internal */
 export class LifecycleRefImpl {
   private readonly _destroyCallbacks = new Set<() => void>();
@@ -96,6 +104,13 @@ export class LifecycleRefImpl {
   }
 }
 
-export const LifecycleRef: NodeToken<LifecycleRefImpl> = new NodeToken<LifecycleRefImpl>(
-  "LifecycleRef",
-);
+if (!lcrGlobal[LIFECYCLE_REF_TOKEN_KEY]) {
+  lcrGlobal[LIFECYCLE_REF_TOKEN_KEY] = new NodeToken<LifecycleRefImpl>("LifecycleRef");
+}
+
+/**
+ * A token representing the lifecycle reference for the current container.
+ * This can be injected to register hooks for bootstrap and destruction phases.
+ */
+export const LifecycleRef: NodeToken<LifecycleRefImpl> =
+  lcrGlobal[LIFECYCLE_REF_TOKEN_KEY];

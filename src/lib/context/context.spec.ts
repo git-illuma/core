@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NodeToken } from "../api";
 import { InjectionError } from "../errors";
+import { Illuma } from "../global";
 import type { iContextScanner } from "../plugins/context/types";
-import { Illuma } from "../plugins/core/plugin-container";
 import { InjectionContext } from "./context";
 import type { iInjectionNode } from "./types";
 

@@ -1,4 +1,3 @@
-import { InjectionError } from "../errors";
 import type {
   Ctor,
   ImplementationShape,
@@ -10,14 +9,25 @@ import type {
   iNodeValueProvider,
   Token,
 } from "../provider/types";
-import { getInjectableToken, isInjectable } from "./decorator";
+
+const NODE_TOKEN_CLASSES_KEY = Symbol.for("@illuma/core/NodeTokenClasses");
+
+type iNodeTokenGlobalThis = typeof globalThis & {
+  [NODE_TOKEN_CLASSES_KEY]?: {
+    NodeBase: typeof NodeBaseImpl;
+    NodeToken: typeof NodeTokenImpl;
+    MultiNodeToken: typeof MultiNodeTokenImpl;
+  };
+};
+
+const nodeTokenGlobal = globalThis as iNodeTokenGlobalThis;
 
 /**
  * Base class for dependency injection tokens. Should not be instantiated directly.
  * Use {@link NodeToken} or {@link MultiNodeToken} instead.
  * @template T - The type of value this token represents
  */
-export abstract class NodeBase<T> {
+abstract class NodeBaseImpl<T> {
   constructor(
     public readonly name: string,
     public readonly opts?: iNodeTokenBaseOptions<T>,
@@ -78,6 +88,7 @@ export abstract class NodeBase<T> {
     return `Token[${this.name}]`;
   }
 }
+
 /**
  * A token that represents a single dependency in the dependency injection system.
  * Use this to define injectable dependencies that have exactly one provider.
@@ -91,7 +102,7 @@ export abstract class NodeBase<T> {
  * const logger = container.get(LoggerToken);
  * ```
  */
-export class NodeToken<T> extends NodeBase<T> {
+class NodeTokenImpl<T> extends NodeBaseImpl<T> {
   public readonly multi = false as const;
   public override toString(): string {
     return `NodeToken[${this.name}]`;
@@ -113,49 +124,29 @@ export class NodeToken<T> extends NodeBase<T> {
  * const plugins = container.get(PluginToken); // [PluginA instance, PluginB instance]
  * ```
  */
-export class MultiNodeToken<T> extends NodeBase<T> {
+class MultiNodeTokenImpl<T> extends NodeBaseImpl<T> {
   public readonly multi = true as const;
   public override toString(): string {
     return `MultiNodeToken[${this.name}]`;
   }
 }
 
-/**
- * Type guard to check if a value is a valid dependency injection token.
- *
- * @template T - The type of value the token represents
- * @param obj - The value to check
- * @returns True if the object is a NodeToken or MultiNodeToken, false otherwise
- * @internal
- */
-export function isNodeBase<T>(obj: unknown): obj is NodeToken<T> | MultiNodeToken<T> {
-  return obj instanceof NodeToken || obj instanceof MultiNodeToken;
+if (!nodeTokenGlobal[NODE_TOKEN_CLASSES_KEY]) {
+  nodeTokenGlobal[NODE_TOKEN_CLASSES_KEY] = {
+    NodeBase: NodeBaseImpl,
+    NodeToken: NodeTokenImpl,
+    MultiNodeToken: MultiNodeTokenImpl,
+  };
 }
 
-/**
- * Extracts a valid NodeBase token from a given provider.
- * If the provider is a class constructor decorated with @NodeInjectable, it retrieves the associated token.
- * If the provider is already a NodeBase token, it returns it directly.
- * Throws an InjectionError if the provider is invalid.
- *
- * @template T - The type of value the token represents
- * @param provider - The provider to extract the token from
- * @param isAlias - Whether the provider is being used as an alias
- * @returns The extracted NodeBase token
- * @throws {InjectionError} If the provider is invalid
- * @internal
- */
-export function extractToken<T>(
-  provider: Token<T>,
-  isAlias = false,
-): NodeToken<T> | MultiNodeToken<T> {
-  if (isNodeBase<T>(provider)) return provider;
+export type NodeBase<T> = NodeBaseImpl<T>;
+export const NodeBase: typeof NodeBaseImpl =
+  nodeTokenGlobal[NODE_TOKEN_CLASSES_KEY].NodeBase;
 
-  if (typeof provider === "function") {
-    if (!isInjectable<T>(provider)) throw InjectionError.invalidCtor(provider);
-    return getInjectableToken<T>(provider);
-  }
+export type NodeToken<T> = NodeTokenImpl<T>;
+export const NodeToken: typeof NodeTokenImpl =
+  nodeTokenGlobal[NODE_TOKEN_CLASSES_KEY].NodeToken;
 
-  if (isAlias) throw InjectionError.invalidAlias(provider);
-  throw InjectionError.invalidProvider(String(provider));
-}
+export type MultiNodeToken<T> = MultiNodeTokenImpl<T>;
+export const MultiNodeToken: typeof MultiNodeTokenImpl =
+  nodeTokenGlobal[NODE_TOKEN_CLASSES_KEY].MultiNodeToken;

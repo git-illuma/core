@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NodeToken } from "../../api/token";
 import { NodeContainer } from "../../container/container";
-import { Illuma } from "../core/plugin-container";
+import { Illuma } from "../../global";
 import type { iMiddleware } from "./types";
 
 vi.spyOn(console, "log").mockImplementation(() => {});

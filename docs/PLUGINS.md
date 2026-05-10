@@ -69,6 +69,8 @@ Illuma.registerGlobalMiddleware(myMiddleware);
 
 > **Note:** Plugins must be registered **before** creating any container instances to ensure they are applied correctly. Execution order is not guaranteed due to potential imports of external packages via NPM.
 
+> **Runtime scope:** Global registrations are shared per JavaScript global object. This means separate Illuma entrypoints loaded in the same runtime (for example `@illuma/core`, `@illuma/core/testkit`, and `@illuma/core/plugins`) share the same plugin and injectable runtime state, while separate processes, workers, or isolated VM contexts do not.
+
 ---
 
 ## Context Scanners

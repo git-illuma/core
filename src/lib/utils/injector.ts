@@ -5,6 +5,14 @@ import type { iDIContainer } from "../container/types";
 import { InjectionError } from "../errors";
 import type { Ctor, Token } from "../provider/types";
 
+const INJECTOR_TOKEN_KEY = Symbol.for("@illuma/core/InjectorToken");
+
+type iInjectorGlobalThis = typeof globalThis & {
+  [INJECTOR_TOKEN_KEY]?: NodeToken<iInjector>;
+};
+
+const injectorGlobal = globalThis as iInjectorGlobalThis;
+
 /** @internal */
 export interface iInjector {
   /** The DI container associated with this injector */
@@ -116,4 +124,6 @@ import { NodeContainer } from '../container/container';
  * }
  * ```
  */
-export const Injector: NodeToken<iInjector> = new NodeToken<iInjector>("Injector");
+export const Injector: NodeToken<iInjector> =
+  injectorGlobal[INJECTOR_TOKEN_KEY] ??
+  (injectorGlobal[INJECTOR_TOKEN_KEY] = new NodeToken<iInjector>("Injector"));

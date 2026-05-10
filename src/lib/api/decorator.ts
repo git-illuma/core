@@ -1,12 +1,7 @@
 import { InjectionError } from "../errors";
+import { Illuma } from "../global/global";
 import type { Ctor } from "../provider/types";
 import { NodeToken } from "./token";
-
-/**
- * Registry to store associated tokens for injectable classes.
- * Uses WeakMap to ensure metadata doesn't prevent garbage collection of classes.
- */
-const tokenRegistry = new WeakMap<object, NodeToken<any>>();
 
 /** Options for marking a class as injectable. */
 export interface iNodeInjectableOptions {
@@ -61,6 +56,7 @@ export function NodeInjectable(opts?: iNodeInjectableOptions): ClassDecorator {
  * @example
  * ```typescript
  * import { makeInjectable } from '@illuma/core';
+import { Illuma } from '../plugins/core/plugin-container';
  *
  * class _UserService {
  *   public getUser() {
@@ -94,18 +90,18 @@ export function makeInjectable<T>(ctor: Ctor<T>, opts?: iNodeInjectableOptions):
  * @param token - The token to associate with the class
  */
 export function registerClassAsInjectable<T>(ctor: Ctor<T>, token: NodeToken<T>): void {
-  tokenRegistry.set(ctor, token);
+  Illuma._classRegistry.set(ctor, token);
 }
 
 /** @internal */
 export function isInjectable<T>(ctor: unknown): ctor is Ctor<T> {
-  return isConstructor(ctor) && tokenRegistry.has(ctor);
+  return isConstructor(ctor) && Illuma._classRegistry.has(ctor);
 }
 
 /** @internal */
 export function getInjectableToken<T>(ctor: Ctor<T>): NodeToken<T> {
   // biome-ignore lint/style/noNonNullAssertion: We explicitly check for existence above
-  if (tokenRegistry.has(ctor)) return tokenRegistry.get(ctor)!;
+  if (Illuma._classRegistry.has(ctor)) return Illuma._classRegistry.get(ctor)!;
   throw InjectionError.invalidCtor(ctor);
 }
 

@@ -8,8 +8,8 @@ import {
   nodeInject,
 } from "../../api";
 import { NodeContainer } from "../../container";
+import { Illuma } from "../../global";
 import type { TreeNode } from "../../provider";
-import { Illuma } from "../core";
 import * as builtIn from "./built-in";
 
 describe("Performance measurement", () => {
