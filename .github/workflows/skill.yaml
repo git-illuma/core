@@ -1,0 +1,26 @@
+name: Skill validation
+
+on:
+  workflow_dispatch:
+
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - "skills/**"
+    branches:
+      - main
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Validate skill discovery
+        run: bunx skills@latest add . --list
