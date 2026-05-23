@@ -1,24 +1,24 @@
+---
+name: illuma-core
+description: Creating, using, and testing @illuma/core services and DI containers in TypeScript. Use when defining injectable services, providers, tokens, hierarchical containers, or lifecycle hooks.
+when_to_use: |
+  User mentions @illuma/core, NodeInjectable, makeInjectable, nodeInject, NodeContainer, NodeToken, MultiNodeToken, injectDefer, injectAsync, LifecycleRef, or Injector. Also: questions about dependency injection, providers, tokens, hierarchical containers, transient services, lifecycle hooks, or testing services in this codebase.
+---
+
 # @illuma/core Guidelines
 
 ## General
 
-- Services preferably should be defined as classes. Those should be marked as injectable using `@NodeInjectable` or `makeInjectable`. Factory functions are also supported but less common. Both decorator and the helper accept an optional configuration object literal where you can mark the service as `singleton` if it should be instantiated only once per container tree.
+- Define services as classes marked with `@NodeInjectable` or `makeInjectable`. Factory functions work but are uncommon. Pass `{ singleton: true }` to share a single instance across the container tree.
+- Before using `@NodeInjectable`, verify decorators are enabled in the project; otherwise use `makeInjectable`.
+- Inject dependencies with `nodeInject` on class fields. Injection only works inside an injection context (during instantiation).
+- Constructor injection is not supported. Inject through `nodeInject` in the class body.
+- All injected fields must be `private readonly`.
+- For transient instances, inject `Injector` and call `this._injector.produce(MyService)` or `produce(() => { ... })` to run a factory in injection context.
+- Use `NodeToken` for injectable tokens and `MultiNodeToken` for multi-providers. Define them in `tokens.ts`.
+- Circular dependencies are not allowed. Use `injectDefer` only when you cannot refactor the cycle away.
 
-- Before using `@NodeInjectable` decorator to mark service as injectable, first, check if decorators do already exist in the project, then, if not, check if they are supported at all.
-
-- For injection, use `nodeInject` on a property to retrieve instances of services. This can only be done within an injection context (while instantiating a service).
-
-- Illuma does not support constructor injection, because it does not use reflection or metadata. Instead, all injection is done through the `nodeInject` function within the service body.
-
-- All injected fields should be marked as `readonly` to prevent reassignment after instantiation.
-
-- If you need to create a transient service (a new instance every time), inject a built-in `Injector` token and call `this._injector.produce(MyService)` or `this._injector.produce(() => {/** this factory is ran in injection context */})` to get a new instance.
-
-- Use `NodeToken` for injectable tokens and `MultiNodeToken` for multi-providers. Define them in a separate file (e.g., `tokens.ts`) and export them for use across the app.
-
-- Circular dependencies are not allowed in Illuma.
-
-- For testing, you can use illuma's testing utilities.
+For async/lazy patterns, see [async-injection.md](async-injection.md). For testing, see [testing.md](testing.md). For error codes, see [errors.md](errors.md).
 
 ---
 
@@ -371,146 +371,6 @@ container.destroy();
 
 ---
 
-## Async Injection & Sub-containers
-
-For lazy-loading heavy modules or creating isolated sub-containers, use the async injection utilities:
-
-### `injectAsync` — lazy single dependency
-
-```typescript
-import { injectAsync } from '@illuma/core';
-
-@NodeInjectable()
-class ReportService {
-  private readonly _getPdfEngine = injectAsync(
-    () => import('./pdf-engine').then(m => m.PdfEngine),
-  );
-
-  async generateReport(): Promise<Buffer> {
-    const engine = await this._getPdfEngine();
-    return engine.render();
-  }
-}
-```
-
-By default the result is cached. Pass `{ withCache: false }` to create a new instance each call.
-
-### `injectEntryAsync` — sub-container with a specific entrypoint
-
-```typescript
-import { injectEntryAsync } from '@illuma/core';
-
-@NodeInjectable()
-class AppService {
-  private readonly _getReport = injectEntryAsync(
-    async () => import('./reports').then(m => m.ReportService),
-    { config: [Logger, PdfEngine] },
-  );
-
-  async run(): Promise<void> {
-    const report = await this._getReport();
-    report.generate();
-  }
-}
-```
-
-### `injectGroupAsync` — sub-container exposing a full injector
-
-```typescript
-import { injectGroupAsync } from '@illuma/core';
-
-@NodeInjectable()
-class PluginHost {
-  private readonly _getPluginInjector = injectGroupAsync({
-    config: [PluginA, PluginB],
-  });
-
-  async executePlugins(): Promise<void> {
-    const injector = await this._getPluginInjector();
-    injector.get(PluginA).run();
-  }
-}
-```
-
----
-
-## Testing
-
-Import testing utilities from the `@illuma/core/testkit` subpath:
-
-```typescript
-import { createTestFactory } from '@illuma/core/testkit';
-```
-
-### Basic service test
-
-```typescript
-import { describe, it, expect } from 'vitest';
-import { NodeInjectable, nodeInject } from '@illuma/core';
-import { createTestFactory } from '@illuma/core/testkit';
-
-@NodeInjectable()
-class UserService {
-  public getUser() {
-    return { id: 1, name: 'Alice' };
-  }
-}
-
-describe('UserService', () => {
-  const createTest = createTestFactory({ target: UserService });
-
-  it('should return a user', () => {
-    const { instance } = createTest();
-    expect(instance.getUser()).toEqual({ id: 1, name: 'Alice' });
-  });
-});
-```
-
-### Mocking dependencies
-
-```typescript
-class MockEmailService {
-  public readonly sent: string[] = [];
-  public send(to: string) {
-    this.sent.push(to);
-  }
-}
-
-describe('NotificationService', () => {
-  const createTest = createTestFactory({
-    target: NotificationService,
-    provide: [{ provide: EmailService, useClass: MockEmailService }],
-  });
-
-  it('should send an email', () => {
-    const { instance, injector } = createTest();
-    instance.notify('user@example.com');
-    const mock = injector.get(EmailService) as MockEmailService;
-    expect(mock.sent).toContain('user@example.com');
-  });
-});
-```
-
-### Testing with tokens
-
-```typescript
-const API_URL = new NodeToken<string>('API_URL');
-
-describe('ApiClient', () => {
-  const createTest = createTestFactory({
-    target: ApiClient,
-    provide: [API_URL.withValue('https://test.example.com')],
-  });
-
-  it('should use the provided URL', () => {
-    const { instance } = createTest();
-    expect(instance.baseUrl).toBe('https://test.example.com');
-  });
-});
-```
-
----
-
 ## File & Naming Conventions
 
 | Concern         | File                            | Export                             |
@@ -528,27 +388,5 @@ describe('ApiClient', () => {
 
 ### Visibility
 
-- All injected fields should be marked as `private` to prevent unnecessary external access (until we have a use case for protected or public injection).
-- All injected fields should strictly be marked as `readonly` to prevent reassignment after instantiation. Consider leaving mutability as a design flaw if you find yourself needing to reassign an injected field.
-
----
-
-## Error Reference
-
-| Code   | Meaning                | Quick fix                                           |
-| ------ | ---------------------- | --------------------------------------------------- |
-| `i100` | Duplicate provider     | Remove duplicate or use `MultiNodeToken`            |
-| `i101` | Duplicate factory      | Only provide one factory per token                  |
-| `i102` | Invalid constructor    | Add `@NodeInjectable()` or `makeInjectable`         |
-| `i103` | Invalid provider       | Use valid provider shape                            |
-| `i200` | Invalid alias          | Alias target must be a token or injectable class    |
-| `i201` | Loop alias             | Alias must not point to itself                      |
-| `i202` | Conflicting strategies | Don't use `self` and `skipSelf` together            |
-| `i300` | Not bootstrapped       | Call `bootstrap()` before `get()`                   |
-| `i301` | Already bootstrapped   | Call `provide()` before `bootstrap()`               |
-| `i302` | Double bootstrap       | Only call `bootstrap()` once                        |
-| `i303` | Container destroyed    | Do not use a destroyed container                    |
-| `i400` | Provider not found     | Register the token or use `{ optional: true }`      |
-| `i401` | Circular dependency    | Refactor to remove the cycle                        |
-| `i500` | Untracked injection    | Use `nodeInject` only in class field initializers   |
-| `i501` | Outside context        | Use `nodeInject` only inside factories/constructors |
+- Mark injected fields `private` to prevent external access (until a use case for protected/public exists).
+- Mark injected fields `readonly` to prevent reassignment. Needing to reassign an injected field is usually a design flaw.
