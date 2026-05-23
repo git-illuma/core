@@ -5,6 +5,8 @@
 ![NPM Downloads](https://img.shields.io/npm/dw/%40illuma%2Fcore?labelColor=gray&color=gray)
 ![npm bundle size](https://img.shields.io/bundlephobia/min/%40illuma%2Fcore?labelColor=gray&color=gray)
 ![Test coverage](https://raw.githubusercontent.com/git-illuma/core/refs/heads/main/badges/coverage.svg)
+[![skills.sh](https://skills.sh/b/git-illuma/core)](https://skills.sh/git-illuma/core)
+
 
 A universal, lightweight and type-safe dependency injection container for TypeScript.
 Heavily inspired by Angular's DI system, but designed to work in any environment (Node.js, Bun, Deno, browsers, and more).
@@ -30,6 +32,16 @@ Please check out the [migration guide](https://github.com/git-illuma/core/blob/m
 ```bash
 npm install @illuma/core
 ```
+
+### AI agent skill
+
+Install the bundled [Agent Skill](https://agentskills.io) so your AI coding agent follows Illuma's conventions:
+
+```bash
+npx skills add git-illuma/core
+```
+
+The skill lives at [skills/illuma-core/](skills/illuma-core/) and is installed into your project's agent directory (e.g. `.claude/skills/`).
 
 ## Compatibility
 
