@@ -500,6 +500,48 @@ During scanning:
 - Factory execution may throw errors (which are caught and ignored)
 - The goal is to discover what dependencies are needed, not to construct final instances
 
+> [!IMPORTANT]
+> **Factories and constructors run twice.**
+>
+> Illuma discovers a provider's dependencies by *invoking* its factory in a
+> scan context, with every `nodeInject(...)` call short-circuited to a
+> placeholder proxy ([SHAPE_SHIFTER](#injection-context)). That scan runs once
+> at registration time (`provide()` for factories, `useClass`, and
+> `@NodeInjectable()` classes), and the factory then runs again for real
+> during instantiation (`bootstrap()` or first `get()` under `instant: false`).
+>
+> The proxy makes the scan invocation safe for typical code — property
+> accesses, method calls, and constructor calls on injected values all return
+> the same proxy without throwing. But the **outer factory body still
+> executes**, which means any side effects in a constructor or factory
+> (timers, network calls, `console.log`, throwing on bad config, mutating
+> module-level state) will fire twice.
+>
+> **Guidance:** keep constructors and factories side-effect free. Reserve
+> side-effecting initialization for an `afterBootstrap` hook on `LifecycleRef`,
+> or perform it lazily on the first method call after construction:
+>
+> ```typescript
+> @NodeInjectable()
+> class DatabaseService {
+>   private readonly _lifecycle = nodeInject(LifecycleRef);
+>   private _connection?: Connection;
+>
+>   constructor() {
+>     // ❌ this runs twice
+>     // this._connection = connectToDb();
+>
+>     // ✅ this runs once, after bootstrap completes
+>     this._lifecycle.afterBootstrap(() => {
+>       this._connection = connectToDb();
+>     });
+>   }
+> }
+> ```
+>
+> Value providers (`{ provide: TOKEN, value: ... }`) and alias providers are
+> not affected — their factories are trivial and have no observable effect.
+
 #### 2. Instantiation Phase (Bootstrap)
 
 When instantiating a factory, Illuma provides actual dependencies:

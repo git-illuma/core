@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  extractToken,
   MultiNodeToken,
   makeInjectable,
   NodeInjectable,
   NodeToken,
   nodeInject,
 } from "../api";
+import { extractToken } from "../api/token-utils";
 import { InjectionError } from "../errors";
 import { NodeContainer } from "./container";
 

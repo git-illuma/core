@@ -238,7 +238,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
     const end = performance.now();
     const duration = end - start;
     if (this._opts?.measurePerformance) {
-      console.log(`[Illuma] 🚀 Bootstrapped in ${duration.toFixed(2)} ms`);
+      Illuma.logger.log(`[Illuma] 🚀 Bootstrapped in ${duration.toFixed(2)} ms`);
     }
 
     this._lifecycle.runBootstrapHooks();

@@ -105,4 +105,38 @@ describe("Illuma", () => {
       expect(Array.isArray(scanners)).toBe(true);
     });
   });
+
+  describe("setLogger", () => {
+    it("should default to a console-backed logger", () => {
+      expect(typeof Illuma.logger.log).toBe("function");
+      expect(typeof Illuma.logger.warn).toBe("function");
+      expect(typeof Illuma.logger.error).toBe("function");
+    });
+
+    it("should route output through the registered logger", () => {
+      const log = vi.fn();
+      const warn = vi.fn();
+      const error = vi.fn();
+
+      Illuma.setLogger({ log, warn, error });
+
+      Illuma.logger.log("a");
+      Illuma.logger.warn("b");
+      Illuma.logger.error("c");
+
+      expect(log).toHaveBeenCalledWith("a");
+      expect(warn).toHaveBeenCalledWith("b");
+      expect(error).toHaveBeenCalledWith("c");
+    });
+
+    it("should restore the default logger when given null", () => {
+      const log = vi.fn();
+      Illuma.setLogger({ log, warn: vi.fn(), error: vi.fn() });
+      Illuma.setLogger(null);
+
+      Illuma.logger.log("x");
+
+      expect(log).not.toHaveBeenCalled();
+    });
+  });
 });

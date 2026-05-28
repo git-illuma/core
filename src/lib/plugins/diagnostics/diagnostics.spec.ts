@@ -1,12 +1,7 @@
 import type { MockInstance } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  extractToken,
-  MultiNodeToken,
-  NodeInjectable,
-  NodeToken,
-  nodeInject,
-} from "../../api";
+import { MultiNodeToken, NodeInjectable, NodeToken, nodeInject } from "../../api";
+import { extractToken } from "../../api/token-utils";
 import { NodeContainer } from "../../container";
 import { Illuma } from "../../global";
 import type { TreeNode } from "../../provider";

@@ -4,7 +4,7 @@
   "author": "bebrasmell",
   "repository": {
     "type": "git",
-    "url": "https://github.com/git-illuma/core"
+    "url": "git+https://github.com/git-illuma/core.git"
   },
   "version": "2.2.0",
   "type": "module",
@@ -67,6 +67,7 @@
     "@types/node": "24.10.1",
     "@vitest/coverage-v8": "4.0.18",
     "make-coverage-badge": "1.2.0",
+    "terser": "5.48.0",
     "tsup": "8.5.1",
     "typescript": "5.9.2",
     "vitest": "4.0.18"
