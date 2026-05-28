@@ -1,3 +1,4 @@
+import { Illuma } from "../../global";
 import type { iMiddleware } from "./types";
 
 export const performanceDiagnostics: iMiddleware = (params, next) => {
@@ -10,6 +11,6 @@ export const performanceDiagnostics: iMiddleware = (params, next) => {
   const end = performance.now();
   const duration = end - start;
 
-  console.log(`Instantiated ${params.token.name} in ${duration.toFixed(2)} ms`);
+  Illuma.logger.log(`Instantiated ${params.token.name} in ${duration.toFixed(2)} ms`);
   return instance;
 };

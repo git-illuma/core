@@ -19,9 +19,13 @@ describe("Package Entrypoints", () => {
       expect(mainExports.makeScoped).toBeDefined();
       expect(mainExports.isInjectable).toBeDefined();
       expect(mainExports.getInjectableToken).toBeDefined();
-      expect(mainExports.isNodeBase).toBeDefined();
-      expect(mainExports.extractToken).toBeDefined();
       expect(mainExports.registerClassAsInjectable).toBeDefined();
+
+      // Internal token utilities are not part of the public surface
+      // @ts-expect-error Accessing internal API for testing
+      expect(mainExports.isNodeBase).not.toBeDefined();
+      // @ts-expect-error Accessing internal API for testing
+      expect(mainExports.extractToken).not.toBeDefined();
       expect(mainExports.Injector).toBeDefined();
       expect(mainExports.LifecycleRef).toBeDefined();
       expect(mainExports.NodeContainer).toBeDefined();
@@ -113,6 +117,15 @@ describe("Package Entrypoints", () => {
       expect(pluginsExports.DiagnosticsDefaultReporter).toBeDefined();
       expect(pluginsExports.enableIllumaDiagnostics).toBeDefined();
       expect(typeof pluginsExports.enableIllumaDiagnostics).toBe("function");
+    });
+
+    it("should expose token utilities for plugin authors", async () => {
+      const pluginsExports = await import("./plugins");
+
+      expect(pluginsExports.isNodeBase).toBeDefined();
+      expect(pluginsExports.extractToken).toBeDefined();
+      expect(typeof pluginsExports.isNodeBase).toBe("function");
+      expect(typeof pluginsExports.extractToken).toBe("function");
     });
   });
 });

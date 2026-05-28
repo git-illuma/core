@@ -6,11 +6,30 @@ import type {
 } from "../plugins/diagnostics/types";
 import type { iMiddleware } from "../plugins/middlewares/types";
 
+/**
+ * Minimal logger surface used by Illuma for diagnostics, bootstrap timing,
+ * and built-in middleware output. `console` satisfies this interface and is
+ * the default. Provide a custom implementation via {@link Illuma.setLogger}
+ * to silence, redirect, or structure these messages.
+ */
+export interface iLogger {
+  log: (...args: unknown[]) => void;
+  warn: (...args: unknown[]) => void;
+  error: (...args: unknown[]) => void;
+}
+
+const defaultLogger: iLogger = {
+  log: (...args) => console.log(...args),
+  warn: (...args) => console.warn(...args),
+  error: (...args) => console.error(...args),
+};
+
 interface iIllumaGlobalState {
   diagnostics: Set<iDiagnosticsModule>;
   scanners: iContextScanner[];
   middlewares: iMiddleware[];
   classRegistry: WeakMap<object, NodeToken<any>>;
+  logger: iLogger;
 }
 
 const ILLUMA_CLASS_KEY = Symbol.for("@illuma/core/Illuma");
@@ -29,10 +48,14 @@ if (!illumaGlobal[ILLUMA_STATE_KEY]) {
     scanners: [] as iContextScanner[],
     middlewares: [] as iMiddleware[],
     classRegistry: new WeakMap<object, NodeToken<any>>(),
+    logger: defaultLogger,
   };
 }
 
 const illumaState = illumaGlobal[ILLUMA_STATE_KEY];
+// Backfill if state was created by an older version of @illuma/core sharing
+// the same globalThis (npm + jsr, dual-installs, etc.)
+illumaState.logger ??= defaultLogger;
 
 /**
  * Global plugin container for managing core plugins such as diagnostics and context scanners.
@@ -61,6 +84,36 @@ abstract class IllumaBase {
   /** @internal */
   public static get contextScanners(): ReadonlyArray<iContextScanner> {
     return IllumaBase._scanners;
+  }
+
+  /**
+   * The logger used by Illuma for diagnostics, bootstrap timing, and built-in
+   * middleware output. Defaults to `console`. Replace via {@link setLogger}.
+   */
+  public static get logger(): iLogger {
+    return illumaState.logger;
+  }
+
+  /**
+   * Replaces the logger used by Illuma's diagnostics, bootstrap timing, and
+   * built-in middleware output. Pass `null` to restore the default `console`
+   * logger.
+   *
+   * @param logger - The logger implementation, or `null` to reset to default
+   *
+   * @example
+   * ```typescript
+   * import { Illuma } from '@illuma/core/plugins';
+   *
+   * Illuma.setLogger({
+   *   log: (...args) => myLogger.info(...args),
+   *   warn: (...args) => myLogger.warn(...args),
+   *   error: (...args) => myLogger.error(...args),
+   * });
+   * ```
+   */
+  public static setLogger(logger: iLogger | null): void {
+    illumaState.logger = logger ?? defaultLogger;
   }
 
   /**
@@ -119,6 +172,7 @@ abstract class IllumaBase {
     IllumaBase._diagnostics.clear();
     IllumaBase._scanners.length = 0;
     IllumaBase._middlewares.length = 0;
+    illumaState.logger = defaultLogger;
   }
 }
 
