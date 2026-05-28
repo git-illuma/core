@@ -77,7 +77,43 @@ export type AppConfigService = _AppConfigService;
 export const AppConfigService = makeService(_AppConfigService);
 ```
 
-When a class is marked with `@Service`, there is no need to call `container.provide()` for it. It is automatically provided and resolved in the root container on first request.
+**Do not pass `@Service` / `makeService` classes (or singleton `@NodeInjectable({ singleton: true })`) to `container.provide()`.** Root-scoped singletons auto-register in the root container on first resolution. Listing them in `provide()` registers them a second time and throws `DUPLICATE_PROVIDER` (`i100`) at bootstrap.
+
+```typescript
+// Wrong — singletons self-provide; this throws i100
+container.provide([AppConfigService, Logger, UserService]);
+
+// Right — only provide @Scoped services and token bindings.
+// @Service classes (AppConfigService, Logger) are resolved automatically.
+container.provide([
+  UserService,
+  CONFIG.withValue({ apiUrl: '...' }),
+]);
+```
+
+The same rule applies to singleton `NodeToken`s declared with `{ singleton: true, factory }` — the factory is the registration; do not also call `provide()` for them in the root container.
+
+**Advanced: shadowing a singleton in a sub-container.** Providing a singleton inside a *child* container is a deliberate override technique: it shadows the root singleton for that sub-tree while the parent and sibling containers keep the default instance.
+
+```typescript
+@Service()
+class SharedService { public source = 'root'; }
+
+class ChildOverride extends SharedService { public override source = 'child'; }
+
+const root = new NodeContainer();
+const child = new NodeContainer({ parent: root });
+
+// Shadow only inside `child` — root and siblings still get the default.
+child.provide({ provide: SharedService, useClass: ChildOverride });
+
+root.bootstrap();
+
+child.get(SharedService).source; // 'child'
+root.get(SharedService).source;  // 'root'
+```
+
+Use this for per-request, per-tenant, or test sub-trees. It is *not* normal wiring — only reach for it when you specifically need a singleton to differ within a sub-container. Listing the same singleton twice in the same container still throws `i100`.
 
 ### Lower-level form
 
@@ -133,7 +169,8 @@ import { NodeContainer } from '@illuma/core';
 const container = new NodeContainer();
 
 container.provide([
-  Logger,
+  // Only @Scoped services and token bindings belong here.
+  // @Service singletons (e.g. Logger) self-register — do not list them.
   DatabaseService,
   UserService,
   CONFIG.withValue({ apiUrl: 'https://api.example.com' }),
@@ -150,14 +187,14 @@ Child containers inherit providers from their parent and can override them local
 
 ```typescript
 const root = new NodeContainer();
-root.provide([Logger, DatabaseService]);
+root.provide([DatabaseService]); // @Scoped — needs explicit provide
 root.bootstrap();
 
 const child = new NodeContainer({ parent: root });
 child.provide(CONFIG.withValue({ apiUrl: 'https://staging.example.com' }));
 child.bootstrap();
 
-// Resolves Logger from root, CONFIG from child
+// Resolves singleton services from root automatically, CONFIG from child
 const service = child.get(MyService);
 ```
 
