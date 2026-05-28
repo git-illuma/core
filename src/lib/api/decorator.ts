@@ -79,6 +79,98 @@ export function makeInjectable<T>(ctor: Ctor<T>, opts?: iNodeInjectableOptions):
 }
 
 /**
+ * Decorator that marks a class as a root-scoped singleton service.
+ *
+ * Equivalent to `@NodeInjectable({ singleton: true })`. The class is shared
+ * across the entire container tree, including all descendants, unless a child
+ * explicitly overrides it via `.provide()`.
+ *
+ * @returns A class decorator function
+ *
+ * @example
+ * ```typescript
+ * @Service()
+ * class UserService {
+ *   public getUser() {
+ *     return { id: 1, name: 'John' };
+ *   }
+ * }
+ * ```
+ */
+export function Service(): ClassDecorator {
+  return NodeInjectable({ singleton: true });
+}
+
+/**
+ * Alternative to {@link Service} for environments that do not support decorators.
+ * Marks a class as a root-scoped singleton service.
+ *
+ * @template T - The type of the class being registered
+ * @param ctor - The class constructor to mark as a singleton service
+ * @returns The same constructor, now registered as an injectable singleton
+ *
+ * @example
+ * ```typescript
+ * import { makeService } from '@illuma/core';
+ *
+ * class _UserService {
+ *   public getUser() { return { id: 1, name: 'John Doe' }; }
+ * }
+ *
+ * export type UserService = _UserService;
+ * export const UserService = makeService(_UserService);
+ * ```
+ */
+export function makeService<T>(ctor: Ctor<T>): Ctor<T> {
+  return makeInjectable(ctor, { singleton: true });
+}
+
+/**
+ * Decorator that marks a class as a node-scoped injectable.
+ *
+ * Equivalent to `@NodeInjectable()`. The class is resolved within the container
+ * (or sub-container) that provides it, and is not shared globally across the
+ * container tree.
+ *
+ * @returns A class decorator function
+ *
+ * @example
+ * ```typescript
+ * @Scoped()
+ * class RequestContext {
+ *   public readonly id = crypto.randomUUID();
+ * }
+ * ```
+ */
+export function Scoped(): ClassDecorator {
+  return NodeInjectable();
+}
+
+/**
+ * Alternative to {@link Scoped} for environments that do not support decorators.
+ * Marks a class as a node-scoped injectable.
+ *
+ * @template T - The type of the class being registered
+ * @param ctor - The class constructor to mark as node-scoped injectable
+ * @returns The same constructor, now registered as an injectable
+ *
+ * @example
+ * ```typescript
+ * import { makeScoped } from '@illuma/core';
+ *
+ * class _RequestContext {
+ *   public readonly id = crypto.randomUUID();
+ * }
+ *
+ * export type RequestContext = _RequestContext;
+ * export const RequestContext = makeScoped(_RequestContext);
+ * ```
+ */
+export function makeScoped<T>(ctor: Ctor<T>): Ctor<T> {
+  return makeInjectable(ctor);
+}
+
+/**
  * Registers a class as injectable with a specific token.
  * Use this function to manually associate a class with a token.
  *

@@ -10,10 +10,10 @@ import { createTestFactory } from '@illuma/core/testkit';
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { NodeInjectable, nodeInject } from '@illuma/core';
+import { Scoped, nodeInject } from '@illuma/core';
 import { createTestFactory } from '@illuma/core/testkit';
 
-@NodeInjectable()
+@Scoped()
 class UserService {
   public getUser() {
     return { id: 1, name: 'Alice' };

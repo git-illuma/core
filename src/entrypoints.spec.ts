@@ -13,6 +13,10 @@ describe("Package Entrypoints", () => {
       expect(mainExports.injectDefer).toBeDefined();
       expect(mainExports.NodeInjectable).toBeDefined();
       expect(mainExports.makeInjectable).toBeDefined();
+      expect(mainExports.Service).toBeDefined();
+      expect(mainExports.makeService).toBeDefined();
+      expect(mainExports.Scoped).toBeDefined();
+      expect(mainExports.makeScoped).toBeDefined();
       expect(mainExports.isInjectable).toBeDefined();
       expect(mainExports.getInjectableToken).toBeDefined();
       expect(mainExports.registerClassAsInjectable).toBeDefined();
