@@ -16,7 +16,7 @@ Heavily inspired by Angular's DI system, but designed to work in any environment
 - **Type-Safe** – Excellent type inference
 - **Lightweight** – Zero dependencies, minimal bundle size
 - **Flexible** – Classes, factories, values, and aliases
-- **Optional decorators** – Injectable classes with `@NodeInjectable()` decorator
+- **Optional decorators** – Injectable classes with `@NodeInjectable()` (or the `@Service()` / `@Scoped()` shorthands)
 - **Multi-Tokens** – Built-in multi-provider support
 - **Lifecycle hooks** – Graceful container destruction and resource cleanup
 - **Plugin System** – Extensible architecture with custom middlewares, scanners, and diagnostics

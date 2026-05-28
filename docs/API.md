@@ -451,6 +451,50 @@ export type UserService = _UserService;
 export const UserService = makeInjectable(_UserService, { singleton: true });
 ```
 
+### @Service() / makeService()
+
+Shorthand for `@NodeInjectable({ singleton: true })` — marks a class as a root-scoped singleton service shared across the entire container tree.
+
+```typescript
+import { Service, makeService } from '@illuma/core';
+
+@Service()
+class UserService {
+  private readonly db = nodeInject(DatabaseService);
+}
+
+// Decorator-free equivalent
+class _UserService {
+  public getUser() { return { id: 1 }; }
+}
+
+export type UserService = _UserService;
+export const UserService = makeService(_UserService);
+```
+
+See [Root singleton semantics](#root-singleton-semantics) below for the resolution rules that apply to services.
+
+### @Scoped() / makeScoped()
+
+Shorthand for `@NodeInjectable()` — marks a class as a node-scoped injectable that resolves within the container (or sub-container) that provides it. Useful when you want to make the non-singleton scope explicit at the call site.
+
+```typescript
+import { Scoped, makeScoped } from '@illuma/core';
+
+@Scoped()
+class RequestContext {
+  public readonly id = crypto.randomUUID();
+}
+
+// Decorator-free equivalent
+class _RequestContext {
+  public readonly id = crypto.randomUUID();
+}
+
+export type RequestContext = _RequestContext;
+export const RequestContext = makeScoped(_RequestContext);
+```
+
 ### Root singleton semantics
 
 `{ singleton: true }` implements Angular-like root scope for single providers:
