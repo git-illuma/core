@@ -208,8 +208,6 @@ const childA = new NodeContainer({ parent: root });
 const childB = new NodeContainer({ parent: root });
 
 root.bootstrap();
-childA.bootstrap();
-childB.bootstrap();
 
 const a = childA.get(GlobalService);
 const b = childB.get(GlobalService);
