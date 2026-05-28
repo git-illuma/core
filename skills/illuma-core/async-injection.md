@@ -7,7 +7,7 @@ For lazy-loading heavy modules or creating isolated sub-containers, use the asyn
 ```typescript
 import { injectAsync } from '@illuma/core';
 
-@NodeInjectable()
+@Scoped()
 class ReportService {
   private readonly _getPdfEngine = injectAsync(
     () => import('./pdf-engine').then(m => m.PdfEngine),
@@ -27,7 +27,7 @@ By default the result is cached. Pass `{ withCache: false }` to create a new ins
 ```typescript
 import { injectEntryAsync } from '@illuma/core';
 
-@NodeInjectable()
+@Scoped()
 class AppService {
   private readonly _getReport = injectEntryAsync(
     async () => import('./reports').then(m => m.ReportService),
@@ -46,7 +46,7 @@ class AppService {
 ```typescript
 import { injectGroupAsync } from '@illuma/core';
 
-@NodeInjectable()
+@Scoped()
 class PluginHost {
   private readonly _getPluginInjector = injectGroupAsync({
     config: [PluginA, PluginB],

@@ -48,7 +48,7 @@ To use decorators like `@NodeInjectable()`, enable experimental decorators in yo
 
 ### Alternative: Without decorators
 
-If you prefer not to use decorators, use `makeInjectable` to mark classes as injectable:
+If you prefer not to use decorators, use `makeInjectable` (or its scope-specific aliases `makeService` / `makeScoped`) to mark classes as injectable:
 
 ```typescript
 import { makeInjectable } from '@illuma/core';
@@ -193,12 +193,12 @@ const config = container.get(CONFIG_TOKEN);
 
 ## Root-scoped singletons
 
-Use `{ singleton: true }` to make an injectable class behave like Angular's `providedIn: 'root'`.
+Use `{ singleton: true }` to make an injectable class behave like Angular's `providedIn: 'root'`. Illuma also exposes a `@Service()` shorthand (and a decorator-free `makeService()` analog) for this common case, with `@Scoped()` / `makeScoped()` as the symmetric pair for the default node-scoped behavior.
 
 ```typescript
-import { NodeContainer, NodeInjectable } from '@illuma/core';
+import { NodeContainer, Service } from '@illuma/core';
 
-@NodeInjectable({ singleton: true })
+@Service() // equivalent to @NodeInjectable({ singleton: true })
 class GlobalService {
   public readonly id = Math.random();
 }

@@ -2,15 +2,15 @@
 name: illuma-core
 description: Creating, using, and testing @illuma/core services and DI containers in TypeScript. Use when defining injectable services, providers, tokens, hierarchical containers, or lifecycle hooks.
 when_to_use: |
-  User mentions @illuma/core, NodeInjectable, makeInjectable, nodeInject, NodeContainer, NodeToken, MultiNodeToken, injectDefer, injectAsync, LifecycleRef, or Injector. Also: questions about dependency injection, providers, tokens, hierarchical containers, transient services, lifecycle hooks, or testing services in this codebase.
+  User mentions @illuma/core, NodeInjectable, makeInjectable, Service, makeService, Scoped, makeScoped, nodeInject, NodeContainer, NodeToken, MultiNodeToken, injectDefer, injectAsync, LifecycleRef, or Injector. Also: questions about dependency injection, providers, tokens, hierarchical containers, transient services, lifecycle hooks, or testing services in this codebase.
 ---
 
 # @illuma/core Guidelines
 
 ## General
 
-- Define services as classes marked with `@NodeInjectable` or `makeInjectable`. Factory functions work but are uncommon. Pass `{ singleton: true }` to share a single instance across the container tree.
-- Before using `@NodeInjectable`, verify decorators are enabled in the project; otherwise use `makeInjectable`.
+- Define services as classes marked with `@Service` (root-scoped singleton, shared across the container tree) or `@Scoped` (node-scoped, resolved within the container that provides it). Prefer these over the lower-level `@NodeInjectable({ singleton: true | false })` form. Use `makeService` / `makeScoped` in decorator-free environments. Factory functions work but are uncommon.
+- Before using decorators, verify they are enabled in the project; otherwise use `makeService` / `makeScoped`.
 - Inject dependencies with `nodeInject` on class fields. Injection only works inside an injection context (during instantiation).
 - Constructor injection is not supported. Inject through `nodeInject` in the class body.
 - All injected fields must be `private readonly`.
@@ -24,12 +24,12 @@ For async/lazy patterns, see [async-injection.md](async-injection.md). For testi
 
 ## Defining Injectable Services
 
-Use the `@NodeInjectable()` decorator to mark a class as injectable:
+Use `@Scoped()` to mark a class as a node-scoped injectable — it resolves within the container (or sub-container) that provides it:
 
 ```typescript
-import { NodeInjectable, nodeInject } from '@illuma/core';
+import { Scoped, nodeInject } from '@illuma/core';
 
-@NodeInjectable()
+@Scoped()
 class UserService {
   private readonly _db = nodeInject(DatabaseService);
 
@@ -39,10 +39,10 @@ class UserService {
 }
 ```
 
-For environments without decorator support, use `makeInjectable`:
+For environments without decorator support, use `makeScoped`:
 
 ```typescript
-import { makeInjectable, nodeInject } from '@illuma/core';
+import { makeScoped, nodeInject } from '@illuma/core';
 
 class _UserService {
   private readonly _db = nodeInject(DatabaseService);
@@ -53,21 +53,35 @@ class _UserService {
 }
 
 export type UserService = _UserService;
-export const UserService = makeInjectable(_UserService);
+export const UserService = makeScoped(_UserService);
 ```
 
 ### Root-scoped singletons
 
-Mark a service as a root-scoped singleton (analogous to Angular's `providedIn: 'root'`) to share a single instance across all containers in a hierarchy:
+Use `@Service()` to mark a class as a root-scoped singleton (analogous to Angular's `providedIn: 'root'`) — a single instance is shared across all containers in a hierarchy:
 
 ```typescript
-@NodeInjectable({ singleton: true })
+import { Service, makeService } from '@illuma/core';
+
+@Service()
 class AppConfigService {
   public readonly apiUrl = 'https://api.example.com';
 }
+
+// Decorator-free equivalent
+class _AppConfigService {
+  public readonly apiUrl = 'https://api.example.com';
+}
+
+export type AppConfigService = _AppConfigService;
+export const AppConfigService = makeService(_AppConfigService);
 ```
 
-When `singleton: true` is set, there is no need to call `container.provide()` for this service. It is automatically provided and resolved in the root container on first request.
+When a class is marked with `@Service`, there is no need to call `container.provide()` for it. It is automatically provided and resolved in the root container on first request.
+
+### Lower-level form
+
+`@Service()` and `@Scoped()` are the recommended way to declare services. Under the hood they are shorthands for `@NodeInjectable({ singleton: true })` and `@NodeInjectable()` (and likewise `makeInjectable`). Reach for the `@NodeInjectable` / `makeInjectable` form only when you need to compute the scope at runtime or are writing tooling that has to handle both cases uniformly.
 
 ---
 
@@ -224,7 +238,7 @@ const plugins = container.get(PLUGIN); // Plugin[]
 ### Standard injection
 
 ```typescript
-@NodeInjectable()
+@Scoped()
 class NotificationService {
   private readonly _email = nodeInject(EmailService);
   private readonly _sms = nodeInject(SmsService);
@@ -239,7 +253,7 @@ Use `injectDefer` when two services have a mutual dependency. Prefer refactoring
 ```typescript
 import { injectDefer } from '@illuma/core';
 
-@NodeInjectable()
+@Scoped()
 class ServiceA {
   private readonly _getServiceB = injectDefer(ServiceB);
 
@@ -256,7 +270,7 @@ Inject `Injector` to produce a new instance on demand without registering it in 
 ```typescript
 import { Injector, nodeInject } from '@illuma/core';
 
-@NodeInjectable()
+@Scoped()
 class RequestFactory {
   private readonly _injector = nodeInject(Injector);
 
@@ -278,7 +292,7 @@ class RequestFactory {
 Control how the container traverses the hierarchy when resolving a dependency:
 
 ```typescript
-@NodeInjectable()
+@Scoped()
 class ConfigService {
   // Only look in the current container
   private readonly _local = nodeInject(CONFIG, { self: true });
@@ -302,7 +316,7 @@ Use the `LifecycleRef` token to register cleanup callbacks that run when the con
 ```typescript
 import { nodeInject, LifecycleRef } from '@illuma/core';
 
-@NodeInjectable()
+@Scoped()
 class DatabaseService {
   private readonly _lifecycle = nodeInject(LifecycleRef);
   private readonly _connection = connect();
@@ -322,7 +336,7 @@ Hooks run in reverse registration order (bottom-up). Child containers are destro
 `beforeDestroy` returns an unsubscribe function you can call to remove the hook early:
 
 ```typescript
-@NodeInjectable()
+@Scoped()
 class PollingService {
   private readonly _lifecycle = nodeInject(LifecycleRef);
   private readonly _stopHook: () => void;
@@ -345,7 +359,7 @@ class PollingService {
 ### Checking destroyed state in async code
 
 ```typescript
-@NodeInjectable()
+@Scoped()
 class AsyncWorker {
   private readonly _lifecycle = nodeInject(LifecycleRef);
 
