@@ -372,7 +372,7 @@ export type TreeNode<T = any> =
   | TreeNodeMulti<T>
   | TreeNodeTransparent<T>;
 
-  function poolSetOnce(pool: InjectionPool, token: NodeBase<any>, node: TreeNode): void {
+function poolSetOnce(pool: InjectionPool, token: NodeBase<any>, node: TreeNode): void {
   if (pool.get(token) === node) return;
   if (pool.has(token)) return;
   pool.set(token, node);
