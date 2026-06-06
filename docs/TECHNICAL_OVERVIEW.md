@@ -172,8 +172,15 @@ During dependency graph resolution:
 2. If missing, resolver checks upstream (parent/root).
 3. If still missing and token is singleton, resolver creates a `ProtoNodeSingle` from token factory metadata.
 4. That proto node becomes part of the resolved tree and is attached to root container state.
+5. Once the singleton (and any transitive singleton/multi dependencies it pulled in) is attached to the root pool, the **transient proto nodes minted during this lazy pass are discarded** — exactly as `bootstrap()` clears its proto maps. A later, independent resolution therefore reuses the pooled node instead of rediscovering a stale proto and minting a duplicate.
 
 This is why singleton classes can resolve without explicit `provide()` as long as they were made injectable.
+
+##### Single-instance guarantee
+
+The root pool maps each token to a single canonical node, and a node **never overwrites an entry that already holds a different node for the same token**. Combined with the transient-proto cleanup above, this means a singleton resolves to **exactly one pooled instance per token**, regardless of resolution order or entry path — eager `get()`, lazy `injectDefer`, field injection on another `@NodeInjectable`, or a multi-token alias all converge on the same instance, and a value populated through one path is visible through every other.
+
+(This concerns the single *pooled* instance handed to consumers; the scan pass described in [Factories and constructors run twice](#injection-context) still constructs a throwaway instance that is never pooled.)
 
 #### Visibility and override rules
 
@@ -182,6 +189,7 @@ This is why singleton classes can resolve without explicit `provide()` as long a
 3. Child explicit overrides remain local to that child container.
 4. Sibling containers continue sharing the same root singleton instance.
 5. Circular dependency checks remain active and unchanged.
+6. A root singleton aliased into a multi-token (`MULTI.withAlias(SingletonClass)`) resolves to the shared root instance: the alias is forwarded upstream rather than materialized as a container-local copy, so the value seen through the multi-token, through `get(SingletonClass)`, and through field injection is the same instance.
 
 **Without `@NodeInjectable` and `makeInjectable`:**
 
