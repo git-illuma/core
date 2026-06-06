@@ -6,7 +6,7 @@
     "type": "git",
     "url": "git+https://github.com/git-illuma/core.git"
   },
-  "version": "2.3.0",
+  "version": "2.3.1",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
