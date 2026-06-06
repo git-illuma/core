@@ -125,6 +125,14 @@ export function resolveTreeNode<T>(
       for (const single of proto.singleNodes) {
         let p = singleNodes.get(single);
         if (!p) {
+          if (single.opts?.singleton) {
+            const rootSingleton = upstreamGetter?.(single);
+            if (rootSingleton) {
+              deps.push(rootSingleton);
+              continue;
+            }
+          }
+
           p = new ProtoNodeSingle(single);
           singleNodes.set(single, p);
         }

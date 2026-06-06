@@ -464,6 +464,10 @@ export class NodeContainer extends Illuma implements iDIContainer {
     );
 
     root._rootNode.registerDependency(treeNode);
+
+    root._protoNodes.clear();
+    root._multiProtoNodes.clear();
+
     return instantiate ? root._rootNode.obtain(token) : root._rootNode.find(token);
   }
 

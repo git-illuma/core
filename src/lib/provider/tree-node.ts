@@ -147,7 +147,7 @@ export class TreeNodeSingle<T = any> {
 
   public collectPool(pool: InjectionPool): void {
     if (this._collected) {
-      pool.set(this.proto.token, this);
+      poolSetOnce(pool, this.proto.token, this);
       return;
     }
 
@@ -160,7 +160,7 @@ export class TreeNodeSingle<T = any> {
     }
 
     this._collected = true;
-    pool.set(this.proto.token, this);
+    poolSetOnce(pool, this.proto.token, this);
   }
 
   public instantiate(pool?: InjectionPool, middlewares: iMiddleware[] = []): void {
@@ -190,7 +190,7 @@ export class TreeNodeSingle<T = any> {
 
     this._resolved = true;
 
-    if (pool) pool.set(this.proto.token, this);
+    if (pool) poolSetOnce(pool, this.proto.token, this);
   }
 
   public toString(): string {
@@ -318,7 +318,7 @@ export class TreeNodeMulti<T = any> {
 
   public collectPool(pool: InjectionPool): void {
     if (this._collected) {
-      pool.set(this.proto.token, this);
+      poolSetOnce(pool, this.proto.token, this);
       return;
     }
 
@@ -327,7 +327,7 @@ export class TreeNodeMulti<T = any> {
     }
 
     this._collected = true;
-    pool.set(this.proto.token, this);
+    poolSetOnce(pool, this.proto.token, this);
   }
 
   public instantiate(pool?: InjectionPool, middlewares: iMiddleware[] = []): void {
@@ -347,7 +347,7 @@ export class TreeNodeMulti<T = any> {
     }
 
     this._resolved = true;
-    if (pool) pool.set(this.proto.token, this);
+    if (pool) poolSetOnce(pool, this.proto.token, this);
   }
 
   public addDependency(...nodes: TreeNode[]): void {
@@ -371,6 +371,12 @@ export type TreeNode<T = any> =
   | TreeNodeSingle<T>
   | TreeNodeMulti<T>
   | TreeNodeTransparent<T>;
+
+  function poolSetOnce(pool: InjectionPool, token: NodeBase<any>, node: TreeNode): void {
+  if (pool.get(token) === node) return;
+  if (pool.has(token)) return;
+  pool.set(token, node);
+}
 
 function upsertIndexedDependency<TNode>(
   token: NodeBase<any>,
