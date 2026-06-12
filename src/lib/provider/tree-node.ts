@@ -130,12 +130,20 @@ export class TreeNodeSingle<T = any> {
   public addDependency(node: TreeNode<any>): void {
     if (node instanceof TreeNodeTransparent) {
       const token = node.proto.parent.token;
+      const existing = this._transparentMap.get(token);
+      if (existing === node) return;
+      if (existing) existing.allocations--;
+
       this._transparentMap.set(token, node);
       upsertIndexedDependency(token, node, this._transparentIndex, this._transparentList);
 
       this._depsTokens.add(token);
     } else {
       const token = node.proto.token;
+      const existing = this._deps.get(token);
+      if (existing === node) return;
+      if (existing) existing.allocations--;
+
       this._deps.set(token, node);
       upsertIndexedDependency(token, node, this._depsIndex, this._depsList);
 
@@ -164,7 +172,11 @@ export class TreeNodeSingle<T = any> {
   }
 
   public instantiate(pool?: InjectionPool, middlewares: iMiddleware[] = []): void {
-    if (this._resolved) return;
+    if (this._resolved) {
+      // Pre-resolved nodes (e.g. Injector) still have to be discoverable
+      if (pool) poolSetOnce(pool, this.proto.token, this);
+      return;
+    }
 
     for (let i = 0; i < this._depsList.length; i++) {
       this._depsList[i].instantiate(pool, middlewares);
@@ -242,12 +254,20 @@ export class TreeNodeTransparent<T = any> {
   public addDependency(node: TreeNode<any>): void {
     if (node instanceof TreeNodeTransparent) {
       const token = node.proto.parent.token;
+      const existing = this._transparentMap.get(token);
+      if (existing === node) return;
+      if (existing) existing.allocations--;
+
       this._transparentMap.set(token, node);
       upsertIndexedDependency(token, node, this._transparentIndex, this._transparentList);
 
       this._depsTokens.add(token);
     } else {
       const token = node.proto.token;
+      const existing = this._deps.get(token);
+      if (existing === node) return;
+      if (existing) existing.allocations--;
+
       this._deps.set(token, node);
       upsertIndexedDependency(token, node, this._depsIndex, this._depsList);
 
@@ -353,11 +373,10 @@ export class TreeNodeMulti<T = any> {
   public addDependency(...nodes: TreeNode[]): void {
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i];
-      if (!this._deps.has(node)) {
-        this._deps.add(node);
-        this._depsList.push(node);
-      }
+      if (this._deps.has(node)) continue;
 
+      this._deps.add(node);
+      this._depsList.push(node);
       node.allocations++;
     }
   }

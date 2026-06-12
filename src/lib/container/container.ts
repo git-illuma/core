@@ -250,7 +250,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
         .filter((node) => node.allocations === 0)
         .filter((node) => {
           if (!(node.proto instanceof ProtoNodeSingle)) return true;
-          return node.proto.token !== Injector;
+          return node.proto.token !== Injector && node.proto.token !== LifecycleRef;
         });
 
       Illuma.onReport({
@@ -318,8 +318,8 @@ export class NodeContainer extends Illuma implements iDIContainer {
       if (rootSingleton) return rootSingleton.instance;
     }
 
+    if (token instanceof MultiNodeToken) return [];
     if (optional) return null;
-    if (!skipSelf && token instanceof MultiNodeToken) return [];
 
     throw InjectionError.notFound(token);
   }
@@ -361,7 +361,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
         if (upstream) return upstream.instance;
       }
 
-      if (!skipSelf && token instanceof MultiNodeToken) return [];
+      if (token instanceof MultiNodeToken) return [];
       if (!skipSelf && token instanceof NodeToken && token.opts?.singleton) {
         const singleton = this._getRootSingleton(token, true);
         if (singleton) return singleton.instance;
@@ -528,7 +528,11 @@ export class NodeContainer extends Illuma implements iDIContainer {
 
   /** @internal */
   private _registerMultiDeclaration<T>(token: MultiNodeToken<T>): void {
-    if (this._multiProtoNodes.has(token)) {
+    const existing = this._multiProtoNodes.get(token);
+    if (existing) {
+      // Declaring a token that already has providers is a no-op,
+      // mirroring declaration-then-implementation order
+      if (existing.hasProviders()) return;
       throw InjectionError.duplicate(token);
     }
 
@@ -537,7 +541,11 @@ export class NodeContainer extends Illuma implements iDIContainer {
 
   /** @internal */
   private _registerSingleDeclaration<T>(token: NodeToken<T>): void {
-    if (this._protoNodes.has(token)) {
+    const existing = this._protoNodes.get(token);
+    if (existing) {
+      // Declaring a token that already has a factory is a no-op,
+      // mirroring declaration-then-implementation order
+      if (existing.hasFactory()) return;
       throw InjectionError.duplicate(token);
     }
 

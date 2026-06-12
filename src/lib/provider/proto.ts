@@ -64,6 +64,14 @@ export class ProtoNodeMulti<T = any> {
 
   constructor(public readonly token: MultiNodeToken<T>) {}
 
+  public hasProviders(): boolean {
+    return (
+      this.singleNodes.size > 0 ||
+      this.multiNodes.size > 0 ||
+      this.transparentNodes.size > 0
+    );
+  }
+
   public addProvider(retriever: NodeBase<T> | (() => T)): void {
     if (retriever instanceof NodeToken) {
       this.singleNodes.add(retriever);

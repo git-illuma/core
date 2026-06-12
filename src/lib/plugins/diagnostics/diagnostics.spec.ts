@@ -339,9 +339,9 @@ describe("Plugin: Diagnostics", () => {
 
     container.bootstrap();
 
-    // Multi token and LifecycleRef should be unused if not injected
+    // Only the multi token should be unused; built-ins are excluded
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining("2 were not used"),
+      expect.stringContaining("1 were not used"),
     );
     expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("Multi"));
   });
