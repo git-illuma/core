@@ -185,6 +185,17 @@ private readonly getAnalytics = injectAsync(
 );
 ```
 
+> **Lifecycle note for `withCache: false`.** Each call creates a fresh
+> sub-container that is tied to the parent container's lifecycle and is
+> destroyed when the parent is destroyed. The parent therefore accumulates one
+> sub-container per call until it is destroyed — by design, since you opted out
+> of caching. For request-scoped work on a long-lived parent where you need to
+> release each scope eagerly, use `injectGroupAsync` (which returns the
+> sub-container's `Injector`) and call `injector.destroy()` when the scope ends,
+> or create and destroy a child container explicitly. `injectAsync` /
+> `injectEntryAsync` return the produced instance only, so they intentionally do
+> not expose a per-call disposal handle.
+
 ### Overriding dependencies
 
 Provide additional dependencies or override parent container values:

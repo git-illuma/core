@@ -12,7 +12,16 @@ type MaybeAsyncFactory<T> = () => T | Promise<T>;
 interface iInjectionOptions {
   /**
    * Whether to cache the result of the injection function
-   * Prevents multiple invocations from creating multiple sub-containers or injections
+   * Prevents multiple invocations from creating multiple sub-containers or injections.
+   *
+   * When `false`, every call creates a fresh sub-container bound to the parent's
+   * lifecycle (destroyed when the parent is destroyed). On a long-lived parent
+   * these accumulate one per call until the parent is destroyed — by design,
+   * since caching is opted out. To release request-scoped work eagerly, prefer
+   * {@link injectGroupAsync} (which returns the sub-container's `Injector`, so
+   * you can call `injector.destroy()`) or manage a child container explicitly;
+   * `injectAsync`/`injectEntryAsync` return only the produced instance and do
+   * not expose a per-call disposal handle.
    * @default true
    */
   withCache?: boolean;
