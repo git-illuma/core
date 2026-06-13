@@ -116,6 +116,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
    * ```
    */
   public provide<T>(provider: Provider<T>): void {
+    if (this.destroyed) throw InjectionError.destroyed();
     if (this._bootstrapped) {
       throw InjectionError.bootstrapped();
     }
@@ -220,6 +221,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
   }
 
   public bootstrap(): void {
+    if (this.destroyed) throw InjectionError.destroyed();
     if (this._bootstrapped) throw InjectionError.doubleBootstrap();
     if (this._parent) {
       if (this._parent.destroyed) throw InjectionError.parentDestroyed();
@@ -388,17 +390,23 @@ export class NodeContainer extends Illuma implements iDIContainer {
 
   public destroy(): void {
     if (this._lifecycle.destroyed) throw InjectionError.destroyed();
-    this._lifecycle.destroy();
 
-    if (this._rootNode) {
-      this._rootNode.destroy();
-      this._rootNode = undefined;
+    // Tear the container down even if a destroy hook throws, so a misbehaving
+    // hook cannot leave the container half-destroyed with no recovery path.
+    try {
+      this._lifecycle.destroy();
+    } finally {
+      if (this._rootNode) {
+        this._rootNode.destroy();
+        this._rootNode = undefined;
+      }
+
+      this._unsubParentBootstrap?.();
+      this._unsubParentDestroy?.();
+      this._bootstrapped = false;
+      this._protoNodes.clear();
+      this._multiProtoNodes.clear();
     }
-
-    this._unsubParentBootstrap?.();
-    this._unsubParentDestroy?.();
-    this._bootstrapped = false;
-    this._protoNodes.clear();
   }
 
   public child(): iDIContainer {

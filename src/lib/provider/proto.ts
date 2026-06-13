@@ -19,6 +19,11 @@ export class ProtoNodeSingle<T = any> {
     if (factory) {
       this.factory = factory;
       InjectionContext.scanInto(factory, this.injections);
+    } else if (typeof token.opts?.factory === "function") {
+      // Track the deps of the token's own factory so the resolver wires them,
+      // without claiming a factory: hasFactory() stays false so an explicit
+      // provider may still override this bare declaration.
+      InjectionContext.scanInto(token.opts.factory, this.injections);
     }
   }
 
@@ -30,6 +35,9 @@ export class ProtoNodeSingle<T = any> {
     if (this.factory) throw InjectionError.duplicateFactory(this.token);
     this.factory = factory;
 
+    // Replace any deps scanned from token.opts.factory so the explicit
+    // factory's injections fully supersede them.
+    this.injections.clear();
     InjectionContext.scanInto(factory, this.injections);
   }
 

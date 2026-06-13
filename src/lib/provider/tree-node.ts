@@ -91,6 +91,7 @@ export class TreeNodeSingle<T = any> {
   private _instance: T | null = null;
   private _collected = false;
   private _resolved = false;
+  private _inProgress = false;
   public allocations = 0;
 
   public get instance(): T {
@@ -159,6 +160,14 @@ export class TreeNodeSingle<T = any> {
       return;
     }
 
+    // Re-entry before completion means a genuine cycle the resolver's
+    // build-time check could not see (e.g. mutually-referencing siblings);
+    // report it instead of overflowing the stack.
+    if (this._inProgress) {
+      throw InjectionError.circularDependency(this.proto.token, [this.proto.token]);
+    }
+    this._inProgress = true;
+
     for (let i = 0; i < this._depsList.length; i++) {
       this._depsList[i].collectPool(pool);
     }
@@ -167,6 +176,7 @@ export class TreeNodeSingle<T = any> {
       this._transparentList[i].collectPool(pool);
     }
 
+    this._inProgress = false;
     this._collected = true;
     poolSetOnce(pool, this.proto.token, this);
   }
@@ -177,6 +187,11 @@ export class TreeNodeSingle<T = any> {
       if (pool) poolSetOnce(pool, this.proto.token, this);
       return;
     }
+
+    if (this._inProgress) {
+      throw InjectionError.circularDependency(this.proto.token, [this.proto.token]);
+    }
+    this._inProgress = true;
 
     for (let i = 0; i < this._depsList.length; i++) {
       this._depsList[i].instantiate(pool, middlewares);
@@ -200,6 +215,7 @@ export class TreeNodeSingle<T = any> {
       });
     }
 
+    this._inProgress = false;
     this._resolved = true;
 
     if (pool) poolSetOnce(pool, this.proto.token, this);
@@ -224,6 +240,7 @@ export class TreeNodeTransparent<T = any> {
   private _instance: T | null = null;
   private _collected = false;
   private _resolved = false;
+  private _inProgress = false;
   public allocations = 0;
 
   public get instance(): T {
@@ -280,6 +297,13 @@ export class TreeNodeTransparent<T = any> {
   public collectPool(pool: InjectionPool): void {
     if (this._collected) return;
 
+    if (this._inProgress) {
+      throw InjectionError.circularDependency(this.proto.parent.token, [
+        this.proto.parent.token,
+      ]);
+    }
+    this._inProgress = true;
+
     for (let i = 0; i < this._depsList.length; i++) {
       this._depsList[i].collectPool(pool);
     }
@@ -288,11 +312,19 @@ export class TreeNodeTransparent<T = any> {
       this._transparentList[i].collectPool(pool);
     }
 
+    this._inProgress = false;
     this._collected = true;
   }
 
   public instantiate(pool?: InjectionPool, middlewares: iMiddleware[] = []): void {
     if (this._resolved) return;
+
+    if (this._inProgress) {
+      throw InjectionError.circularDependency(this.proto.parent.token, [
+        this.proto.parent.token,
+      ]);
+    }
+    this._inProgress = true;
 
     for (let i = 0; i < this._transparentList.length; i++) {
       this._transparentList[i].instantiate(pool, middlewares);
@@ -316,6 +348,7 @@ export class TreeNodeTransparent<T = any> {
       });
     }
 
+    this._inProgress = false;
     this._resolved = true;
   }
 
@@ -332,6 +365,7 @@ export class TreeNodeMulti<T = any> {
 
   private _collected = false;
   private _resolved = false;
+  private _inProgress = false;
   public allocations = 0;
 
   constructor(public readonly proto: ProtoNodeMulti<T>) {}
@@ -342,16 +376,27 @@ export class TreeNodeMulti<T = any> {
       return;
     }
 
+    if (this._inProgress) {
+      throw InjectionError.circularDependency(this.proto.token, [this.proto.token]);
+    }
+    this._inProgress = true;
+
     for (let i = 0; i < this._depsList.length; i++) {
       this._depsList[i].collectPool(pool);
     }
 
+    this._inProgress = false;
     this._collected = true;
     poolSetOnce(pool, this.proto.token, this);
   }
 
   public instantiate(pool?: InjectionPool, middlewares: iMiddleware[] = []): void {
     if (this._resolved) return;
+
+    if (this._inProgress) {
+      throw InjectionError.circularDependency(this.proto.token, [this.proto.token]);
+    }
+    this._inProgress = true;
 
     for (let i = 0; i < this._depsList.length; i++) {
       const dep = this._depsList[i];
@@ -366,6 +411,7 @@ export class TreeNodeMulti<T = any> {
       }
     }
 
+    this._inProgress = false;
     this._resolved = true;
     if (pool) poolSetOnce(pool, this.proto.token, this);
   }

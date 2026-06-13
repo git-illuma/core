@@ -92,15 +92,31 @@ export class LifecycleRefImpl {
    */
   public destroy(): void {
     if (this._destroyed) throw InjectionError.destroyed();
+    // Mark destroyed before running hooks so a hook that (re-entrantly) checks
+    // `destroyed` observes true; a guarded re-entrant destroy is a safe no-op
+    // instead of recursing infinitely.
+    this._destroyed = true;
 
-    for (const cb of Array.from(this._destroyChildCallbacks).reverse()) cb();
-    for (const cb of Array.from(this._destroyCallbacks).reverse()) cb();
+    // Guard each hook so one throwing callback cannot strand sibling children
+    // or abort the cascade; surface the first error after every hook has run.
+    const errors: unknown[] = [];
+    const run = (cb: () => void): void => {
+      try {
+        cb();
+      } catch (e) {
+        errors.push(e);
+      }
+    };
+
+    for (const cb of Array.from(this._destroyChildCallbacks).reverse()) run(cb);
+    for (const cb of Array.from(this._destroyCallbacks).reverse()) run(cb);
 
     this._bootstrapCallbacks.clear();
     this._bootstrapChildCallbacks.clear();
     this._destroyChildCallbacks.clear();
     this._destroyCallbacks.clear();
-    this._destroyed = true;
+
+    if (errors.length) throw errors[0];
   }
 }
 

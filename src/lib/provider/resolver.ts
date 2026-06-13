@@ -78,6 +78,9 @@ export function resolveTreeNode<T>(
   if (inCache) return inCache;
 
   const rootNode = createTreeNode(rootProto);
+  // Register every node in the dedup cache at creation time so a proto that is
+  // queued (pushed but not yet processed) is reused instead of re-created.
+  cache.set(rootProto, rootNode);
 
   const stack: StackFrame[] = [{ proto: rootProto, node: rootNode, processed: false }];
   const visiting = new Set<ProtoNode>();
@@ -89,7 +92,7 @@ export function resolveTreeNode<T>(
     if (frame.processed) {
       stack.pop();
       visiting.delete(proto);
-      cache.set(proto, node);
+      // node was already registered in `cache` when it was created
       continue;
     }
 
@@ -166,17 +169,21 @@ export function resolveTreeNode<T>(
 
       const depProto = dep as ProtoNode;
 
+      // Cycle detection must run BEFORE the dedup lookup: in-progress ancestors
+      // on the active DFS path are now present in `cache`, so reusing them first
+      // would silently wire a cycle instead of reporting it.
+      if (visiting.has(depProto) && isNotTransparentProto(depProto)) {
+        throwCircularDependencyCycle(stack, depProto, true);
+      }
+
       const cached = cache.get(depProto);
       if (cached) {
         node.addDependency(cached);
         continue;
       }
 
-      if (visiting.has(depProto) && isNotTransparentProto(depProto)) {
-        throwCircularDependencyCycle(stack, depProto, true);
-      }
-
       const childNode = createTreeNode(depProto);
+      cache.set(depProto, childNode);
       node.addDependency(childNode);
       stack.push({ proto: depProto, node: childNode, processed: false });
     }
