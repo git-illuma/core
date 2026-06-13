@@ -92,7 +92,6 @@ export function resolveTreeNode<T>(
     if (frame.processed) {
       stack.pop();
       visiting.delete(proto);
-      // node was already registered in `cache` when it was created
       continue;
     }
 

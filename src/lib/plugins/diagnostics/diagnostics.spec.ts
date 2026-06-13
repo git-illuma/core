@@ -339,7 +339,6 @@ describe("Plugin: Diagnostics", () => {
 
     container.bootstrap();
 
-    // Only the multi token should be unused; built-ins are excluded
     expect(consoleLogSpy).toHaveBeenCalledWith(
       expect.stringContaining("1 were not used"),
     );

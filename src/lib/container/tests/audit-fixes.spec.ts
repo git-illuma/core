@@ -8,16 +8,7 @@ import { Injector } from "../../utils/injector";
 import { NodeContainer } from "../container";
 import { LifecycleRef } from "../lifecycle";
 
-/**
- * Regression coverage for the bugs found in the 2026-06 audit.
- * @see audit-2026-06-open-bugs memory.
- */
-
 describe("diamond dependency dedup (resolver)", () => {
-  // The bug only reproduces in certain provide orders; pin the documented one.
-  // The signal is runtime instance identity (a.d === a.b.d), NOT a factory call
-  // counter (the dry-run scan runs the factory once) and NOT cache membership
-  // (a membership-only assertion passes even on the buggy code).
   it("shares one diamond-shared instance across both consumers (order A,B,D)", () => {
     const D = new NodeToken<{ marker: object }>("DIAMOND_D");
     const B = new NodeToken<{ d: { marker: object } }>("DIAMOND_B");
@@ -39,7 +30,6 @@ describe("diamond dependency dedup (resolver)", () => {
 
     const a = c.get(A);
 
-    // A's direct D and B's D must be the same real instance.
     expect(a.d).toBe(a.b.d);
   });
 
@@ -66,14 +56,10 @@ describe("diamond dependency dedup (resolver)", () => {
     c.bootstrap();
 
     const rootNode = (c as any)._rootNode;
-    // Referenced by two distinct parents -> exactly two allocations on one node.
     expect(rootNode.find(D).allocations).toBe(2);
   });
 
   it("throws i401 (not stack-overflow) for mutually-referencing siblings", () => {
-    // P injects [A, B]; A injects B; B injects A. Both A and B are created and
-    // queued before either is processed, so the resolver's build-time visiting
-    // check cannot see the back-edge; the materialization guard must catch it.
     const P = new NodeToken<unknown>("SIBLING_CYCLE_P");
     const A = new NodeToken<unknown>("SIBLING_CYCLE_A");
     const B = new NodeToken<unknown>("SIBLING_CYCLE_B");
@@ -152,7 +138,6 @@ describe("diamond dependency dedup (resolver)", () => {
   });
 
   it("shares a diamond dep across two bare-declared opts.factory tokens", () => {
-    // Object identity is dry-run-immune; X and Y must receive the same V.
     const V = new NodeToken<{ marker: object }>("DIAMOND_BARE_V", {
       factory: () => ({ marker: {} }),
     });
@@ -234,8 +219,6 @@ describe("nested injection context (no clobber)", () => {
     Illuma.extendContextScanner(throwingScanner);
 
     try {
-      // A scanner throw during provide()-time scanInto must not corrupt the
-      // shared global context: a subsequent independent container must work.
       expect(() => {
         const c = new NodeContainer();
         c.provide(new NodeToken<number>("SCANNER_X").withFactory(() => 1));
@@ -259,8 +242,6 @@ describe("nested injection context (no clobber)", () => {
   });
 
   it("restores the context stack when a scanner opens a context then throws", () => {
-    // A re-entrant scanner that opens but never closes must not leave an
-    // orphaned frame that corrupts the shared global context.
     const reentrantScanner: iContextScanner = {
       scan: () => {
         (InjectionContext as any).open();
@@ -276,11 +257,8 @@ describe("nested injection context (no clobber)", () => {
       const c = new NodeContainer();
       c.provide(new NodeToken<number>("REENTRANT_X").withFactory(() => 1));
 
-      // No frame leaked, context fully closed.
       expect(state.stack.length).toBe(depthBefore);
       expect(InjectionContext.contextOpen).toBe(false);
-
-      // The corruption guard still works: injecting outside a context throws.
       expect(() => nodeInject(new NodeToken<number>("OUTSIDE"))).toThrow(InjectionError);
     } finally {
       (Illuma as any).__resetPlugins();
@@ -311,10 +289,10 @@ describe("bare declaration tracks opts.factory dependencies", () => {
 
     const c = new NodeContainer();
     c.provide(EXPLICIT_DEP.withValue(100));
-    c.provide(X); // scans opts.factory deps (OPTS_DEP), no factory claimed
-    c.provide(X.withFactory(() => nodeInject(EXPLICIT_DEP) + 1)); // override
-    // OPTS_DEP is intentionally NOT provided: if its deps leaked into the tree
-    // this would throw i400/i500. It must resolve purely via EXPLICIT_DEP.
+    c.provide(X);
+    c.provide(X.withFactory(() => nodeInject(EXPLICIT_DEP) + 1));
+    // OPTS_DEP is deliberately never provided: the override's deps must fully
+    // replace it, otherwise bootstrap would throw on the leaked dependency.
     expect(() => c.bootstrap()).not.toThrow();
     expect(c.get(X)).toBe(101);
   });
@@ -425,7 +403,6 @@ describe("re-entrant destroy", () => {
     });
 
     expect(() => c.destroy()).toThrow("boom");
-    // The throwing hook must not leave a half-destroyed zombie.
     expect(c.destroyed).toBe(true);
     expect(c.bootstrapped).toBe(false);
     expect((c as any)._rootNode).toBeUndefined();
@@ -447,7 +424,6 @@ describe("re-entrant destroy", () => {
 
     expect(() => parent.destroy()).toThrow("flush failed");
 
-    // A throwing hook in one child must not strand its siblings or the parent.
     expect(childA.destroyed).toBe(true);
     expect(childB.destroyed).toBe(true);
     expect(childC.destroyed).toBe(true);
