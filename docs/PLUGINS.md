@@ -47,7 +47,7 @@ Illuma provides a plugin system that allows you to extend its core functionality
 The `Illuma` class is the central hub for managing plugins in Illuma. It provides static methods to register plugins globally, which will then be automatically invoked at the appropriate times during the container lifecycle.
 
 ```typescript
-import { Illuma } from '@illuma/core';
+import { Illuma } from '@illuma/core/plugins';
 
 // Register a context scanner
 Illuma.extendContextScanner(myScanner);
@@ -136,17 +136,19 @@ Diagnostics modules analyze the container state after bootstrap and provide insi
 A diagnostics module must implement the `iDiagnosticsModule` interface:
 
 ```typescript
-import type { TreeNode } from '@illuma/core';
+import type { iDiagnosticsModule, iDiagnosticsReport } from '@illuma/core/plugins';
 
-interface iDiagnosticsReport {
-  readonly totalNodes: number;        // Total dependency nodes in container
-  readonly unusedNodes: TreeNode<unknown>[]; // Nodes that weren't resolved
-  readonly bootstrapDuration: number; // Bootstrap time in milliseconds
-}
-
-interface iDiagnosticsModule {
-  readonly onReport: (report: iDiagnosticsReport) => void;
-}
+// Both interfaces are exported from '@illuma/core/plugins'. Their shape:
+//
+//   interface iDiagnosticsReport {
+//     readonly totalNodes: number;        // Total dependency nodes in container
+//     readonly unusedNodes: TreeNode<unknown>[]; // Nodes never resolved (TreeNode is internal)
+//     readonly bootstrapDuration: number; // Bootstrap time in milliseconds
+//   }
+//
+//   interface iDiagnosticsModule {
+//     readonly onReport: (report: iDiagnosticsReport) => void;
+//   }
 ```
 
 **Report fields:**
@@ -160,7 +162,7 @@ interface iDiagnosticsModule {
 #### Example: Custom Performance Reporter
 
 ```typescript
-import type { iDiagnosticsModule, iDiagnosticsReport } from '@illuma/core';
+import type { iDiagnosticsModule, iDiagnosticsReport } from '@illuma/core/plugins';
 
 export class PerformanceReporter implements iDiagnosticsModule {
   public onReport(report: iDiagnosticsReport): void {
@@ -186,7 +188,7 @@ export class PerformanceReporter implements iDiagnosticsModule {
 Throw an error if any dependencies are unused (strict mode):
 
 ```typescript
-import type { iDiagnosticsModule, iDiagnosticsReport } from '@illuma/core';
+import type { iDiagnosticsModule, iDiagnosticsReport } from '@illuma/core/plugins';
 
 export class StrictUnusedValidator implements iDiagnosticsModule {
   public onReport(report: iDiagnosticsReport): void {
@@ -208,7 +210,7 @@ export class StrictUnusedValidator implements iDiagnosticsModule {
 Send diagnostics to a logging service:
 
 ```typescript
-import type { iDiagnosticsModule, iDiagnosticsReport } from '@illuma/core';
+import type { iDiagnosticsModule, iDiagnosticsReport } from '@illuma/core/plugins';
 
 export class JsonDiagnosticsLogger implements iDiagnosticsModule {
   constructor(private readonly loggerService: LoggerService) {}
@@ -246,9 +248,9 @@ export class JsonDiagnosticsLogger implements iDiagnosticsModule {
 Diagnostics modules should be registered before bootstrapping the container. To enable the diagnostics system, you must call `enableIllumaDiagnostics()` from `@illuma/core/plugins`:
 
 ```typescript
-import { Illuma, NodeContainer } from '@illuma/core';
+import { NodeContainer } from '@illuma/core';
 import { PerformanceReporter } from './diagnostics';
-import { enableIllumaDiagnostics } from '@illuma/core/plugins';
+import { Illuma, enableIllumaDiagnostics } from '@illuma/core/plugins';
 
 // 1. Enable diagnostics system
 enableIllumaDiagnostics();
@@ -334,7 +336,7 @@ type iMiddleware<T = unknown> = (
 Log every time a dependency is instantiated:
 
 ```typescript
-import type { iMiddleware } from '@illuma/core';
+import type { iMiddleware } from '@illuma/core/plugins';
 
 export const loggerMiddleware: iMiddleware = (params, next) => {
   console.log(`[Middleware] Creating instance of: ${params.token.name}`);
@@ -354,7 +356,7 @@ export const loggerMiddleware: iMiddleware = (params, next) => {
 Automatically wrap certain services in a Proxy:
 
 ```typescript
-import type { iMiddleware } from '@illuma/core';
+import type { iMiddleware } from '@illuma/core/plugins';
 
 export const proxyMiddleware: iMiddleware = (params, next) => {
   const instance = next(params);
@@ -380,7 +382,7 @@ export const proxyMiddleware: iMiddleware = (params, next) => {
 Affects **all** containers created thereafter.
 
 ```typescript
-import { Illuma } from '@illuma/core';
+import { Illuma } from '@illuma/core/plugins';
 
 Illuma.registerGlobalMiddleware(loggerMiddleware);
 ```
@@ -446,7 +448,8 @@ export class OptimizedScanner implements iContextScanner {
 Support property-based injection using decorators:
 
 ```typescript
-import type { iContextScanner, NodeToken, iInjectionNode } from '@illuma/core';
+import type { iContextScanner } from '@illuma/core/plugins';
+import type { NodeToken, iInjectionNode } from '@illuma/core';
 
 const PROPERTY_INJECT_KEY = Symbol('di:properties');
 
@@ -496,7 +499,7 @@ Only report diagnostics in development mode:
 
 ```typescript
 import { enableIllumaDiagnostics } from '@illuma/core/plugins';
-import type { iDiagnosticsModule, iDiagnosticsReport } from '@illuma/core';
+import type { iDiagnosticsModule, iDiagnosticsReport } from '@illuma/core/plugins';
 
 export class ConditionalReporter implements iDiagnosticsModule {
   constructor(

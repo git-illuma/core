@@ -153,7 +153,9 @@ abstract class IllumaBase {
   }
 
   protected static onReport(report: iDiagnosticsReport): void {
-    for (const diag of IllumaBase._diagnostics) diag.onReport(report);
+    // Iterate a snapshot so a reporter that registers another module during
+    // onReport doesn't mutate the set mid-iteration.
+    for (const diag of Array.from(IllumaBase._diagnostics)) diag.onReport(report);
   }
 
   /**
@@ -173,6 +175,11 @@ abstract class IllumaBase {
     IllumaBase._scanners.length = 0;
     IllumaBase._middlewares.length = 0;
     illumaState.logger = defaultLogger;
+    // Clear the built-in diagnostics idempotency flag too (referenced by its
+    // shared symbol to avoid a circular import) so a reset fully re-arms it.
+    (globalThis as Record<symbol, unknown>)[
+      Symbol.for("@illuma/core/DiagnosticsEnabled")
+    ] = false;
   }
 }
 

@@ -12,7 +12,16 @@ type MaybeAsyncFactory<T> = () => T | Promise<T>;
 interface iInjectionOptions {
   /**
    * Whether to cache the result of the injection function
-   * Prevents multiple invocations from creating multiple sub-containers or injections
+   * Prevents multiple invocations from creating multiple sub-containers or injections.
+   *
+   * When `false`, every call creates a fresh sub-container bound to the parent's
+   * lifecycle (destroyed when the parent is destroyed). On a long-lived parent
+   * these accumulate one per call until the parent is destroyed — by design,
+   * since caching is opted out. To release request-scoped work eagerly, prefer
+   * {@link injectGroupAsync} (which returns the sub-container's `Injector`, so
+   * you can call `injector.destroy()`) or manage a child container explicitly;
+   * `injectAsync`/`injectEntryAsync` return only the produced instance and do
+   * not expose a per-call disposal handle.
    * @default true
    */
   withCache?: boolean;
@@ -113,7 +122,7 @@ export interface iEntrypointConfig<T extends Token<any>> {
 export function injectEntryAsync<T>(
   fn: MaybeAsyncFactory<iEntrypointConfig<NodeToken<T>>>,
   opts?: iInjectionOptions,
-): () => Promise<T[]>;
+): () => Promise<T>;
 export function injectEntryAsync<T>(
   fn: MaybeAsyncFactory<iEntrypointConfig<Ctor<T>>>,
   opts?: iInjectionOptions,
@@ -121,7 +130,7 @@ export function injectEntryAsync<T>(
 export function injectEntryAsync<T>(
   fn: MaybeAsyncFactory<iEntrypointConfig<MultiNodeToken<T>>>,
   opts?: iInjectionOptions,
-): () => Promise<T>;
+): () => Promise<T[]>;
 export function injectEntryAsync<T>(
   fn: MaybeAsyncFactory<iEntrypointConfig<Token<T>>>,
   opts?: iInjectionOptions,
@@ -145,10 +154,15 @@ function createSubContainerCache<T>(
     : nodeInject(LifecycleRef);
   const withCache = opts?.withCache ?? true;
 
-  const factory = () => {
+  const factory = (): Promise<T> => {
     const subContainer = new NodeContainer({ parent });
     if (opts?.config) subContainer.provide(opts.config);
-    return factoryFn(subContainer);
+    // Tear down the sub-container if the async build rejects, so repeated
+    // attempts don't accumulate dead scopes on the parent's lifecycle.
+    return factoryFn(subContainer).catch((err) => {
+      if (!subContainer.destroyed) subContainer.destroy();
+      throw err;
+    });
   };
 
   if (!withCache) {
@@ -158,15 +172,23 @@ function createSubContainerCache<T>(
     };
   }
 
+  // No beforeDestroy hook clears this cache: the getter already refuses to
+  // resolve once the parent is destroyed, and a per-call hook on the shared
+  // lifecycle would leak one callback per produce()d instance.
   let cache: Promise<T> | null = null;
-
-  lifecycle.beforeDestroy(() => {
-    cache = null;
-  });
 
   return () => {
     if (lifecycle.destroyed) throw InjectionError.destroyed();
-    cache ??= factory();
+    if (cache) return cache;
+
+    const pending = factory();
+    cache = pending;
+    // Evict a rejected attempt so a later call retries with a fresh sub-container
+    // instead of replaying the cached rejection. This also marks the promise as
+    // handled, so a fire-and-forget rejection isn't reported as unhandled.
+    pending.catch(() => {
+      if (cache === pending) cache = null;
+    });
     return cache;
   };
 }

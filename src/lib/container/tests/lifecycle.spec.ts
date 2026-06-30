@@ -62,3 +62,28 @@ describe("Container lifecycle", () => {
     expect(() => container.destroy()).toThrowError(InjectionError);
   });
 });
+
+describe("cascade bootstrap hook cleanup (#38)", () => {
+  it("releases the parent's bootstrap-cascade hook after the child is bootstrapped", () => {
+    const parent = new NodeContainer();
+    const child = parent.child() as NodeContainer;
+    const lc = (parent as any)._lifecycle;
+
+    // Created before parent bootstrap → the child registered an onChildBootstrap hook.
+    expect(lc._bootstrapChildCallbacks.size).toBe(1);
+
+    parent.bootstrap();
+
+    expect(child.bootstrapped).toBe(true);
+    // The hook is dropped once the child has bootstrapped (no parent retention).
+    expect(lc._bootstrapChildCallbacks.size).toBe(0);
+  });
+
+  it("still tears down a cascade-bootstrapped child on parent destroy", () => {
+    const parent = new NodeContainer();
+    const child = parent.child() as NodeContainer;
+    parent.bootstrap();
+    parent.destroy();
+    expect(child.destroyed).toBe(true);
+  });
+});

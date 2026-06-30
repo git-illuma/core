@@ -274,7 +274,7 @@ describe("resolveTreeNode", () => {
   it("should throw on unknown ProtoNode type", () => {
     const fakeProto = { token: new NodeToken("fake") } as any;
     expect(() => resolveTreeNode(fakeProto, new Map(), new Map(), new Map())).toThrow(
-      "Unknown ProtoNode type",
+      InjectionError.unknownProtoNode(),
     );
   });
 

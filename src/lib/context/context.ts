@@ -4,10 +4,14 @@ import { Illuma } from "../global/global";
 import type { iContextScanner } from "../plugins/context/types";
 import type { iInjectionNode } from "./types";
 
-interface iInjectionContextState {
+interface iInjectionContextFrame {
   contextOpen: boolean;
   injector: InjectorFn | null;
   calls: Set<iInjectionNode<any>>;
+}
+
+interface iInjectionContextState extends iInjectionContextFrame {
+  stack: iInjectionContextFrame[];
 }
 
 const INJECTION_CONTEXT_KEY = Symbol.for("@illuma/core/InjectionContext");
@@ -25,10 +29,14 @@ if (!contextGlobal[INJECTION_CONTEXT_STATE_KEY]) {
     contextOpen: false,
     injector: null,
     calls: new Set<iInjectionNode<any>>(),
+    stack: [],
   };
 }
 
 const injectionContextState = contextGlobal[INJECTION_CONTEXT_STATE_KEY];
+// Backfill if state was created by an older version of @illuma/core sharing
+// the same globalThis (npm + jsr, dual-installs, etc.)
+injectionContextState.stack ??= [];
 
 /**
  * Internal context manager for tracking dependency injections during factory execution.
@@ -77,15 +85,23 @@ abstract class InjectionContextBase {
   }
 
   /**
-   * Opens a new injection context.
-   * Resets the calls set and sets the injector if provided.
+   * Opens a new injection context, suspending the current one.
+   * The previous context (open flag, injector, and collected calls) is pushed
+   * onto a stack and restored by the matching {@link close}, so a factory that
+   * triggers a nested instantiation/scan does not clobber its outer context.
    *
    * @param injector - Optional injector function to use for resolving dependencies
    */
   public static open(injector?: InjectorFn): void {
-    InjectionContextBase._calls.clear();
-    InjectionContextBase.contextOpen = true;
-    InjectionContextBase.injector = injector || null;
+    injectionContextState.stack.push({
+      contextOpen: injectionContextState.contextOpen,
+      injector: injectionContextState.injector,
+      calls: injectionContextState.calls,
+    });
+
+    injectionContextState.contextOpen = true;
+    injectionContextState.injector = injector || null;
+    injectionContextState.calls = new Set<iInjectionNode<any>>();
   }
 
   /**
@@ -99,27 +115,41 @@ abstract class InjectionContextBase {
   public static scanInto(factory: any, target: Set<iInjectionNode<any>>): void {
     if (typeof factory !== "function") return;
     InjectionContextBase.open();
+    const baseDepth = injectionContextState.stack.length;
 
+    // close() must run on every path: a throwing context scanner would
+    // otherwise orphan the frame opened above and leave the context corrupted
+    // for every subsequent instantiation sharing this globalThis state.
     try {
-      factory();
-    } catch {
-      // No-op
-    }
+      try {
+        factory();
+      } catch {
+        // No-op: dry-run, unresolved injections are expected here
+      }
 
-    const scanners = InjectionContextBase._scanners;
-    if (!scanners.length) {
+      for (const scanner of InjectionContextBase._scanners) {
+        try {
+          const scanned = scanner.scan(factory);
+          for (const node of scanned) InjectionContextBase._calls.add(node);
+        } catch (err) {
+          // A misbehaving scanner must not break provide() or corrupt the
+          // shared context, but the error must not vanish silently.
+          Illuma.logger.error(
+            "[Illuma] A context scanner threw during dependency scan; its injections were skipped:",
+            err,
+          );
+        }
+      }
+
       InjectionContextBase._flushInto(target);
+    } finally {
+      // Discard any frames a re-entrant scanner opened without closing, then
+      // close this scan's own frame, so the stack returns to its prior depth.
+      while (injectionContextState.stack.length > baseDepth) {
+        InjectionContextBase.close();
+      }
       InjectionContextBase.close();
-      return;
     }
-
-    for (const scanner of scanners) {
-      const scanned = scanner.scan(factory);
-      for (const node of scanned) InjectionContextBase._calls.add(node);
-    }
-
-    InjectionContextBase._flushInto(target);
-    InjectionContextBase.close();
   }
 
   /**
@@ -152,11 +182,23 @@ abstract class InjectionContextBase {
     }
   }
 
-  /** Closes the current injection context. */
+  /**
+   * Closes the current injection context, restoring the one suspended by the
+   * matching {@link open}. Falls back to a fully-closed state when there is no
+   * outer context to restore.
+   */
   public static close(): void {
-    InjectionContextBase.contextOpen = false;
-    InjectionContextBase._calls.clear();
-    InjectionContextBase.injector = null;
+    const previous = injectionContextState.stack.pop();
+    if (previous) {
+      injectionContextState.contextOpen = previous.contextOpen;
+      injectionContextState.injector = previous.injector;
+      injectionContextState.calls = previous.calls;
+      return;
+    }
+
+    injectionContextState.contextOpen = false;
+    injectionContextState.injector = null;
+    injectionContextState.calls = new Set<iInjectionNode<any>>();
   }
 
   /**

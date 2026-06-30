@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NodeToken } from "../../api/token";
 import { NodeContainer } from "../../container/container";
+import { InjectionError } from "../../errors";
 import { Illuma } from "../../global";
 import type { iMiddleware } from "./types";
 
@@ -183,5 +184,43 @@ describe("Plugin: Middlewares", () => {
 
     expect(container.get(Token)).toBe("val");
     expect(logs).toContain("deferred");
+  });
+});
+
+describe("middleware next() called more than once (#31)", () => {
+  it("rejects a middleware that calls next() twice instead of silently skipping downstream", () => {
+    const Token = new NodeToken<string>("MW_DOUBLE_NEXT");
+    let downstreamRuns = 0;
+
+    const container = new NodeContainer();
+    const doubleNext: iMiddleware = (params, next) => {
+      next(params);
+      return next(params); // second call must throw, not silently skip downstream
+    };
+    const counter: iMiddleware = (params, next) => {
+      downstreamRuns++;
+      return next(params);
+    };
+
+    container.registerMiddleware(doubleNext);
+    container.registerMiddleware(counter);
+    container.provide(Token.withValue("v"));
+
+    expect(() => container.bootstrap()).toThrow(InjectionError.middlewareNextReused());
+    // The downstream middleware ran from the FIRST next() (not skipped).
+    expect(downstreamRuns).toBeGreaterThanOrEqual(1);
+  });
+
+  it("composes a well-behaved chain in registration order", () => {
+    const Token = new NodeToken<string>("MW_ORDER");
+
+    const container = new NodeContainer();
+    // First-registered is outermost; each wraps the inner result.
+    container.registerMiddleware((p, next) => `${next(p)}-a`);
+    container.registerMiddleware((p, next) => `${next(p)}-b`);
+    container.provide(Token.withValue("base"));
+    container.bootstrap();
+
+    expect(container.get(Token)).toBe("base-b-a");
   });
 });

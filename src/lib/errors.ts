@@ -31,6 +31,15 @@ export const ERR_CODES = {
   CALLED_UTILS_OUTSIDE_CONTEXT: 502,
   INSTANCE_ACCESS_FAILED: 503,
   ACCESS_FAILED: 504,
+
+  // Token errors
+  GLOBAL_TOKEN_CONFLICT: 600,
+
+  // Middleware errors
+  MIDDLEWARE_NEXT_REUSED: 700,
+
+  // Internal invariant errors
+  UNKNOWN_PROTO_NODE: 800,
 } as const;
 
 /**
@@ -200,6 +209,32 @@ export class InjectionError extends Error {
       ERR_CODES.ACCESS_FAILED,
       "Failed to access the requested instance due to an unknown error.",
     );
+  }
+
+  // Token errors
+  public static globalTokenConflict(
+    name: string,
+    existing: string,
+    attempted: string | undefined,
+  ): InjectionError {
+    return new InjectionError(
+      ERR_CODES.GLOBAL_TOKEN_CONFLICT,
+      `Global token "${name}" is already registered as ${existing}; ` +
+        `cannot redeclare it as ${attempted}.`,
+    );
+  }
+
+  // Middleware errors
+  public static middlewareNextReused(): InjectionError {
+    return new InjectionError(
+      ERR_CODES.MIDDLEWARE_NEXT_REUSED,
+      "Middleware next() was called more than once.",
+    );
+  }
+
+  // Internal invariant errors
+  public static unknownProtoNode(): InjectionError {
+    return new InjectionError(ERR_CODES.UNKNOWN_PROTO_NODE, "Unknown ProtoNode type.");
   }
 }
 

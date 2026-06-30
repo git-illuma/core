@@ -39,7 +39,11 @@ export function extractToken<T>(
   if (isNodeBase<T>(provider)) return provider;
 
   if (typeof provider === "function") {
-    if (!isInjectable<T>(provider)) throw InjectionError.invalidCtor(provider);
+    if (!isInjectable<T>(provider)) {
+      if (isAlias) throw InjectionError.invalidAlias(provider);
+      throw InjectionError.invalidCtor(provider);
+    }
+
     return getInjectableToken<T>(provider);
   }
 

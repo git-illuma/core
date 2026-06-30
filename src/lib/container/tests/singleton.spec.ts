@@ -488,3 +488,33 @@ describe("singletons", () => {
     });
   });
 });
+
+describe("on-demand singleton factory failure (#11)", () => {
+  it("does not strand dead nodes in the root when the singleton factory throws", () => {
+    let boom = true;
+    const SING = new NodeToken<number>("STRAND_SINGLETON", {
+      singleton: true,
+      factory: () => {
+        if (boom) throw new Error("sing boom");
+        return 42;
+      },
+    });
+
+    const c = new NodeContainer(); // SING resolved on-demand, not provided
+    c.bootstrap();
+
+    const root = (c as any)._rootNode;
+    const depsBefore = root.dependencies.size;
+
+    expect(() => c.get(SING)).toThrow("sing boom");
+    expect(() => c.get(SING)).toThrow("sing boom");
+    expect(() => c.get(SING)).toThrow("sing boom");
+
+    // Failed attempts must not accumulate dead nodes in the long-lived root.
+    expect(root.dependencies.size).toBe(depsBefore);
+
+    // Once the transient failure clears, resolution succeeds.
+    boom = false;
+    expect(c.get(SING)).toBe(42);
+  });
+});

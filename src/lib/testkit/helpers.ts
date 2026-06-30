@@ -1,7 +1,6 @@
 import type { NodeInjectFn } from "../api/injection";
 import type { iNodeInjectorOptions } from "../api/types";
 import { NodeContainer } from "../container/container";
-import { isNotFoundError } from "../errors";
 import type { Provider, Token } from "../provider/types";
 
 /**
@@ -56,17 +55,8 @@ export function createTestFactory<T>(cfg: iTestFactoryConfig<T>): TestFactoryFn<
     container.bootstrap();
 
     const instance = container.get<T>(cfg.target as any);
-    const nodeInject = <T>(token: Token<T>, opts?: iNodeInjectorOptions) => {
-      try {
-        return container.get(token as any);
-      } catch (e) {
-        if (isNotFoundError(e) && opts?.optional) {
-          return null as any;
-        }
-
-        throw e;
-      }
-    };
+    const nodeInject = <T>(token: Token<T>, opts?: iNodeInjectorOptions) =>
+      container.get(token as any, opts);
 
     return {
       instance,

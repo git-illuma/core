@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { InjectionError } from "../errors";
+import { ERR_CODES, InjectionError } from "../errors";
 import type { Token } from "../provider/types";
 import { NodeInjectable } from "./decorator";
 import { MultiNodeToken, NodeToken } from "./token";
@@ -41,5 +41,31 @@ describe("Token Utils", () => {
     it("should throw invalid alias error if isAlias is true", () => {
       expect(() => extractToken({} as Token<unknown>, true)).toThrow(InjectionError);
     });
+  });
+});
+
+describe("extractToken alias target error (#35)", () => {
+  it("throws invalidAlias (i200) for a non-injectable function used as an alias target", () => {
+    function NotInjectable() {}
+
+    let code: number | undefined;
+    try {
+      extractToken(NotInjectable as unknown as Token<unknown>, true);
+    } catch (e) {
+      code = (e as InjectionError).code;
+    }
+    expect(code).toBe(ERR_CODES.INVALID_ALIAS);
+  });
+
+  it("still throws invalidCtor (i102) for a non-injectable function NOT used as an alias", () => {
+    function NotInjectable() {}
+
+    let code: number | undefined;
+    try {
+      extractToken(NotInjectable as unknown as Token<unknown>);
+    } catch (e) {
+      code = (e as InjectionError).code;
+    }
+    expect(code).toBe(ERR_CODES.INVALID_CTOR);
   });
 });

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ERR_CODES, InjectionError } from "../errors";
 import { MultiNodeToken, NodeBase, NodeToken } from "./token";
 
 describe("Token", () => {
@@ -204,5 +205,51 @@ describe("Token", () => {
       const t = new CustomToken("custom");
       expect(t.toString()).toBe("Token[custom]");
     });
+  });
+});
+
+describe("global tokens", () => {
+  it("dedupes a single token by name so independent constructions are identical", () => {
+    const a = new NodeToken("seam.alpha", { global: true });
+    const b = new NodeToken("seam.alpha", { global: true });
+    expect(b).toBe(a);
+  });
+
+  it("dedupes multi tokens too", () => {
+    const a = new MultiNodeToken("seam.beta", { global: true });
+    const b = new MultiNodeToken("seam.beta", { global: true });
+    expect(b).toBe(a);
+  });
+
+  it("leaves non-global tokens as distinct instances", () => {
+    expect(new NodeToken("seam.gamma")).not.toBe(new NodeToken("seam.gamma"));
+  });
+
+  it("keeps a non-global token independent of a same-named global one", () => {
+    const g = new NodeToken("seam.delta", { global: true });
+    expect(new NodeToken("seam.delta")).not.toBe(g);
+  });
+
+  it("throws when a name is reused for a different token kind", () => {
+    new NodeToken("seam.epsilon", { global: true });
+
+    let err: unknown;
+    try {
+      new MultiNodeToken("seam.epsilon", { global: true });
+    } catch (e) {
+      err = e;
+    }
+
+    expect(err).toBeInstanceOf(InjectionError);
+    expect((err as InjectionError).code).toBe(ERR_CODES.GLOBAL_TOKEN_CONFLICT);
+    expect((err as InjectionError).message).toMatch(/already registered/);
+  });
+
+  it("the first registration's options win for the shared instance", () => {
+    const factory = () => "x";
+    const a = new NodeToken<string>("seam.zeta", { global: true, factory });
+    const b = new NodeToken<string>("seam.zeta", { global: true });
+    expect(b).toBe(a);
+    expect(b.opts?.factory).toBe(factory);
   });
 });

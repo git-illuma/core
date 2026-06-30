@@ -41,11 +41,11 @@ This guide covers advanced dependency injection patterns using `injectAsync`, `i
 
 Illuma provides three utilities for advanced async dependency injection:
 
-| Utility | Purpose | Returns |
-|---------|---------|---------|
-| `injectAsync` | Lazily inject a single dependency | The dependency instance |
-| `injectEntryAsync` | Create sub-container and resolve specific entrypoint | The entrypoint instance |
-| `injectGroupAsync` | Create isolated sub-container with array of providers | An injector |
+| Utility            | Purpose                                               | Returns                 |
+| ------------------ | ----------------------------------------------------- | ----------------------- |
+| `injectAsync`      | Lazily inject a single dependency                     | The dependency instance |
+| `injectEntryAsync` | Create sub-container and resolve specific entrypoint  | The entrypoint instance |
+| `injectGroupAsync` | Create isolated sub-container with array of providers | An injector             |
 
 **Note:** For synchronous deferred injection (e.g. to solve circular dependencies without async/await), use [`injectDefer`](./API.md#injectDefer) instead.
 
@@ -184,6 +184,8 @@ private readonly getAnalytics = injectAsync(
   { withCache: false } // Creates new instance each time
 );
 ```
+
+> **Lifecycle note for `withCache: false`.** Each call creates a fresh sub-container that is tied to the parent container's lifecycle and is destroyed when the parent is destroyed. The parent therefore accumulates one sub-container per call until it is destroyed — by design, since you opted out of caching. For request-scoped work on a long-lived parent where you need to release each scope eagerly, use `injectGroupAsync` (which returns the sub-container's `Injector`) and call `injector.destroy()` when the scope ends, or create and destroy a child container explicitly. `injectAsync` / `injectEntryAsync` return the produced instance only, so they intentionally do not expose a per-call disposal handle.
 
 ### Overriding dependencies
 
@@ -467,11 +469,20 @@ const REQUEST_CONTEXT = new NodeToken<RequestContext>('REQUEST_CONTEXT');
 
 @NodeInjectable()
 class RequestHandler {
+  // Capture the injector during construction, while the injection context is
+  // open. `injectGroupAsync` resolves `Injector` eagerly when it is *called*,
+  // so invoking it later from a request handler (outside the context) would
+  // otherwise throw an "outside of an injection context" error ([i501]).
+  private readonly injector = nodeInject(Injector);
+
   public createRequestScope(userId: string, requestId: string) {
-    return injectGroupAsync(async () => [
-      RequestService,
-      { provide: REQUEST_CONTEXT, value: { userId, requestId } }
-    ], { withCache: false }); // New scope per request
+    return injectGroupAsync(
+      async () => [
+        RequestService,
+        { provide: REQUEST_CONTEXT, value: { userId, requestId } },
+      ],
+      { injector: this.injector, withCache: false }, // new scope per request
+    );
   }
 
   public async handleRequest(userId: string, requestId: string) {

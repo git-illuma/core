@@ -1,3 +1,4 @@
+import { InjectionError } from "../errors";
 import type {
   Ctor,
   ImplementationShape,
@@ -11,6 +12,7 @@ import type {
 } from "../provider/types";
 
 const NODE_TOKEN_CLASSES_KEY = Symbol.for("@illuma/core/NodeTokenClasses");
+const GLOBAL_TOKENS_KEY = Symbol.for("@illuma/core/GlobalTokens");
 
 type iNodeTokenGlobalThis = typeof globalThis & {
   [NODE_TOKEN_CLASSES_KEY]?: {
@@ -18,6 +20,7 @@ type iNodeTokenGlobalThis = typeof globalThis & {
     NodeToken: typeof NodeTokenImpl;
     MultiNodeToken: typeof MultiNodeTokenImpl;
   };
+  [GLOBAL_TOKENS_KEY]?: Map<string, NodeBaseImpl<unknown>>;
 };
 
 const nodeTokenGlobal = globalThis as iNodeTokenGlobalThis;
@@ -31,7 +34,30 @@ abstract class NodeBaseImpl<T> {
   constructor(
     public readonly name: string,
     public readonly opts?: iNodeTokenBaseOptions<T>,
-  ) {}
+  ) {
+    if (!opts?.global) return;
+
+    let registry = nodeTokenGlobal[GLOBAL_TOKENS_KEY];
+    if (!registry) {
+      registry = new Map();
+      nodeTokenGlobal[GLOBAL_TOKENS_KEY] = registry;
+    }
+
+    const existing = registry.get(name);
+    if (existing) {
+      if (existing.constructor !== new.target) {
+        throw InjectionError.globalTokenConflict(
+          name,
+          existing.constructor.name,
+          new.target?.name,
+        );
+      }
+
+      return existing as NodeBaseImpl<T>;
+    }
+
+    registry.set(name, this);
+  }
 
   /** Provides this token with a value */
   public withValue(value: T): iNodeValueProvider<T> {
@@ -103,7 +129,10 @@ abstract class NodeBaseImpl<T> {
  * ```
  */
 class NodeTokenImpl<T> extends NodeBaseImpl<T> {
-  public readonly multi = false as const;
+  public get multi(): false {
+    return false;
+  }
+
   public override toString(): string {
     return `NodeToken[${this.name}]`;
   }
@@ -125,7 +154,10 @@ class NodeTokenImpl<T> extends NodeBaseImpl<T> {
  * ```
  */
 class MultiNodeTokenImpl<T> extends NodeBaseImpl<T> {
-  public readonly multi = true as const;
+  public get multi(): true {
+    return true;
+  }
+
   public override toString(): string {
     return `MultiNodeToken[${this.name}]`;
   }

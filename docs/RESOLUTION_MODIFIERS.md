@@ -34,13 +34,13 @@ Sometimes you need to explicitly constrain this traversal to either:
 
 When `self: true` is passed, the container stops traversal and **only looks for the provider in the current (local) container**.
 
-If the provider is not registered locally, a `NotFound` error (`[i101]`) will be thrown (*unless `optional: true` is also provided*).
+If the provider is not registered locally, a `NotFound` error (`[i400]`) will be thrown (*unless `optional: true` is also provided*).
 
 ### `skipSelf`
 
 When `skipSelf: true` is passed, the container **ignores providers in the current container** and immediately delegates the resolution to the parent container.
 
-If the container has no parent, or if none of the parents provide the dependency, a `NotFound` error (`[i101]`) will be thrown (*unless `optional: true` is also provided*).
+If the container has no parent, or if none of the parents provide the dependency, a `NotFound` error (`[i400]`) will be thrown (*unless `optional: true` is also provided*).
 
 ### `optional`
 

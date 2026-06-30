@@ -339,9 +339,8 @@ describe("Plugin: Diagnostics", () => {
 
     container.bootstrap();
 
-    // Multi token and LifecycleRef should be unused if not injected
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining("2 were not used"),
+      expect.stringContaining("1 were not used"),
     );
     expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("Multi"));
   });
@@ -400,5 +399,63 @@ describe("Plugin: Diagnostics", () => {
     const report = mockDiagnosticsModule.onReport.mock.calls[0][0];
     expect(report.bootstrapDuration).toBeGreaterThanOrEqual(0);
     expect(typeof report.bootstrapDuration).toBe("number");
+  });
+});
+
+describe("diagnostics idempotency across a plugin reset (#30)", () => {
+  afterEach(() => {
+    (Illuma as any).__resetPlugins();
+  });
+
+  it("re-enables diagnostics after __resetPlugins (no stale idempotency flag)", () => {
+    builtIn.enableIllumaDiagnostics();
+    expect(Illuma.hasDiagnostics()).toBe(true);
+
+    (Illuma as any).__resetPlugins();
+    expect(Illuma.hasDiagnostics()).toBe(false);
+
+    // Before the fix this was a no-op (module-local flag stayed true), leaving
+    // diagnostics silently disabled.
+    builtIn.enableIllumaDiagnostics();
+    expect(Illuma.hasDiagnostics()).toBe(true);
+  });
+});
+
+describe("diagnostics report consistency (#37 / #34)", () => {
+  afterEach(() => {
+    (Illuma as any).__resetPlugins();
+  });
+
+  it("totalNodes excludes the Injector/LifecycleRef built-ins, matching the unused population (#37)", () => {
+    const reports: any[] = [];
+    Illuma.extendDiagnostics({ onReport: (r: any) => reports.push(r) });
+
+    const T = new NodeToken<string>("DIAG_TOTAL_T");
+    const c = new NodeContainer();
+    c.provide(T.withValue("v")); // one user node, unused
+    c.bootstrap();
+
+    expect(reports).toHaveLength(1);
+    // Only the user node is counted (not Injector + LifecycleRef → would be 3).
+    expect(reports[0].totalNodes).toBe(1);
+    expect(reports[0].unusedNodes).toHaveLength(1);
+  });
+
+  it("a reporter registering another module during onReport is not pulled into the same pass (#34)", () => {
+    const calls: string[] = [];
+    const second = { onReport: () => calls.push("second") };
+    const first = {
+      onReport: () => {
+        calls.push("first");
+        Illuma.extendDiagnostics(second);
+      },
+    };
+    Illuma.extendDiagnostics(first);
+
+    const c = new NodeContainer();
+    c.bootstrap();
+
+    // The snapshot iteration must not run `second` during the pass that registered it.
+    expect(calls).toEqual(["first"]);
   });
 });

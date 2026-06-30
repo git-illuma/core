@@ -665,3 +665,162 @@ describe("injectEntryAsync", () => {
     expect(logSpy).toHaveBeenCalledWith("Generating report...");
   });
 });
+
+describe("async injection failure handling (#5 / #29)", () => {
+  it("evicts a cached rejection so a later call retries with a fresh attempt (#5)", async () => {
+    const parent = new NodeContainer();
+
+    @NodeInjectable()
+    class TestService {
+      public readonly value = "ok";
+    }
+    parent.provide(TestService);
+
+    let attempt = 0;
+
+    @NodeInjectable()
+    class ParentService {
+      public readonly load = injectAsync(() => {
+        attempt++;
+        if (attempt === 1) throw new Error("transient");
+        return TestService;
+      });
+    }
+    parent.provide(ParentService);
+    parent.bootstrap();
+
+    const ps = parent.get(ParentService);
+
+    await expect(ps.load()).rejects.toThrow("transient");
+    // The poisoned attempt must not be cached: a retry succeeds.
+    const svc = await ps.load();
+    expect(svc).toBeInstanceOf(TestService);
+    expect(attempt).toBe(2);
+  });
+
+  it("caches a successful result after a failed-then-retried attempt (#5)", async () => {
+    const parent = new NodeContainer();
+
+    @NodeInjectable()
+    class TestService {}
+    parent.provide(TestService);
+
+    let attempt = 0;
+
+    @NodeInjectable()
+    class ParentService {
+      public readonly load = injectAsync(() => {
+        attempt++;
+        if (attempt === 1) throw new Error("transient");
+        return TestService;
+      });
+    }
+    parent.provide(ParentService);
+    parent.bootstrap();
+
+    const ps = parent.get(ParentService);
+    await expect(ps.load()).rejects.toThrow("transient");
+
+    const a = await ps.load();
+    const b = await ps.load();
+    expect(a).toBe(b); // second success is cached
+    expect(attempt).toBe(2);
+  });
+
+  it("rejects cleanly (no crash) when the parent is destroyed mid-flight (#29)", async () => {
+    const parent = new NodeContainer();
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+
+    @NodeInjectable()
+    class TestService {}
+    parent.provide(TestService);
+
+    @NodeInjectable()
+    class ParentService {
+      public readonly load = injectAsync(async () => {
+        await gate;
+        return TestService;
+      });
+    }
+    parent.provide(ParentService);
+    parent.bootstrap();
+
+    const ps = parent.get(ParentService);
+    const pending = ps.load(); // starts the sub-container build, suspends at gate
+    parent.destroy(); // tears the sub-container down underneath the factory
+    release?.();
+
+    await expect(pending).rejects.toThrow(InjectionError);
+  });
+});
+
+describe("lifecycle callback leak (#16)", () => {
+  it("does not accumulate a beforeDestroy hook per produced instance using injectAsync", () => {
+    const parent = new NodeContainer();
+
+    @NodeInjectable()
+    class Dep {}
+    parent.provide(Dep);
+
+    @NodeInjectable()
+    class Service {
+      public readonly load = injectAsync(() => Dep);
+    }
+    parent.provide(Service);
+    parent.bootstrap();
+
+    const destroyCallbacks = (parent as any)._lifecycle._destroyCallbacks as Set<unknown>;
+    const before = destroyCallbacks.size;
+
+    for (let i = 0; i < 25; i++) parent.produce(Service);
+
+    expect(destroyCallbacks.size).toBe(before);
+  });
+});
+
+// The runtime contract the (fixed) overloads must encode: a NodeToken
+// entrypoint resolves to a single value, a MultiNodeToken entrypoint to an
+// array (#15). NOTE: spec files are excluded from tsc, so this guards the
+// runtime contract; the overload return TYPES are kept consistent with this.
+describe("injectEntryAsync entrypoint kind (#15)", () => {
+  it("a NodeToken entrypoint resolves to a single value", async () => {
+    const parent = new NodeContainer();
+    const SINGLE = new NodeToken<string>("ET_SINGLE_TOK");
+
+    @NodeInjectable()
+    class Host {
+      public readonly get = injectEntryAsync(() => ({
+        entrypoint: SINGLE,
+        providers: [SINGLE.withValue("only")],
+      }));
+    }
+    parent.provide(Host);
+    parent.bootstrap();
+
+    const result = await parent.get(Host).get();
+    expect(Array.isArray(result)).toBe(false);
+    expect(result).toBe("only");
+  });
+
+  it("a MultiNodeToken entrypoint resolves to an array of all members", async () => {
+    const parent = new NodeContainer();
+    const MULTI = new MultiNodeToken<string>("ET_MULTI_TOK");
+
+    @NodeInjectable()
+    class Host {
+      public readonly get = injectEntryAsync(() => ({
+        entrypoint: MULTI,
+        providers: [MULTI.withValue("a"), MULTI.withValue("b")],
+      }));
+    }
+    parent.provide(Host);
+    parent.bootstrap();
+
+    const result = await parent.get(Host).get();
+    expect(Array.isArray(result)).toBe(true);
+    expect(result).toEqual(["a", "b"]);
+  });
+});

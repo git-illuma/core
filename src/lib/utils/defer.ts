@@ -4,7 +4,7 @@ import type { MultiNodeToken, NodeToken } from "../api/token";
 import { extractToken } from "../api/token-utils";
 import type { ExtractInjectedType, iNodeInjectorOptions } from "../api/types";
 import { LifecycleRef } from "../container/lifecycle";
-import { InjectionError, isNotFoundError } from "../errors";
+import { InjectionError } from "../errors";
 import type { Token } from "../provider/types";
 import { Injector } from "./injector";
 
@@ -57,35 +57,19 @@ export function injectDefer<
 
   const token = extractToken(provider as Token<unknown>);
 
+  // No beforeDestroy hook resets this state: the getter already refuses to
+  // resolve once the container is destroyed, and a per-call hook on the shared
+  // lifecycle would leak one callback per produce()d instance.
   let resolved = false;
   let instance: ExtractInjectedType<N> | typeof SHAPE_SHIFTER | null = SHAPE_SHIFTER;
 
-  lifecycle.beforeDestroy(() => {
-    resolved = false;
-    instance = null;
-  });
-
   return () => {
     if (lifecycle.destroyed) throw InjectionError.destroyed();
-
     if (resolved) return instance;
-    if (options?.optional) {
-      try {
-        instance = injector.get(token as any) as ExtractInjectedType<N>;
-        resolved = true;
-        return instance;
-      } catch (e) {
-        if (isNotFoundError(e)) {
-          resolved = true;
-          instance = null;
-          return instance;
-        }
 
-        throw e;
-      }
-    }
-
-    instance = injector.get(token as any) as ExtractInjectedType<N>;
+    // Forward every modifier: get() honors them natively, so deferred resolution
+    // resolves from the same scope an eager nodeInject(token, options) would.
+    instance = injector.get(token as any, options) as ExtractInjectedType<N>;
     resolved = true;
     return instance;
   };

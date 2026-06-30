@@ -21,7 +21,7 @@ The Illuma testkit provides framework-agnostic utilities for testing components 
   - [API Reference](#api-reference)
     - [`createTestFactory<T>(config)`](#createtestfactorytconfig)
     - [`TestFactoryFn<T>`](#testfactoryfnt)
-    - [`Spectator<T>`](#spectatort)
+    - [`iSpectator<T>`](#ispectatort)
   - [Best practices](#best-practices)
   - [Related documentation](#related-documentation)
 
@@ -134,10 +134,10 @@ class NotificationService {
 describe('NotificationService', () => {
   const createTest = createTestFactory({
     target: NotificationService,
-    provide: [
+    provide: [{
       provide: EmailService,
       useClass: MockEmailService,
-    ],
+    }],
   });
 
   it('should send notification via email', () => {
@@ -366,9 +366,9 @@ Creates a test factory for the specified target.
 
 A function that creates a new test instance with a clean DI container.
 
-**Returns:** `Spectator<T>`
+**Returns:** `iSpectator<T>`
 
-### `Spectator<T>`
+### `iSpectator<T>`
 
 The object returned by test factory functions.
 
