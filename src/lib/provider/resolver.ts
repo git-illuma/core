@@ -102,7 +102,7 @@ export function resolveTreeNode<T>(
     visiting.add(proto);
     frame.processed = true;
 
-    const deps: (ProtoNode | TreeNode)[] = [];
+    const deps: { dep: ProtoNode | TreeNode; skipSelf: boolean }[] = [];
 
     if (proto instanceof ProtoNodeSingle || proto instanceof ProtoNodeTransparent) {
       for (const injection of proto.injections) {
@@ -114,55 +114,59 @@ export function resolveTreeNode<T>(
           upstreamGetter,
         );
 
-        if (resolvedDep) deps.push(resolvedDep);
+        // Carry the injection's skipSelf so the wired node lands in the right
+        // scope: plain and skipSelf injections of one token resolve to different nodes.
+        if (resolvedDep) deps.push({ dep: resolvedDep, skipSelf: !!injection.skipSelf });
       }
     }
 
     if (proto instanceof ProtoNodeMulti) {
       const parentNodes = upstreamGetter?.(proto.token);
-      if (parentNodes instanceof TreeNodeMulti) {
-        node.addDependency(parentNodes);
+      if (parentNodes instanceof TreeNodeMulti && node instanceof TreeNodeMulti) {
+        // Record the ancestor's members as the inherited tail (excluded by self:true).
+        node.setInherited(parentNodes);
       }
 
-      for (const single of proto.singleNodes) {
-        let p = singleNodes.get(single);
-        if (!p) {
-          if (single.opts?.singleton) {
-            const rootSingleton = upstreamGetter?.(single);
-            if (rootSingleton) {
-              deps.push(rootSingleton);
-              continue;
+      // Iterate in declaration order so multi members keep their registration
+      // order regardless of provider kind (token/alias vs factory/value/class).
+      for (const provider of proto.orderedProviders) {
+        if (provider instanceof NodeToken) {
+          let p = singleNodes.get(provider);
+          if (!p) {
+            if (provider.opts?.singleton) {
+              const rootSingleton = upstreamGetter?.(provider);
+              if (rootSingleton) {
+                deps.push({ dep: rootSingleton, skipSelf: false });
+                continue;
+              }
             }
+
+            p = new ProtoNodeSingle(provider);
+            singleNodes.set(provider, p);
           }
 
-          p = new ProtoNodeSingle(single);
-          singleNodes.set(single, p);
+          deps.push({ dep: p, skipSelf: false });
+        } else if (provider instanceof MultiNodeToken) {
+          let p = multiNodes.get(provider);
+          if (!p) {
+            p = new ProtoNodeMulti(provider);
+            multiNodes.set(provider, p);
+          }
+          deps.push({ dep: p, skipSelf: false });
+        } else {
+          // ProtoNodeTransparent (factory / value / useClass member)
+          deps.push({ dep: provider, skipSelf: false });
         }
-
-        deps.push(p);
-      }
-
-      for (const multi of proto.multiNodes) {
-        let p = multiNodes.get(multi);
-        if (!p) {
-          p = new ProtoNodeMulti(multi);
-          multiNodes.set(multi, p);
-        }
-        deps.push(p);
-      }
-
-      for (const transparent of proto.transparentNodes) {
-        deps.push(transparent);
       }
     }
 
-    for (const dep of deps) {
+    for (const { dep, skipSelf } of deps) {
       if (
         dep instanceof TreeNodeSingle ||
         dep instanceof TreeNodeMulti ||
         dep instanceof TreeNodeTransparent
       ) {
-        node.addDependency(dep);
+        wireDependency(node, dep, skipSelf);
         continue;
       }
 
@@ -177,13 +181,15 @@ export function resolveTreeNode<T>(
 
       const cached = cache.get(depProto);
       if (cached) {
-        node.addDependency(cached);
+        // A proto-resolved dependency is always plain scope: skipSelf injections
+        // resolve to an upstream TreeNode, handled by the branch above.
+        wireDependency(node, cached, false);
         continue;
       }
 
       const childNode = createTreeNode(depProto);
       cache.set(depProto, childNode);
-      node.addDependency(childNode);
+      wireDependency(node, childNode, false);
       stack.push({ proto: depProto, node: childNode, processed: false });
     }
   }
@@ -195,7 +201,17 @@ function createTreeNode(p: ProtoNode): TreeNode {
   if (p instanceof ProtoNodeSingle) return new TreeNodeSingle(p);
   if (p instanceof ProtoNodeMulti) return new TreeNodeMulti(p);
   if (p instanceof ProtoNodeTransparent) return new TreeNodeTransparent(p);
-  throw new Error("Unknown ProtoNode type");
+  throw InjectionError.unknownProtoNode();
+}
+
+/**
+ * Wires `dep` onto `node`, passing the injection scope where it matters. Multi
+ * nodes aggregate positionally (no per-token scope); single/transparent nodes
+ * slot deps by (token, scope) and take the skipSelf flag.
+ */
+function wireDependency(node: TreeNode, dep: TreeNode, skipSelf: boolean): void {
+  if (node instanceof TreeNodeMulti) node.addDependency(dep);
+  else node.addDependency(dep, skipSelf);
 }
 
 function throwCircularDependencyCycle(

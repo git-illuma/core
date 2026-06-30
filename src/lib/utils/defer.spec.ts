@@ -286,3 +286,26 @@ describe("injectDefer", () => {
     expect(factorySpy).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("injectDefer lifecycle callback leak (#17)", () => {
+  it("does not accumulate a beforeDestroy hook per produced instance", () => {
+    const parent = new NodeContainer();
+
+    const DEP = new NodeToken<number>("DEFER_LEAK_DEP");
+    parent.provide(DEP.withValue(1));
+
+    @NodeInjectable()
+    class Service {
+      public readonly dep = injectDefer(DEP);
+    }
+    parent.provide(Service);
+    parent.bootstrap();
+
+    const destroyCallbacks = (parent as any)._lifecycle._destroyCallbacks as Set<unknown>;
+    const before = destroyCallbacks.size;
+
+    for (let i = 0; i < 25; i++) parent.produce(Service);
+
+    expect(destroyCallbacks.size).toBe(before);
+  });
+});

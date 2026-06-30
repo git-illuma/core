@@ -409,3 +409,51 @@ describe("nodeInject", () => {
     });
   });
 });
+
+describe("dependency scan with primitive coercion (#14)", () => {
+  it("detects deps declared after a factory coerces an injected value to a primitive", () => {
+    const A = new NodeToken<number>("COERCE_A");
+    const B = new NodeToken<number>("COERCE_B");
+    const HOST = new NodeToken<string>("COERCE_HOST");
+
+    const c = new NodeContainer();
+    c.provide(A.withValue(1));
+    c.provide(B.withValue(2));
+    c.provide(
+      HOST.withFactory(() => {
+        const a = nodeInject(A);
+        // Coerce the injected value to a primitive: during the scan dry-run `a`
+        // is the SHAPE_SHIFTER placeholder. This must NOT abort dependency
+        // detection, so nodeInject(B) below is still tracked.
+        const prefix = `value-${a}`;
+        const b = nodeInject(B);
+        return `${prefix}-${b}`;
+      }),
+    );
+
+    expect(() => c.bootstrap()).not.toThrow();
+    expect(c.get(HOST)).toBe("value-1-2");
+  });
+
+  it("supports numeric and string coercion of placeholders in the scan", () => {
+    const N = new NodeToken<number>("COERCE_N");
+    const M = new NodeToken<number>("COERCE_M");
+    const HOST = new NodeToken<number>("COERCE_NUM_HOST");
+
+    const c = new NodeContainer();
+    c.provide(N.withValue(10));
+    c.provide(M.withValue(5));
+    c.provide(
+      HOST.withFactory(() => {
+        const n = nodeInject(N);
+        // Numeric coercion + comparison during the dry-run must not throw.
+        const flag = +n > 0 && `${n}`.length >= 0;
+        const m = nodeInject(M);
+        return flag ? n + m : m;
+      }),
+    );
+
+    expect(() => c.bootstrap()).not.toThrow();
+    expect(c.get(HOST)).toBe(15);
+  });
+});

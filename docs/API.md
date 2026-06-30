@@ -149,6 +149,7 @@ new NodeToken<T>(
   options?: {
     factory?: () => T;
     singleton?: boolean;
+    global?: boolean;
   }
 )
 ```
@@ -158,6 +159,7 @@ new NodeToken<T>(
 | `name`            | `string`  | Unique identifier for the token    |
 | `options.factory` | `() => T` | Optional factory for default value |
 | `options.singleton` | `boolean` | Marks token as root-scoped singleton in parent-child containers |
+| `options.global`  | `boolean` | Dedupe this token by name in a process-global registry, so an identically-named global token from another bundle is the same instance. Reserve for cross-bundle seam tokens; the name becomes a global identity and must be unique per kind (see [i600](./TROUBLESHOOTING.md#token-errors)) |
 
 When `singleton: true`, there's no need to call `provide` for this token. It will be automatically provided as a singleton in the root container when first requested until you want to override it in a child container.
 
@@ -207,7 +209,14 @@ A token that can have multiple providers, returning an array.
 ### Constructor
 
 ```typescript
-new MultiNodeToken<T>(name: string, options?: { factory?: () => T })
+new MultiNodeToken<T>(
+  name: string,
+  options?: {
+    factory?: () => T;
+    singleton?: boolean;
+    global?: boolean;
+  }
+)
 ```
 
 ### Usage

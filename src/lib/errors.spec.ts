@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MultiNodeToken, NodeInjectable, NodeToken, nodeInject } from "./api";
 import { NodeContainer } from "./container";
-import { InjectionError } from "./errors";
+import { ERR_CODES, InjectionError } from "./errors";
 
 describe("error handling", () => {
   it("should throw on duplicate token provider", () => {
@@ -144,5 +144,38 @@ describe("error handling", () => {
     });
 
     expect(() => container.bootstrap()).toThrow(InjectionError.notFound(missing));
+  });
+});
+
+describe("InjectionError factories", () => {
+  it("builds a global token conflict error", () => {
+    const error = InjectionError.globalTokenConflict(
+      "seam.alpha",
+      "NodeTokenImpl",
+      "MultiNodeTokenImpl",
+    );
+
+    expect(error).toBeInstanceOf(InjectionError);
+    expect(error.code).toBe(ERR_CODES.GLOBAL_TOKEN_CONFLICT);
+    expect(error.message).toContain('Global token "seam.alpha" is already registered');
+    expect(error.message).toContain("[i600]");
+  });
+
+  it("builds a middleware next() reuse error", () => {
+    const error = InjectionError.middlewareNextReused();
+
+    expect(error).toBeInstanceOf(InjectionError);
+    expect(error.code).toBe(ERR_CODES.MIDDLEWARE_NEXT_REUSED);
+    expect(error.message).toContain("next() was called more than once");
+    expect(error.message).toContain("[i700]");
+  });
+
+  it("builds an unknown ProtoNode error", () => {
+    const error = InjectionError.unknownProtoNode();
+
+    expect(error).toBeInstanceOf(InjectionError);
+    expect(error.code).toBe(ERR_CODES.UNKNOWN_PROTO_NODE);
+    expect(error.message).toContain("Unknown ProtoNode type");
+    expect(error.message).toContain("[i800]");
   });
 });

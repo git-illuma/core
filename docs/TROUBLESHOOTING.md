@@ -6,10 +6,13 @@ This document provides detailed information about all error codes in Illuma and 
 
 - [Quick Reference](#quick-reference)
 - [Provider Errors (i100-i103)](#provider-errors)
-- [Alias Errors (i200-i201)](#alias-errors)
-- [Bootstrap Errors (i300-i302)](#bootstrap-errors)
+- [Alias Errors (i200-i202)](#alias-errors)
+- [Bootstrap Errors (i300-i305)](#bootstrap-errors)
 - [Retrieval Errors (i400-i401)](#retrieval-errors)
 - [Instantiation Errors (i500-i504)](#instantiation-errors)
+- [Token Errors (i600)](#token-errors)
+- [Middleware Errors (i700)](#middleware-errors)
+- [Internal Errors (i800)](#internal-errors)
 - [Debugging Tips](#debugging-tips)
 
 ## Quick Reference
@@ -27,6 +30,8 @@ This document provides detailed information about all error codes in Illuma and 
 | i301 | Container Bootstrapped | Provide before `bootstrap()`             |
 | i302 | Double Bootstrap       | Only bootstrap once                      |
 | i303 | Container destroyed    | Container has been destroyed             |
+| i304 | Parent Destroyed       | Keep the parent alive while children exist |
+| i305 | Parent Not Bootstrapped | Bootstrap the parent before the child   |
 | i400 | Provider Not Found     | Provide the token or use `optional`      |
 | i401 | Circular Dependency    | Refactor to break cycle                  |
 | i500 | Untracked Injection    | Use in class field initializers only     |
@@ -34,6 +39,9 @@ This document provides detailed information about all error codes in Illuma and 
 | i502 | Called Utils Outside   | Use only during instantiation            |
 | i503 | Instance Access Failed | Check factory/constructor logic          |
 | i504 | Access Failed          | Check provider configuration             |
+| i600 | Global Token Conflict  | Use one token kind per global name       |
+| i700 | Middleware Next Reused | Call `next()` at most once per middleware |
+| i800 | Unknown ProtoNode      | Internal invariant — please report it    |
 
 ---
 
@@ -337,7 +345,7 @@ container.provide({
 });
 ```
 
-**Note:** You don't need to provide the alias target before creating the alias (unlike what you might expect). The target will be resolved when the container is bootstrapped. However, if the alias target is never provided, you'll get an `[i400] Provider Not Found` error when trying to retrieve it.
+**Note:** You don't need to provide the alias target before creating the alias (unlike what you might expect). The target will be resolved when the container is bootstrapped. However, if the alias target is never provided, `bootstrap()` itself throws an `[i400] Provider Not Found` error (the whole container build fails, not just a later retrieval of the alias).
 
 ---
 
@@ -382,6 +390,45 @@ container.provide({
   alias: TOKEN_B
 });
 ```
+
+---
+
+### [i202] Conflicting Strategies
+
+**Error Message:**
+
+```
+Token "TokenName" cannot use both 'self' and 'skipSelf' strategies.
+```
+
+**Cause:**
+You passed both `self: true` and `skipSelf: true` to a single `nodeInject()` call. Their semantics are mutually exclusive — `self` restricts resolution to the current container, while `skipSelf` skips the current container and delegates to the parent — so they cannot be combined.
+
+**Example:**
+
+```typescript
+@NodeInjectable()
+class MyService {
+  // ❌ This will throw [i202]
+  private readonly dep = nodeInject(SomeToken, { self: true, skipSelf: true });
+}
+```
+
+**Solution:**
+Pick the one that matches your intent:
+
+```typescript
+@NodeInjectable()
+class MyService {
+  // ✅ Only resolve from the current container
+  private readonly local = nodeInject(SomeToken, { self: true });
+
+  // ✅ Or skip the current container and resolve from a parent
+  private readonly inherited = nodeInject(OtherToken, { skipSelf: true });
+}
+```
+
+See [Resolution Modifiers](./RESOLUTION_MODIFIERS.md) for details on `self` and `skipSelf`.
 
 ---
 
@@ -534,7 +581,7 @@ const container2 = createContainer(); // ✅ New instance
 **Error Message:**
 
 ```
-Container has been already destroyed
+Container has been already destroyed.
 ```
 
 **Cause:**
@@ -554,6 +601,67 @@ container.get(SomeToken); // ❌ This will throw [i303]
 
 **Solution:**
 Make sure to only call `destroy()` when you are completely done with the container and its dependencies. Avoid using the container or any of its injectors after calling `destroy()`.
+
+---
+
+### [i304] Parent Destroyed
+
+**Error Message:**
+
+```
+Parent container has been destroyed.
+```
+
+**Cause:**
+You tried to create a child container whose parent was already destroyed, or you called `bootstrap()` on a child whose parent was destroyed after the child was created. A destroyed container can no longer parent or bootstrap children.
+
+**Example:**
+
+```typescript
+const parent = new NodeContainer();
+parent.bootstrap();
+parent.destroy();
+
+// ❌ This will throw [i304] - the parent is already destroyed
+const child = new NodeContainer({ parent });
+```
+
+**Solution:**
+Ensure the parent container outlives its children. Create and bootstrap child containers before the parent is destroyed, and when managing lifecycles manually, tear children down before (or together with) the parent.
+
+---
+
+### [i305] Parent Not Bootstrapped
+
+**Error Message:**
+
+```
+Parent container has not been bootstrapped.
+```
+
+**Cause:**
+You called `bootstrap()` on a child container before its parent container was bootstrapped. A child cannot complete its own bootstrap until the parent is ready.
+
+**Example:**
+
+```typescript
+const parent = new NodeContainer();
+const child = new NodeContainer({ parent });
+
+// ❌ This will throw [i305] - the parent hasn't been bootstrapped yet
+child.bootstrap();
+```
+
+**Solution:**
+Bootstrap the parent first. A child created before its parent is bootstrapped is bootstrapped automatically when the parent bootstraps, so you usually only need to bootstrap the parent:
+
+```typescript
+const parent = new NodeContainer();
+const child = new NodeContainer({ parent });
+
+// ✅ Bootstrapping the parent cascades to the child
+parent.bootstrap();
+```
 
 ---
 
@@ -948,6 +1056,93 @@ A general instance access failure occurred that doesn't fit into other error cat
 4. Review the full error stack trace for more details
 
 If the issue persists, create a minimal reproduction and [report it on GitHub](https://github.com/git-illuma/core/issues).
+
+---
+
+## Token Errors
+
+### [i600] Global Token Conflict
+
+**Error Message:**
+
+```
+Global token "name" is already registered as NodeToken; cannot redeclare it as MultiNodeToken.
+```
+
+**Cause:**
+You constructed two tokens with `{ global: true }` that share the same name but are of different kinds (for example a `NodeToken` and a `MultiNodeToken`). Global tokens are deduplicated by name in a process-wide registry so identically-named tokens from separately-bundled modules resolve to one instance — which only works if every declaration of that name agrees on the token kind.
+
+**Example:**
+
+```typescript
+// ❌ Same global name, different kinds → throws [i600]
+const CONFIG = new NodeToken('seam.config', { global: true });
+const ALSO_CONFIG = new MultiNodeToken('seam.config', { global: true });
+```
+
+**Solution:**
+Give each global token a unique, stable name and keep its kind consistent everywhere it is declared:
+
+```typescript
+// ✅ Distinct names, one kind each
+const CONFIG = new NodeToken('seam.config', { global: true });
+const PLUGINS = new MultiNodeToken('seam.plugins', { global: true });
+```
+
+Reserve `global: true` for cross-bundle seam tokens. Tokens used within a single bundle don't need it — ordinary (non-global) tokens are distinct by reference and never collide. See the [Tokens guide](./TOKENS.md) for more on the `global` option.
+
+---
+
+## Middleware Errors
+
+### [i700] Middleware Next Reused
+
+**Error Message:**
+
+```
+Middleware next() was called more than once.
+```
+
+**Cause:**
+An instantiation middleware called its `next()` callback more than once. Each middleware in the chain must call `next()` at most once; a second call is rejected explicitly rather than silently re-running downstream middlewares.
+
+**Example:**
+
+```typescript
+const badMiddleware: iMiddleware = (params, next) => {
+  next(params);
+  return next(params); // ❌ second call throws [i700]
+};
+```
+
+**Solution:**
+Call `next()` exactly once and return its result. To transform the produced instance, capture the result and modify it instead of calling `next()` again:
+
+```typescript
+const goodMiddleware: iMiddleware = (params, next) => {
+  const instance = next(params); // ✅ called once
+  // ...inspect or wrap `instance`...
+  return instance;
+};
+```
+
+---
+
+## Internal Errors
+
+### [i800] Unknown ProtoNode
+
+**Error Message:**
+
+```
+Unknown ProtoNode type.
+```
+
+**Cause:**
+An internal invariant failed: the resolver encountered a provider prototype node of an unrecognized type. This should not occur through normal use of the public API and usually indicates a bug in Illuma or a mismatched/corrupted build.
+
+**Solution:**
+This is an internal error. Please [report it on GitHub](https://github.com/git-illuma/core/issues) with a minimal reproduction, and make sure all `@illuma/*` packages are on compatible versions.
 
 ---
 

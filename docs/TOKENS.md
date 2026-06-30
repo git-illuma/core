@@ -65,6 +65,29 @@ container.bootstrap();
 const logger = container.get(LOGGER);
 ```
 
+### Root-scoped singletons
+
+Pass `singleton: true` to mark a token as a root-scoped singleton in a hierarchical (parent–child) container tree. The token is provided automatically in the root container the first time it is requested, and the same instance is shared across the whole tree — you don't need to call `provide()` for it unless a child container should override it.
+
+```typescript
+const CLOCK = new NodeToken<Clock>('CLOCK', {
+  singleton: true,
+  factory: () => new SystemClock(),
+});
+```
+
+### Global (cross-bundle) tokens
+
+Pass `global: true` to deduplicate a token by name in a process-global registry. Containers key providers by token _reference_, so two identically-named tokens constructed in separately-bundled modules would otherwise be treated as different providers. With `global: true`, constructing the same-named token again returns the **same** instance — letting a dynamically-imported plugin bind a host's seam tokens without sharing a bundle.
+
+```typescript
+// In the host bundle and in a separately-built plugin bundle:
+const SEAM = new NodeToken<HostApi>('host.seam', { global: true });
+// Both constructions resolve to one and the same token instance.
+```
+
+Reserve `global: true` for cross-bundle seam tokens: the name becomes a global identity, so it must be unique and stable. Reusing one global name for two different token kinds (e.g. a `NodeToken` and a `MultiNodeToken`) throws [`[i600]` Global Token Conflict](./TROUBLESHOOTING.md#token-errors).
+
 ### Provider helper methods
 
 Tokens provide convenient methods to create providers:

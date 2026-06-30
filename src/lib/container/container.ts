@@ -13,6 +13,7 @@ import {
   extractProvider,
   ProtoNodeMulti,
   ProtoNodeSingle,
+  readNodeInstance,
   resolveTreeNode,
   TreeRootNode,
 } from "../provider";
@@ -46,7 +47,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
   private _bootstrapped = false;
   private _rootNode?: TreeRootNode;
 
-  private readonly _unsubParentBootstrap?: () => void;
+  private _unsubParentBootstrap?: () => void;
   private readonly _unsubParentDestroy?: () => void;
 
   private readonly _parent?: iDIContainer;
@@ -230,12 +231,35 @@ export class NodeContainer extends Illuma implements iDIContainer {
 
     const start = performance.now();
 
+    // Snapshot providers and lifecycle hooks so a build that throws rolls back
+    // to the pre-bootstrap state instead of leaving cleared maps and stray
+    // hooks (which would fire on retry or on a teardown that never bootstrapped).
+    const protoSnapshot = new Map(this._protoNodes);
+    const multiSnapshot = new Map(this._multiProtoNodes);
+    const hookSnapshot = this._lifecycle.snapshotHooks();
+
     this.provide(Injector.withValue(this._injector));
     this.provide(LifecycleRef.withValue(this._lifecycle));
 
-    this._rootNode = this._buildInjectionTree();
-    this._rootNode.build();
+    try {
+      this._rootNode = this._buildInjectionTree();
+      this._rootNode.build();
+    } catch (error) {
+      this._rootNode = undefined;
+      this._protoNodes.clear();
+      this._multiProtoNodes.clear();
+      for (const [token, proto] of protoSnapshot) this._protoNodes.set(token, proto);
+      for (const [token, proto] of multiSnapshot) this._multiProtoNodes.set(token, proto);
+      this._lifecycle.restoreHooks(hookSnapshot);
+      throw error;
+    }
+
     this._bootstrapped = true;
+
+    // Drop the parent's bootstrap-cascade hook: it has fired, and keeping it
+    // retains this child for the parent's lifetime and risks a re-bootstrap.
+    this._unsubParentBootstrap?.();
+    this._unsubParentBootstrap = undefined;
 
     const end = performance.now();
     const duration = end - start;
@@ -245,18 +269,22 @@ export class NodeContainer extends Illuma implements iDIContainer {
 
     this._lifecycle.runBootstrapHooks();
 
+    // A bootstrap hook may have destroyed the container; skip diagnostics
+    // rather than dereference the cleared _rootNode.
+    if (!this._rootNode) return;
+
     // Run diagnostics if enabled or diagnostics modules are registered
     if (Illuma.hasDiagnostics()) {
-      const allNodes = this._rootNode.dependencies.size;
-      const unusedNodes = Array.from(this._rootNode.dependencies)
-        .filter((node) => node.allocations === 0)
-        .filter((node) => {
-          if (!(node.proto instanceof ProtoNodeSingle)) return true;
-          return node.proto.token !== Injector && node.proto.token !== LifecycleRef;
-        });
+      // Count totals and unused over the same population: user nodes, excluding
+      // the built-in Injector / LifecycleRef, so the ratio compares like sets.
+      const userNodes = Array.from(this._rootNode.dependencies).filter((node) => {
+        if (!(node.proto instanceof ProtoNodeSingle)) return true;
+        return node.proto.token !== Injector && node.proto.token !== LifecycleRef;
+      });
+      const unusedNodes = userNodes.filter((node) => node.allocations === 0);
 
       Illuma.onReport({
-        totalNodes: allNodes,
+        totalNodes: userNodes.length,
         unusedNodes: unusedNodes,
         bootstrapDuration: duration,
       });
@@ -301,15 +329,30 @@ export class NodeContainer extends Illuma implements iDIContainer {
     }
 
     const token = extractToken(provider);
+    return this._resolve(token, options);
+  }
+
+  /**
+   * @internal
+   * Shared resolution algorithm for {@link get} and {@link produce}'s injector
+   * retriever, so the two cannot drift on modifiers, hierarchy walking, or
+   * root-singleton scoping.
+   */
+  private _resolve<T>(
+    token: NodeBase<T>,
+    options?: iNodeInjectorOptions,
+  ): T | T[] | null {
+    if (!this._rootNode) throw InjectionError.notBootstrapped();
     const { optional, self, skipSelf } = options ?? {};
 
     if (self && skipSelf) {
-      throw InjectionError.conflictingStrategies(token as any);
+      throw InjectionError.conflictingStrategies(token);
     }
 
     if (!skipSelf) {
       const treeNode = this._rootNode.obtain(token);
-      if (treeNode) return treeNode.instance;
+      // self:true on a multi token yields only this container's own members.
+      if (treeNode) return readNodeInstance(treeNode, self ?? false);
     }
 
     if (!self) {
@@ -342,36 +385,10 @@ export class NodeContainer extends Illuma implements iDIContainer {
       factory = isConstructor(fn) ? () => new fn() : (fn as () => T);
     }
 
-    const rootNode = this._rootNode;
-    if (!rootNode) throw InjectionError.notBootstrapped();
+    if (!this._rootNode) throw InjectionError.notBootstrapped();
 
-    const retriever: InjectorFn = (
-      token,
-      { optional, self, skipSelf }: iNodeInjectorOptions = {},
-    ) => {
-      if (self && skipSelf) {
-        throw InjectionError.conflictingStrategies(token as NodeBase<any>);
-      }
-
-      if (!skipSelf) {
-        const node = rootNode.obtain<T>(token);
-        if (node) return node.instance;
-      }
-
-      if (!self) {
-        const upstream = this._getFromParent(token);
-        if (upstream) return upstream.instance;
-      }
-
-      if (token instanceof MultiNodeToken) return [];
-      if (!skipSelf && token instanceof NodeToken && token.opts?.singleton) {
-        const singleton = this._getRootSingleton(token, true);
-        if (singleton) return singleton.instance;
-      }
-
-      if (!optional) throw InjectionError.notFound(token);
-      return null;
-    };
+    // Same algorithm as get(), so produce()'s injections honor scoping identically.
+    const retriever: InjectorFn = (token, options) => this._resolve(token, options);
 
     const middlewares = [...Illuma._middlewares, ...this.collectMiddlewares()];
     const contextFactory = () => InjectionContext.instantiate(factory, retriever);
@@ -481,29 +498,50 @@ export class NodeContainer extends Illuma implements iDIContainer {
 
   /** @internal */
   private _getFromParent<T>(token: Token<T>): TreeNode<T> | null {
-    if (!this._parent) return null;
-    const parentNode = this._parent as NodeContainer;
+    if (!(this._parent instanceof NodeContainer)) return null;
+    const parentNode = this._parent;
 
-    const upstream = parentNode.findNode(token);
-    if (upstream) return upstream;
+    // Walk the whole ancestor chain, not just the immediate parent: a plain
+    // token on a grandparent must still resolve from a grandchild.
+    for (
+      let ancestor: NodeContainer | undefined = parentNode;
+      ancestor;
+      ancestor = ancestor._parent instanceof NodeContainer ? ancestor._parent : undefined
+    ) {
+      const upstream = ancestor.findNode(token);
+      if (upstream) return upstream;
+    }
 
     return this._resolveSingletonFrom(parentNode, token, true);
   }
 
   /** @internal */
   private _resolverFromParent<T>(token: Token<T>): TreeNode<T> | null {
-    if (!this._parent || !(this._parent instanceof NodeContainer)) return null;
+    if (!(this._parent instanceof NodeContainer)) return null;
 
-    const upstream = this._parent._findNode(token);
-    if (upstream) return upstream;
+    // Build-time wiring mirrors runtime resolution: search every ancestor's
+    // pool up to the root, regardless of how many levels separate them.
+    for (
+      let ancestor: NodeContainer | undefined = this._parent;
+      ancestor;
+      ancestor = ancestor._parent instanceof NodeContainer ? ancestor._parent : undefined
+    ) {
+      const upstream = ancestor._findNode(token);
+      if (upstream) return upstream;
+    }
 
     return this._resolveSingletonFrom(this._parent, token, false);
   }
 
   /** @internal */
   private _buildInjectionTree(): TreeRootNode {
-    const middlewares = [...Illuma._middlewares, ...this.collectMiddlewares()];
-    const root = new TreeRootNode(this._opts?.instant, middlewares);
+    // A thunk, not a frozen array: a node materialized lazily after bootstrap
+    // reads the CURRENT middleware chain, so lazy get() matches produce() even
+    // for a global middleware registered post-bootstrap.
+    const root = new TreeRootNode(this._opts?.instant, () => [
+      ...Illuma._middlewares,
+      ...this.collectMiddlewares(),
+    ]);
     const cache = new Map<ProtoNode, TreeNode>();
 
     const nodes: ProtoNode[] = [

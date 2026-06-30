@@ -469,11 +469,20 @@ const REQUEST_CONTEXT = new NodeToken<RequestContext>('REQUEST_CONTEXT');
 
 @NodeInjectable()
 class RequestHandler {
+  // Capture the injector during construction, while the injection context is
+  // open. `injectGroupAsync` resolves `Injector` eagerly when it is *called*,
+  // so invoking it later from a request handler (outside the context) would
+  // otherwise throw an "outside of an injection context" error ([i501]).
+  private readonly injector = nodeInject(Injector);
+
   public createRequestScope(userId: string, requestId: string) {
-    return injectGroupAsync(async () => [
-      RequestService,
-      { provide: REQUEST_CONTEXT, value: { userId, requestId } }
-    ], { withCache: false }); // New scope per request
+    return injectGroupAsync(
+      async () => [
+        RequestService,
+        { provide: REQUEST_CONTEXT, value: { userId, requestId } },
+      ],
+      { injector: this.injector, withCache: false }, // new scope per request
+    );
   }
 
   public async handleRequest(userId: string, requestId: string) {

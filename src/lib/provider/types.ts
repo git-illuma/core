@@ -26,6 +26,15 @@ export interface iNodeTokenBaseOptions<T> {
    * Marks token as root-scoped singleton in hierarchical containers.
    */
   singleton?: boolean;
+
+  /**
+   * Dedupe this token by name in a process-global registry, so an identically
+   * named token declared in another bundle is the SAME object. Containers key
+   * providers by token reference, so cross-bundle sharing needs identical
+   * instances. Reserve for cross-bundle seam tokens: the name becomes a global
+   * identity and must be unique and stable.
+   */
+  global?: boolean;
 }
 
 /**

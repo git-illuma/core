@@ -9,6 +9,14 @@ type iLifecycleGlobalThis = typeof globalThis & {
 
 const lcrGlobal = globalThis as iLifecycleGlobalThis;
 
+/** @internal Snapshot of every lifecycle hook registration. */
+interface iLifecycleHookSnapshot {
+  bootstrap: Set<() => void>;
+  bootstrapChild: Set<() => void>;
+  destroy: Set<() => void>;
+  destroyChild: Set<() => void>;
+}
+
 /** @internal */
 export class LifecycleRefImpl {
   private readonly _destroyCallbacks = new Set<() => void>();
@@ -56,8 +64,64 @@ export class LifecycleRefImpl {
    * Should be called by the container after the bootstrap process is complete.
    */
   public runBootstrapHooks(): void {
-    for (const cb of this._bootstrapCallbacks) cb();
-    for (const cb of this._bootstrapChildCallbacks) cb();
+    // Isolate each hook so one throwing callback cannot strand sibling children;
+    // surface the first error after all have run. Snapshot so a hook that
+    // registers or clears callbacks cannot disturb the walk.
+    const errors = this._runGuarded([
+      Array.from(this._bootstrapCallbacks),
+      Array.from(this._bootstrapChildCallbacks),
+    ]);
+
+    if (errors.length) throw errors[0];
+  }
+
+  /**
+   * Runs every callback in each group, isolating throws, and returns the
+   * collected errors (empty if none threw). Groups run in the order given.
+   */
+  private _runGuarded(groups: Array<Iterable<() => void>>): unknown[] {
+    const errors: unknown[] = [];
+    for (const group of groups) {
+      for (const cb of group) {
+        try {
+          cb();
+        } catch (e) {
+          errors.push(e);
+        }
+      }
+    }
+    return errors;
+  }
+
+  /**
+   * @internal
+   * Captures all four hook sets so a failing bootstrap can roll them back,
+   * dropping user hooks and child hooks a factory may have registered.
+   */
+  public snapshotHooks(): iLifecycleHookSnapshot {
+    return {
+      bootstrap: new Set(this._bootstrapCallbacks),
+      bootstrapChild: new Set(this._bootstrapChildCallbacks),
+      destroy: new Set(this._destroyCallbacks),
+      destroyChild: new Set(this._destroyChildCallbacks),
+    };
+  }
+
+  /**
+   * @internal
+   * Restores the hooks captured by {@link snapshotHooks}, dropping any added
+   * since (e.g. by a factory in a failed build, or a child spawned during it).
+   */
+  public restoreHooks(snapshot: iLifecycleHookSnapshot): void {
+    this._restore(this._bootstrapCallbacks, snapshot.bootstrap);
+    this._restore(this._bootstrapChildCallbacks, snapshot.bootstrapChild);
+    this._restore(this._destroyCallbacks, snapshot.destroy);
+    this._restore(this._destroyChildCallbacks, snapshot.destroyChild);
+  }
+
+  private _restore(target: Set<() => void>, snapshot: Set<() => void>): void {
+    target.clear();
+    for (const cb of snapshot) target.add(cb);
   }
 
   /**
@@ -99,17 +163,10 @@ export class LifecycleRefImpl {
 
     // Guard each hook so one throwing callback cannot strand sibling children
     // or abort the cascade; surface the first error after every hook has run.
-    const errors: unknown[] = [];
-    const run = (cb: () => void): void => {
-      try {
-        cb();
-      } catch (e) {
-        errors.push(e);
-      }
-    };
-
-    for (const cb of Array.from(this._destroyChildCallbacks).reverse()) run(cb);
-    for (const cb of Array.from(this._destroyCallbacks).reverse()) run(cb);
+    const errors = this._runGuarded([
+      Array.from(this._destroyChildCallbacks).reverse(),
+      Array.from(this._destroyCallbacks).reverse(),
+    ]);
 
     this._bootstrapCallbacks.clear();
     this._bootstrapChildCallbacks.clear();

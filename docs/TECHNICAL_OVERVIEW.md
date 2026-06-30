@@ -590,7 +590,14 @@ These are collected during scanning to build the dependency graph.
 ### Function Signature
 
 ```typescript
-function nodeInject<N>(token: N, options?: { optional?: boolean }): ExtractInjectedType<N>;
+function nodeInject<N>(token: N, options?: iNodeInjectorOptions): ExtractInjectedType<N>;
+
+// where:
+interface iNodeInjectorOptions {
+  optional?: boolean; // return null instead of throwing when not found
+  self?: boolean;     // only resolve from the current container
+  skipSelf?: boolean; // skip the current container, resolve from a parent
+}
 ```
 
 ### Behavior
@@ -1088,13 +1095,13 @@ const ConfigToken = new NodeToken<Config>('Config');
 const UserServiceToken = new NodeToken<UserService>('UserService');
 const PluginToken = new MultiNodeToken<Plugin>('Plugin');
 
-@Injectable()
+@NodeInjectable()
 class Logger { /* ... */ }
 
-@Injectable()
+@NodeInjectable()
 class Config { /* ... */ }
 
-@Injectable()
+@NodeInjectable()
 class UserService {
   // Dependencies are injected via nodeInject() in class body
   private readonly logger = nodeInject(LoggerToken);
@@ -1102,10 +1109,10 @@ class UserService {
   private readonly plugins = nodeInject(PluginToken);
 }
 
-@Injectable()
+@NodeInjectable()
 class AuthPlugin { /* ... */ }
 
-@Injectable()
+@NodeInjectable()
 class CachePlugin { /* ... */ }
 ```
 

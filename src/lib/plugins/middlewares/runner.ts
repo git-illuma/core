@@ -1,3 +1,4 @@
+import { InjectionError } from "../../errors";
 import type { iInstantiationParams, iMiddleware } from "./types";
 
 /** @internal */
@@ -8,11 +9,21 @@ export function runMiddlewares<T>(
   const ms = middlewares as iMiddleware<T>[];
   if (ms.length === 0) return params.factory();
 
-  let i = 0;
-  const next = (current: iInstantiationParams<T>): T => {
-    if (i >= ms.length) return current.factory();
-    return ms[i++](current, next);
+  // Dispatch by index so each middleware's `next` continues from its own
+  // position, and reject a double next() explicitly rather than letting it
+  // silently skip downstream middlewares.
+  const dispatch = (index: number, current: iInstantiationParams<T>): T => {
+    if (index >= ms.length) return current.factory();
+
+    let called = false;
+    return ms[index](current, (forwarded) => {
+      if (called) {
+        throw InjectionError.middlewareNextReused();
+      }
+      called = true;
+      return dispatch(index + 1, forwarded);
+    });
   };
 
-  return next(params);
+  return dispatch(0, params);
 }

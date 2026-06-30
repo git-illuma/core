@@ -70,24 +70,31 @@ export class ProtoNodeMulti<T = any> {
   public readonly multiNodes: Set<MultiNodeToken<T>> = new Set();
   public readonly transparentNodes: Set<ProtoNodeTransparent<T>> = new Set();
 
+  // Providers in declaration order across all kinds, so resolved members follow
+  // the order they were registered rather than grouping aliases before factories.
+  public readonly orderedProviders: Array<
+    NodeToken<T> | MultiNodeToken<T> | ProtoNodeTransparent<T>
+  > = [];
+
   constructor(public readonly token: MultiNodeToken<T>) {}
 
   public hasProviders(): boolean {
-    return (
-      this.singleNodes.size > 0 ||
-      this.multiNodes.size > 0 ||
-      this.transparentNodes.size > 0
-    );
+    return this.orderedProviders.length > 0;
   }
 
   public addProvider(retriever: NodeBase<T> | (() => T)): void {
     if (retriever instanceof NodeToken) {
+      if (this.singleNodes.has(retriever)) return;
       this.singleNodes.add(retriever);
+      this.orderedProviders.push(retriever);
     } else if (retriever instanceof MultiNodeToken) {
+      if (this.multiNodes.has(retriever)) return;
       this.multiNodes.add(retriever);
+      this.orderedProviders.push(retriever);
     } else if (typeof retriever === "function") {
       const transparentProto = new ProtoNodeTransparent<T>(this, retriever);
       this.transparentNodes.add(transparentProto);
+      this.orderedProviders.push(transparentProto);
     }
   }
 

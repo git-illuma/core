@@ -498,3 +498,292 @@ describe("LifecycleRef still resolvable after the fixes", () => {
     expect(c.get(Injector)).toBeDefined();
   });
 });
+
+describe("resolution failure does not strand a node as in-progress", () => {
+  it("lazy: a retried get() after a factory throw succeeds instead of faking a cycle", () => {
+    let shouldThrow = true;
+    const B = new NodeToken<number>("RETRY_B");
+    const A = new NodeToken<number>("RETRY_A");
+
+    const c = new NodeContainer({ instant: false });
+    c.provide(
+      B.withFactory(() => {
+        if (shouldThrow) throw new Error("transient boom");
+        return 42;
+      }),
+    );
+    c.provide(A.withFactory(() => nodeInject(B) + 1));
+    c.bootstrap();
+
+    expect(() => c.get(A)).toThrow("transient boom");
+
+    shouldThrow = false;
+    expect(c.get(A)).toBe(43);
+  });
+
+  it("lazy: a sibling sharing a failed dep does not see a bogus circular dependency", () => {
+    let shouldThrow = true;
+    const DEP = new NodeToken<number>("SHARED_DEP");
+    const A = new NodeToken<number>("SHARED_A");
+    const C = new NodeToken<number>("SHARED_C");
+
+    const c = new NodeContainer({ instant: false });
+    c.provide(
+      DEP.withFactory(() => {
+        if (shouldThrow) throw new Error("dep boom");
+        return 1;
+      }),
+    );
+    c.provide(A.withFactory(() => nodeInject(DEP)));
+    c.provide(C.withFactory(() => nodeInject(DEP)));
+    c.bootstrap();
+
+    expect(() => c.get(A)).toThrow("dep boom");
+
+    shouldThrow = false;
+    let caught: InjectionError | undefined;
+    try {
+      c.get(C);
+    } catch (e) {
+      caught = e as InjectionError;
+    }
+    expect(caught?.code).not.toBe(ERR_CODES.CIRCULAR_DEPENDENCY);
+    expect(c.get(C)).toBe(1);
+  });
+
+  it("lazy multi: a retried get() does not accumulate duplicate members", () => {
+    let shouldThrow = true;
+    const M = new MultiNodeToken<number>("RETRY_MULTI");
+    const GOOD = new NodeToken<number>("RETRY_MULTI_GOOD");
+    const BAD = new NodeToken<number>("RETRY_MULTI_BAD");
+
+    const c = new NodeContainer({ instant: false });
+    c.provide(GOOD.withValue(1));
+    c.provide(
+      BAD.withFactory(() => {
+        if (shouldThrow) throw new Error("multi member boom");
+        return 2;
+      }),
+    );
+    c.provide({ provide: M, alias: GOOD });
+    c.provide({ provide: M, alias: BAD });
+    c.bootstrap();
+
+    expect(() => c.get(M)).toThrow("multi member boom");
+
+    shouldThrow = false;
+    expect(c.get(M)).toEqual([1, 2]);
+  });
+});
+
+describe("bootstrap() is atomic (rollback on a failed build)", () => {
+  it("a retry after a throwing factory keeps every user provider", () => {
+    const GOOD = new NodeToken<{ v: number }>("ATOMIC_GOOD");
+    const BAD = new NodeToken<number>("ATOMIC_BAD");
+    let boom = true;
+
+    const c = new NodeContainer();
+    c.provide(GOOD.withFactory(() => ({ v: 1 })));
+    c.provide(
+      BAD.withFactory(() => {
+        if (boom) throw new Error("boom");
+        return 2;
+      }),
+    );
+
+    expect(() => c.bootstrap()).toThrow("boom");
+    expect(c.bootstrapped).toBe(false);
+
+    boom = false;
+    expect(() => c.bootstrap()).not.toThrow();
+    expect(c.bootstrapped).toBe(true);
+    expect(c.get(GOOD)).toEqual({ v: 1 });
+    expect(c.get(BAD)).toBe(2);
+  });
+
+  it("rolls back when an unresolved dependency aborts the build, then succeeds once provided", () => {
+    const DEP = new NodeToken<number>("ATOMIC_DEP");
+    const HOST = new NodeToken<number>("ATOMIC_HOST");
+
+    const c = new NodeContainer();
+    c.provide(HOST.withFactory(() => nodeInject(DEP) + 1));
+
+    // DEP is missing: the build aborts with notFound.
+    expect(() => c.bootstrap()).toThrow(InjectionError);
+    expect(c.bootstrapped).toBe(false);
+
+    // Providing the missing dep and retrying must succeed with HOST intact.
+    c.provide(DEP.withValue(41));
+    expect(() => c.bootstrap()).not.toThrow();
+    expect(c.get(HOST)).toBe(42);
+  });
+
+  it("does not double-register the Injector/LifecycleRef built-ins across a failed attempt", () => {
+    const BAD = new NodeToken<number>("ATOMIC_BUILTIN_BAD");
+    let boom = true;
+
+    const c = new NodeContainer();
+    c.provide(
+      BAD.withFactory(() => {
+        if (boom) throw new Error("boom");
+        return 1;
+      }),
+    );
+
+    expect(() => c.bootstrap()).toThrow("boom");
+    boom = false;
+    // A clean retry proves the built-ins were rolled back (no duplicate-provider).
+    expect(() => c.bootstrap()).not.toThrow();
+    expect(c.get(Injector)).toBeDefined();
+    expect(c.get(LifecycleRef)).toBeDefined();
+    expect(c.get(BAD)).toBe(1);
+  });
+
+  it("rolls back afterBootstrap hooks registered during a failed build", () => {
+    const EARLY = new NodeToken<number>("ATOMIC_HOOK_EARLY");
+    const BAD = new NodeToken<number>("ATOMIC_HOOK_BAD");
+    let boom = true;
+    let hookRuns = 0;
+
+    const c = new NodeContainer();
+    c.provide(
+      EARLY.withFactory(() => {
+        nodeInject(LifecycleRef).afterBootstrap(() => {
+          hookRuns++;
+        });
+        return 1;
+      }),
+    );
+    c.provide(
+      BAD.withFactory(() => {
+        if (boom) throw new Error("boom");
+        return 2;
+      }),
+    );
+
+    expect(() => c.bootstrap()).toThrow("boom");
+    boom = false;
+    c.bootstrap();
+
+    // The hook leaked from the failed attempt must NOT also fire.
+    expect(hookRuns).toBe(1);
+  });
+
+  it("rolls back beforeDestroy hooks registered during a failed build", () => {
+    const EARLY = new NodeToken<number>("ATOMIC_DESTROY_EARLY");
+    const BAD = new NodeToken<number>("ATOMIC_DESTROY_BAD");
+    let boom = true;
+    let destroyRuns = 0;
+
+    const c = new NodeContainer();
+    c.provide(
+      EARLY.withFactory(() => {
+        nodeInject(LifecycleRef).beforeDestroy(() => {
+          destroyRuns++;
+        });
+        return 1;
+      }),
+    );
+    c.provide(
+      BAD.withFactory(() => {
+        if (boom) throw new Error("boom");
+        return 2;
+      }),
+    );
+
+    expect(() => c.bootstrap()).toThrow("boom");
+    boom = false;
+    c.bootstrap();
+    c.destroy();
+
+    // A beforeDestroy from a never-completed bootstrap must not run on teardown.
+    expect(destroyRuns).toBe(1);
+  });
+
+  it("rolls back child hooks from a child spawned during a failed build", () => {
+    const EARLY = new NodeToken<number>("ATOMIC_CHILD_EARLY");
+    const BAD = new NodeToken<number>("ATOMIC_CHILD_BAD");
+    let boom = true;
+
+    const c = new NodeContainer();
+    c.provide(
+      EARLY.withFactory(() => {
+        // Spawning a child registers onChildBootstrap/onChildDestroy on THIS
+        // (parent) lifecycle — those must roll back with a failed attempt.
+        nodeInject(Injector).spawnChild();
+        return 1;
+      }),
+    );
+    c.provide(
+      BAD.withFactory(() => {
+        if (boom) throw new Error("boom");
+        return 2;
+      }),
+    );
+
+    expect(() => c.bootstrap()).toThrow("boom");
+    boom = false;
+    c.bootstrap();
+
+    const lifecycle = (c as any)._lifecycle;
+    // Only the successful attempt's child remains: the failed attempt's child
+    // hooks were rolled back. The surviving child's bootstrap hook is then
+    // released once it bootstraps in the cascade (#38), leaving its destroy hook.
+    expect(lifecycle._bootstrapChildCallbacks.size).toBe(0);
+    expect(lifecycle._destroyChildCallbacks.size).toBe(1);
+  });
+});
+
+describe("bootstrap hook error isolation (#4) and destroy-in-hook (#22)", () => {
+  afterEach(() => {
+    (Illuma as any).__resetPlugins();
+  });
+
+  it("one throwing afterBootstrap hook does not abort sibling hooks", () => {
+    const c = new NodeContainer();
+    c.bootstrap();
+    const lifecycle = (c as any)._lifecycle;
+
+    let secondRan = false;
+    lifecycle.afterBootstrap(() => {
+      throw new Error("hook boom");
+    });
+    lifecycle.afterBootstrap(() => {
+      secondRan = true;
+    });
+
+    expect(() => lifecycle.runBootstrapHooks()).toThrow("hook boom");
+    expect(secondRan).toBe(true);
+  });
+
+  it("a throwing child bootstrap does not strand sibling children in the cascade", () => {
+    const parent = new NodeContainer();
+    const childA = parent.child() as NodeContainer;
+    const childB = parent.child() as NodeContainer;
+    const childC = parent.child() as NodeContainer;
+
+    // childB fails to bootstrap (a throwing factory).
+    childB.provide(
+      new NodeToken<number>("CASCADE_BAD").withFactory(() => {
+        throw new Error("child boom");
+      }),
+    );
+
+    expect(() => parent.bootstrap()).toThrow("child boom");
+
+    expect(childA.bootstrapped).toBe(true);
+    expect(childC.bootstrapped).toBe(true);
+    expect(childB.bootstrapped).toBe(false);
+  });
+
+  it("bootstrap does not crash when a hook destroys the container with diagnostics on", () => {
+    Illuma.extendDiagnostics({ onReport: () => {} });
+
+    const c = new NodeContainer();
+    const lifecycle = (c as any)._lifecycle;
+    lifecycle.afterBootstrap(() => c.destroy());
+
+    expect(() => c.bootstrap()).not.toThrow();
+    expect(c.destroyed).toBe(true);
+  });
+});

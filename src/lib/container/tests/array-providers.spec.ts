@@ -220,3 +220,20 @@ describe("array providers", () => {
     expect(container.get(tokenB)).toBe("value-b");
   });
 });
+
+describe("multi member declaration order (#24)", () => {
+  it("resolves members in registration order regardless of provider kind", () => {
+    const M = new MultiNodeToken<string>("ORDER_MULTI");
+    const ALIAS_SRC = new NodeToken<string>("ORDER_ALIAS_SRC");
+
+    const c = new NodeContainer();
+    c.provide(ALIAS_SRC.withValue("alias"));
+    c.provide(M.withValue("first")); // value -> transparent
+    c.provide({ provide: M, alias: ALIAS_SRC }); // alias -> single
+    c.provide(M.withFactory(() => "factory")); // factory -> transparent
+    c.provide(M.withValue("last")); // value -> transparent
+    c.bootstrap();
+
+    expect(c.get(M)).toEqual(["first", "alias", "factory", "last"]);
+  });
+});

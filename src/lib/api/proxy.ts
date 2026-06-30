@@ -5,6 +5,9 @@
  */
 // @ts-nocheck
 export const SHAPE_SHIFTER = new Proxy(() => {}, {
-  get: () => SHAPE_SHIFTER,
+  get: (_target, prop) => {
+    if (prop === Symbol.toPrimitive) return () => "";
+    return SHAPE_SHIFTER;
+  },
   apply: () => SHAPE_SHIFTER,
 });
