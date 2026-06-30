@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`i600`), a middleware calling `next()` more than once (`i700`), and the internal
   unknown-`ProtoNode` invariant (`i800`). Messages are unchanged apart from the `[iNNN]`
   prefix, and callers can now branch on `error.code` for these cases.
+<<<<<<< HEAD
 
 ### Fixed
 
@@ -34,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+=======
+>>>>>>> 3117119 (fix: changelog)
 - Completed the error reference (`TROUBLESHOOTING.md`): documented `i202`, `i304`, `i305`,
   and the new `i600`/`i700`/`i800` codes across the quick-reference table, table of contents,
   and detail sections; documented the `singleton` and `global` token options in `TOKENS.md`
@@ -44,6 +47,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   name and a malformed provider array in `TESTKIT.md`, and a request-scoped `injectGroupAsync`
   example in `ASYNC_INJECTION.md`.
 
+<<<<<<< HEAD
+=======
+### Fixed
+
+- Tree-node resolution no longer leaves a node stranded as "in progress" when a factory
+  or dependency throws. A failed resolution now resets its guard on every exit path, so a
+  retried `get()` (lazy `instant: false` mode) or another consumer of a shared dependency
+  re-runs the factory instead of reporting a bogus circular-dependency (`i401`) error.
+  `MultiNodeToken` resolution also resets its members per attempt so a retry cannot
+  accumulate duplicates.
+
+>>>>>>> 3117119 (fix: changelog)
 ## 2.3.0 - 2026-05-28
 
 ## 2.2.0 - 2026-05-10
