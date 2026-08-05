@@ -7,8 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2.4.0 - 2026-06-30
 ### Added
-
 - `iNodeTokenBaseOptions.global` — opt-in token-instance deduplication by name via
   a `globalThis` registry (mirrors the existing token-class dedup). Identically-named
   global tokens constructed in separately-bundled modules resolve to the same instance,
@@ -16,7 +16,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   dynamically-imported plugin to bind a host's seam tokens without sharing a bundle.
 
 ### Changed
-
 - The three remaining raw `throw new Error` sites now throw a typed `InjectionError`
   carrying a stable code, matching the rest of the library: a global-token kind conflict
   (`i600`), a middleware calling `next()` more than once (`i700`), and the internal
@@ -33,7 +32,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   example in `ASYNC_INJECTION.md`.
 
 ### Fixed
-
 - Tree-node resolution no longer leaves a node stranded as "in progress" when a factory
   or dependency throws. A failed resolution now resets its guard on every exit path, so a
   retried `get()` (lazy `instant: false` mode) or another consumer of a shared dependency
