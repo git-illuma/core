@@ -691,6 +691,11 @@ describe("bootstrap() is atomic (rollback on a failed build)", () => {
       }),
     );
 
+    // `provide` scans the factory by running it, and the throwaway instance that
+    // scan builds tears itself down when the scan ends. That is not what this
+    // test is about; only what happens from here on is.
+    destroyRuns = 0;
+
     expect(() => c.bootstrap()).toThrow("boom");
     boom = false;
     c.bootstrap();

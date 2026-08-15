@@ -1,4 +1,6 @@
+import { SHAPE_SHIFTER } from "../api/proxy";
 import type { InjectorFn } from "../api/types";
+import { LifecycleRef, LifecycleRefImpl } from "../container/lifecycle";
 import { InjectionError } from "../errors";
 import { Illuma } from "../global/global";
 import type { iContextScanner } from "../plugins/context/types";
@@ -116,7 +118,18 @@ abstract class InjectionContextBase {
    */
   public static scanInto(factory: any, target: Set<iInjectionNode<any>>): void {
     if (typeof factory !== "function") return;
-    InjectionContextBase.open();
+
+    // The dry run executes the factory body for real, so a constructor that
+    // reaches outside the container — subscribing to something module-scoped,
+    // say — leaves that subscription behind. Resolving `LifecycleRef` to the
+    // shape-shifter meant the documented `beforeDestroy` escape hatch silently
+    // registered nothing, so even correct code could not undo it. Hand out a
+    // scratch lifecycle instead; every other token stays a shape-shifter.
+    const scratch = new LifecycleRefImpl();
+
+    InjectionContextBase.open((token) =>
+      token === LifecycleRef ? scratch : SHAPE_SHIFTER,
+    );
     const baseDepth = injectionContextState.stack.length;
 
     // close() must run on every path: a throwing context scanner would
@@ -151,6 +164,18 @@ abstract class InjectionContextBase {
         InjectionContextBase.close();
       }
       InjectionContextBase.close();
+
+      // The instance this scan built is discarded the moment it ends, so its
+      // teardown has to run now: nothing will ever be able to run it later.
+      // Closed first, so a hook that injects sees the outer context restored.
+      try {
+        scratch.destroy();
+      } catch (err) {
+        Illuma.logger.error(
+          "[Illuma] A teardown hook registered during a dependency scan threw:",
+          err,
+        );
+      }
     }
   }
 
