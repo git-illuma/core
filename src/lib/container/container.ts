@@ -26,6 +26,88 @@ import { LifecycleRef, LifecycleRefImpl } from "./lifecycle";
 import type { iContainerOptions, iDIContainer } from "./types";
 
 /**
+ * Prunes a weakly linked child's parent registrations once the child itself has
+ * been collected, so a parent that outlives many discarded children does not
+ * accumulate dead hook closures.
+ *
+ * The held value is the plain array of unsubscribers and the callback closes
+ * over nothing: a held value that reaches the target, however indirectly, keeps
+ * it alive forever and silently turns the weak link back into a strong one.
+ */
+const PARENT_LINK_REGISTRY: FinalizationRegistry<Array<() => void>> | null =
+  typeof FinalizationRegistry === "undefined" || typeof WeakRef === "undefined"
+    ? null
+    : new FinalizationRegistry<Array<() => void>>((unsubscribers) => {
+        for (const unsubscribe of unsubscribers) unsubscribe();
+      });
+
+/**
+ * `WeakRef` and `FinalizationRegistry` are ES2021, while the rest of the library
+ * targets ES2015. Both are required: a `WeakRef` without the registry would stop
+ * retaining children but would never prune their registrations, quietly trading
+ * one accumulation for another. An engine missing either keeps the strong link
+ * rather than failing to build a container at all — the option is an
+ * optimisation, not a correctness requirement.
+ */
+const WEAK_PARENT_LINK_SUPPORTED = PARENT_LINK_REGISTRY !== null;
+
+let weakLinkWarned = false;
+
+function warnWeakLinkUnsupported(): void {
+  if (weakLinkWarned) return;
+  weakLinkWarned = true;
+
+  Illuma.logger.warn(
+    "[Illuma] `weakParentLink` needs WeakRef and FinalizationRegistry (ES2021), which this environment does not provide. Falling back to a strong parent link: a child dropped without destroy() will be retained by its parent.",
+  );
+}
+
+/**
+ * Every weak parent hook is built here, at module scope, and never inside the
+ * constructor.
+ *
+ * A JS engine allocates one context per scope, shared by every closure created
+ * in it. The constructor's other branch builds `() => this.destroy()`, so `this`
+ * lives in the constructor's context — and any hook created alongside it would
+ * reach the child through that shared context no matter how carefully it avoids
+ * naming `this`. These factories capture nothing but the ref.
+ */
+function weakBootstrapHook(ref: WeakRef<NodeContainer>): () => void {
+  return () => {
+    ref.deref()?.bootstrap();
+  };
+}
+
+function weakDestroyHook(ref: WeakRef<NodeContainer>): () => void {
+  return () => {
+    const target = ref.deref();
+    if (target && !target.destroyed) target.destroy();
+  };
+}
+
+function linkWeaklyToParent(
+  child: NodeContainer,
+  lifecycle: LifecycleRefImpl,
+  cascadeBootstrap: boolean,
+): { bootstrap?: () => void; destroy: () => void } {
+  const ref = new WeakRef(child);
+  const unsubscribers: Array<() => void> = [];
+
+  let bootstrap: (() => void) | undefined;
+  if (cascadeBootstrap) {
+    bootstrap = lifecycle.onChildBootstrap(weakBootstrapHook(ref));
+    unsubscribers.push(bootstrap);
+  }
+
+  const destroy = lifecycle.onChildDestroy(weakDestroyHook(ref));
+  unsubscribers.push(destroy);
+
+  PARENT_LINK_REGISTRY?.register(child, unsubscribers, child);
+
+  return { bootstrap, destroy };
+}
+
+/**
  * The main Dependency Injection Container class that holds registered providers
  * and resolves instances of those dependencies.
  *
@@ -80,15 +162,24 @@ export class NodeContainer extends Illuma implements iDIContainer {
       }
 
       if (this._parent instanceof NodeContainer) {
-        if (!this._parent.bootstrapped) {
-          this._unsubParentBootstrap = this._parent._lifecycle.onChildBootstrap(() =>
-            this.bootstrap(),
-          );
-        }
+        const lifecycle = this._parent._lifecycle;
 
-        this._unsubParentDestroy = this._parent._lifecycle.onChildDestroy(() =>
-          this.destroy(),
-        );
+        const wantsWeakLink = _opts?.weakParentLink === true;
+        if (wantsWeakLink && !WEAK_PARENT_LINK_SUPPORTED) warnWeakLinkUnsupported();
+
+        if (wantsWeakLink && WEAK_PARENT_LINK_SUPPORTED) {
+          const link = linkWeaklyToParent(this, lifecycle, !this._parent.bootstrapped);
+          this._unsubParentBootstrap = link.bootstrap;
+          this._unsubParentDestroy = link.destroy;
+        } else {
+          if (!this._parent.bootstrapped) {
+            this._unsubParentBootstrap = lifecycle.onChildBootstrap(() =>
+              this.bootstrap(),
+            );
+          }
+
+          this._unsubParentDestroy = lifecycle.onChildDestroy(() => this.destroy());
+        }
       }
     }
   }
@@ -420,15 +511,16 @@ export class NodeContainer extends Illuma implements iDIContainer {
 
       this._unsubParentBootstrap?.();
       this._unsubParentDestroy?.();
+      PARENT_LINK_REGISTRY?.unregister(this);
       this._bootstrapped = false;
       this._protoNodes.clear();
       this._multiProtoNodes.clear();
     }
   }
 
-  public child(): iDIContainer {
+  public child(options?: Omit<iContainerOptions, "parent">): iDIContainer {
     if (this.destroyed) throw InjectionError.destroyed();
-    return new NodeContainer({ parent: this });
+    return new NodeContainer({ ...options, parent: this });
   }
 
   /** @internal */

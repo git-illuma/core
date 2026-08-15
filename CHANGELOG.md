@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- `iContainerOptions.weakParentLink` — opt-in weak parent-to-child link. The parent
+  reaches such a child through a `WeakRef` and a `FinalizationRegistry` prunes the
+  registration once the child is collected, so a container that is built and then
+  abandoned without `destroy()` no longer pins itself to its parent for the parent's
+  whole lifetime. Reachable children are still destroyed by the parent's cascade.
+  Default (`false`) behaviour is unchanged. Needs both `WeakRef` and
+  `FinalizationRegistry` (ES2021); where either is missing the option warns once and
+  falls back to the strong link.
+- `iDIContainer.child()` now accepts container options, so a child can be created with
+  `instant` or `weakParentLink` without reaching for the `NodeContainer` constructor.
+
+### Changed
+
+- The build now pins `target: 'es2015'`, matching the syntax floor the README has always
+  advertised. Without an explicit target esbuild emitted `esnext`, so the published bundle
+  carried ES2022 class static blocks and ES2021 logical assignment despite documenting an
+  ES2015 floor. Costs ~0.7 KB gzipped. `README.md` now also states what the pin does *not*
+  cover — the module-scope `globalThis` reads (ES2020) and the JSR package, which ships
+  `src/` rather than the bundle — and the one option (`weakParentLink`) that deliberately
+  reaches past the floor.
+
 ## 2.4.0 - 2026-06-30
 ### Added
 - `iNodeTokenBaseOptions.global` — opt-in token-instance deduplication by name via

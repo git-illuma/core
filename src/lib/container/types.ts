@@ -30,6 +30,26 @@ export interface iContainerOptions {
    * @default true
    */
   instant?: boolean;
+
+  /**
+   * When true, the parent holds this container weakly: it is still destroyed
+   * by the parent's destroy cascade while it stays reachable, but it no longer
+   * keeps itself alive through that registration and may be garbage collected
+   * once nothing else references it.
+   *
+   * Intended for hosts that may build a container speculatively and then
+   * discard it without ever getting a chance to call {@link iDIContainer.destroy}
+   * — a React render that never commits, for example. Under the default strong
+   * link every such container is retained by its parent forever.
+   *
+   * The trade-off: a weakly linked container that is dropped without being
+   * destroyed will not run its destroy hooks at all, because nothing observes
+   * that it became unreachable. Only enable it where the host either destroys
+   * containers explicitly or keeps no resources that need releasing.
+   *
+   * @default false
+   */
+  weakParentLink?: boolean;
 }
 
 /**
@@ -108,10 +128,11 @@ export interface iDIContainer {
   /**
    * Creates a new child DI container that inherits from the current container.
    * The child container can be used to provide additional providers that are only available within the child context.
+   * @param options - Optional configuration for the child container. `parent` is always this container.
    * @returns A new child DI container
    * @throws {InjectionError} If called before bootstrap or if the container has been destroyed
    */
-  child(): iDIContainer;
+  child(options?: Omit<iContainerOptions, "parent">): iDIContainer;
 
   /**
    * Destroys the container and releases any resources it holds.

@@ -3,6 +3,10 @@ import { defineConfig } from 'tsup';
 export default defineConfig({
   entry: ['src/index.ts', 'src/testkit.ts', "src/plugins.ts"],
   format: ['cjs', 'esm'],
+  // Pinned to the floor the README advertises. Without it esbuild emits
+  // `esnext`, which shipped ES2022 class static blocks and ES2021 logical
+  // assignment into a bundle documented as ES2015-compatible.
+  target: 'es2015',
   dts: true,
   splitting: false,
   sourcemap: true,
