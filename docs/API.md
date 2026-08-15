@@ -29,6 +29,7 @@ new NodeContainer(options?: {
   measurePerformance?: boolean;
   instant?: boolean;
   parent?: iDIContainer;
+  weakParentLink?: boolean;
 })
 ```
 
@@ -37,6 +38,33 @@ new NodeContainer(options?: {
 | `options.measurePerformance` | `boolean` | `false` | Enable performance monitoring                                                            |
 | `options.instant`            | `boolean` | `true`  | Whether to instantiate consumers immediately on bootstrap (true) or lazily (false)       |
 | `options.parent`             | `iDIContainer` | `undefined` | Optional parent container for hierarchical injection                                   |
+| `options.weakParentLink`     | `boolean` | `false` | Let the parent hold this container weakly, so an abandoned child can be garbage collected |
+
+#### `weakParentLink`
+
+By default a parent keeps a strong reference to every child it ever produced, and
+releases it only when that child's `destroy()` runs. That is the right default: it
+guarantees the destroy cascade reaches everything.
+
+It is the wrong default for a host that may build a container speculatively and then
+drop it without ever being told to — a React render that never commits, for instance.
+Every such container would be retained for the parent's whole lifetime.
+
+With `weakParentLink: true` the parent reaches the child through a `WeakRef`, and a
+`FinalizationRegistry` prunes the registration once the child is collected. A child that
+is still reachable is still destroyed by the parent's cascade, exactly as before.
+
+The trade-off: a weakly linked container that is dropped without `destroy()` never runs
+its destroy hooks, because nothing observes that it became unreachable. Enable it only
+where the host destroys containers explicitly, or where services hold no resource that
+needs releasing — acquire those on a mount hook rather than in a constructor.
+
+Requires `WeakRef` (ES2021). Where it is unavailable the option warns once and falls
+back to the strong link.
+
+```typescript
+const scoped = new NodeContainer({ parent: root, weakParentLink: true });
+```
 
 ### Methods
 
