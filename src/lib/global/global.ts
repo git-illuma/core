@@ -55,7 +55,9 @@ if (!illumaGlobal[ILLUMA_STATE_KEY]) {
 const illumaState = illumaGlobal[ILLUMA_STATE_KEY];
 // Backfill if state was created by an older version of @illuma/core sharing
 // the same globalThis (npm + jsr, dual-installs, etc.)
-illumaState.logger ??= defaultLogger;
+if (illumaState.logger === undefined || illumaState.logger === null) {
+  illumaState.logger = defaultLogger;
+}
 
 /**
  * Global plugin container for managing core plugins such as diagnostics and context scanners.

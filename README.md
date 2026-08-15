@@ -45,23 +45,29 @@ The skill lives at [skills/illuma-core/](skills/illuma-core/) and is installed i
 
 ## Compatibility
 
-Compatible with virtually anything supporting ES2015+ (ES6+).
-Practically the library is compatible with Node.js (v14+), Bun, Deno and all modern browsers.
-For older environments, consider using a transpiler or provide polyfills as needed.
+**ES2020+.** In practice: Node.js 14+, Bun, Deno, and browsers from early 2020
+onwards (Chrome 80+, Firefox 74+, Safari 13.1+).
 
-The npm bundle pins its **syntax** to that floor by the build (`target: 'es2015'`).
-Two things it does not cover:
+That is a checked floor rather than an aspiration. The npm bundle is pinned to it
+(`target: 'es2020'`), and the sources are written to it too, so the JSR package —
+which publishes `src/` rather than the bundle — asks no more of you than npm does.
 
-- The library reads `globalThis` at module scope, which is ES2020. Older engines
-  need a `globalThis` polyfill — a transpiler alone will not do.
-- The JSR package publishes `src/`, not the bundle, so the syntax pin does not
-  apply there; JSR consumers compile the sources themselves.
+| Requirement | Level | Why |
+| --- | --- | --- |
+| `globalThis` | ES2020 | Read at module scope, to key shared state by symbol so two copies of the library interoperate |
+| Optional chaining, `??` | ES2020 | Throughout |
+| `WeakRef`, `FinalizationRegistry` | ES2021 | Only for `weakParentLink`, and only when you opt in |
 
-One container option reaches past the floor deliberately. `weakParentLink` needs
-`WeakRef` and `FinalizationRegistry` (ES2021 — Node.js 14.6+, Chrome 84+,
-Firefox 79+, Safari 14.1+). Where either is missing the option logs a warning
-once and falls back to the default strong parent link; nothing else in the
-library requires them.
+Two notes:
+
+- **`globalThis` is a runtime global, not syntax.** It is the one thing a
+  transpiler cannot supply for you, so an engine older than ES2020 needs a
+  polyfill for it in addition to compiling the bundle down. That configuration is
+  not tested here.
+- **`weakParentLink` is the only thing that reaches past the floor.** Where
+  `WeakRef` or `FinalizationRegistry` is missing it logs a warning once and falls
+  back to the default strong parent link, so it degrades instead of breaking.
+  Nothing else in the library touches either.
 
 ## Quick start
 

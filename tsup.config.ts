@@ -3,10 +3,11 @@ import { defineConfig } from 'tsup';
 export default defineConfig({
   entry: ['src/index.ts', 'src/testkit.ts', "src/plugins.ts"],
   format: ['cjs', 'esm'],
-  // Pinned to the floor the README advertises. Without it esbuild emits
-  // `esnext`, which shipped ES2022 class static blocks and ES2021 logical
-  // assignment into a bundle documented as ES2015-compatible.
-  target: 'es2015',
+  // Pinned to the floor the library actually has: it reads `globalThis` at
+  // module scope, so no lower target can make it run anywhere lower. Without an
+  // explicit target esbuild emits `esnext`, which shipped ES2022 class static
+  // blocks into a bundle documented as far more portable than that.
+  target: 'es2020',
   dts: true,
   splitting: false,
   sourcemap: true,

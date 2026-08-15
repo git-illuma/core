@@ -22,13 +22,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The build now pins `target: 'es2015'`, matching the syntax floor the README has always
-  advertised. Without an explicit target esbuild emitted `esnext`, so the published bundle
-  carried ES2022 class static blocks and ES2021 logical assignment despite documenting an
-  ES2015 floor. Costs ~0.7 KB gzipped. `README.md` now also states what the pin does *not*
-  cover — the module-scope `globalThis` reads (ES2020) and the JSR package, which ships
-  `src/` rather than the bundle — and the one option (`weakParentLink`) that deliberately
-  reaches past the floor.
+- **The supported floor is now ES2020 / Node.js 14+, on every channel, and checked
+  rather than claimed.** The build pins `target: 'es2020'`, the sources are written
+  to the same level, and `README.md` lists what sets it. No engine loses support:
+  with no explicit target esbuild had been emitting `esnext`, so every bundle
+  released so far carried ES2022 class static blocks and this one is strictly more
+  portable than any of them. The previous claim of ES2015 was never achievable,
+  because `globalThis` is read at module scope and no build target can lower a
+  runtime global.
+- Two things that used to push the real floor above the documented one are gone.
+  The last two `??=` operators (ES2021) are rewritten, so the JSR package — which
+  publishes `src/`, not the bundle — is no longer a level stricter than npm. And
+  bootstrap timing no longer reaches for `performance` unguarded: that global only
+  arrived in Node.js 16, which had quietly made 16 the true floor for a diagnostic
+  measurement. It now falls back to `Date.now()` where `performance` is absent.
 
 ## 2.4.0 - 2026-06-30
 ### Added

@@ -21,6 +21,7 @@ import type { ProtoNode } from "../provider/proto";
 import type { UpstreamGetter } from "../provider/resolver";
 import type { TreeNode } from "../provider/tree-node";
 import type { Ctor, iNodeProvider, Provider, Token } from "../provider/types";
+import { now } from "../utils/clock";
 import { Injector, InjectorImpl } from "../utils/injector";
 import { LifecycleRef, LifecycleRefImpl } from "./lifecycle";
 import type { iContainerOptions, iDIContainer } from "./types";
@@ -42,12 +43,13 @@ const PARENT_LINK_REGISTRY: FinalizationRegistry<Array<() => void>> | null =
       });
 
 /**
- * `WeakRef` and `FinalizationRegistry` are ES2021, while the rest of the library
- * targets ES2015. Both are required: a `WeakRef` without the registry would stop
- * retaining children but would never prune their registrations, quietly trading
- * one accumulation for another. An engine missing either keeps the strong link
- * rather than failing to build a container at all — the option is an
- * optimisation, not a correctness requirement.
+ * `WeakRef` and `FinalizationRegistry` are ES2021, one level above the library's
+ * ES2020 floor, and the only thing in it that reaches past that floor. Both are
+ * required: a `WeakRef` without the registry would stop retaining children but
+ * would never prune their registrations, quietly trading one accumulation for
+ * another. An engine missing either keeps the strong link rather than failing to
+ * build a container at all — the option is an optimisation, not a correctness
+ * requirement.
  */
 const WEAK_PARENT_LINK_SUPPORTED = PARENT_LINK_REGISTRY !== null;
 
@@ -320,7 +322,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
       if (!this._parent.bootstrapped) throw InjectionError.parentNotBootstrapped();
     }
 
-    const start = performance.now();
+    const start = now();
 
     // Snapshot providers and lifecycle hooks so a build that throws rolls back
     // to the pre-bootstrap state instead of leaving cleared maps and stray
@@ -352,7 +354,7 @@ export class NodeContainer extends Illuma implements iDIContainer {
     this._unsubParentBootstrap?.();
     this._unsubParentBootstrap = undefined;
 
-    const end = performance.now();
+    const end = now();
     const duration = end - start;
     if (this._opts?.measurePerformance) {
       Illuma.logger.log(`[Illuma] 🚀 Bootstrapped in ${duration.toFixed(2)} ms`);

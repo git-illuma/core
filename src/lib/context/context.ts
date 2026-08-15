@@ -36,7 +36,9 @@ if (!contextGlobal[INJECTION_CONTEXT_STATE_KEY]) {
 const injectionContextState = contextGlobal[INJECTION_CONTEXT_STATE_KEY];
 // Backfill if state was created by an older version of @illuma/core sharing
 // the same globalThis (npm + jsr, dual-installs, etc.)
-injectionContextState.stack ??= [];
+if (injectionContextState.stack === undefined || injectionContextState.stack === null) {
+  injectionContextState.stack = [];
+}
 
 /**
  * Internal context manager for tracking dependency injections during factory execution.
