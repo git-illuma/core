@@ -7,8 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2.5.1 - 2026-08-16
 ### Fixed
-
 - TypeScript consumers on `moduleResolution: node16` can compile against the
   package again. Every `exports` condition pointed `types` at the ESM `.d.ts`,
   so the `.d.cts` files the build emits and the tarball ships were unreachable
@@ -20,9 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   container but not the testkit or the plugin surface.
 
 ## 2.5.0 - 2026-08-16
-
 ### Added
-
 - `iContainerOptions.weakParentLink` — opt-in weak parent-to-child link. The parent
   reaches such a child through a `WeakRef` and a `FinalizationRegistry` prunes the
   registration once the child is collected, so a container that is built and then
@@ -35,7 +33,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `instant` or `weakParentLink` without reaching for the `NodeContainer` constructor.
 
 ### Changed
-
 - **The supported floor is now ES2020 / Node.js 14+, on every channel, and checked
   rather than claimed.** The build pins `target: 'es2020'`, the sources are written
   to the same level, and `README.md` lists what sets it. No engine loses support:
@@ -52,7 +49,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   measurement. It now falls back to `Date.now()` where `performance` is absent.
 
 ### Fixed
-
 - A teardown hook registered while a factory was being scanned is honoured
   rather than dropped, so a service that registers cleanup during the scan
   pass still has it run.
