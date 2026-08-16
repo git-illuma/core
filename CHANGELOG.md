@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   been reachable there, so a consumer on an older tsconfig could use the
   container but not the testkit or the plugin surface.
 
+## 2.5.0 - 2026-08-16
+
 ### Added
 
 - `iContainerOptions.weakParentLink` — opt-in weak parent-to-child link. The parent
@@ -48,6 +50,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   bootstrap timing no longer reaches for `performance` unguarded: that global only
   arrived in Node.js 16, which had quietly made 16 the true floor for a diagnostic
   measurement. It now falls back to `Date.now()` where `performance` is absent.
+
+### Fixed
+
+- A teardown hook registered while a factory was being scanned is honoured
+  rather than dropped, so a service that registers cleanup during the scan
+  pass still has it run.
 
 ## 2.4.0 - 2026-06-30
 ### Added
