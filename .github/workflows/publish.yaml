@@ -94,6 +94,13 @@ jobs:
       - name: Build
         run: bun run build
 
+      # Push repository changes
+      - name: Push changes to repository
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git push origin release/${{ env.NEW_VERSION }} && git push --tags
+
       # Publish version to NPM
       - name: Publish to NPM
         env:
@@ -102,13 +109,6 @@ jobs:
 
       - name: Publish to JSR
         run: bunx jsr publish --allow-dirty
-
-      # Push repository changes
-      - name: Push changes to repository
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git push origin release/${{ env.NEW_VERSION }} && git push --tags
 
       # Create Pull Request
       - name: Create Pull Request to main
