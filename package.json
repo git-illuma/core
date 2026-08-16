@@ -14,19 +14,44 @@
   "typings": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./testkit": {
-      "types": "./dist/testkit.d.ts",
-      "import": "./dist/testkit.js",
-      "require": "./dist/testkit.cjs"
+      "import": {
+        "types": "./dist/testkit.d.ts",
+        "default": "./dist/testkit.js"
+      },
+      "require": {
+        "types": "./dist/testkit.d.cts",
+        "default": "./dist/testkit.cjs"
+      }
     },
     "./plugins": {
-      "types": "./dist/plugins.d.ts",
-      "import": "./dist/plugins.js",
-      "require": "./dist/plugins.cjs"
+      "import": {
+        "types": "./dist/plugins.d.ts",
+        "default": "./dist/plugins.js"
+      },
+      "require": {
+        "types": "./dist/plugins.d.cts",
+        "default": "./dist/plugins.cjs"
+      }
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "testkit": [
+        "./dist/testkit.d.ts"
+      ],
+      "plugins": [
+        "./dist/plugins.d.ts"
+      ]
     }
   },
   "sideEffects": false,

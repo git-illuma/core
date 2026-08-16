@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+
+- TypeScript consumers on `moduleResolution: node16` can compile against the
+  package again. Every `exports` condition pointed `types` at the ESM `.d.ts`,
+  so the `.d.cts` files the build emits and the tarball ships were unreachable
+  and a CommonJS project got `TS1479` on every import. Each subpath now carries
+  its own types under `import` and `require`.
+- `@illuma/core/testkit` and `@illuma/core/plugins` resolve under the legacy
+  `moduleResolution: node` as well, via `typesVersions`. Only the root entry had
+  been reachable there, so a consumer on an older tsconfig could use the
+  container but not the testkit or the plugin surface.
+
 ### Added
 
 - `iContainerOptions.weakParentLink` — opt-in weak parent-to-child link. The parent
